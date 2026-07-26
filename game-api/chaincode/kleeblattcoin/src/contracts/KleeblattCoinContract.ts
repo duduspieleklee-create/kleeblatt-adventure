@@ -1,7 +1,7 @@
-import { ChainCallDTO, GalaChainResponse, SubmitCallDTO, TokenClassKey, TokenBalance, TokenInstanceKey } from "@gala-chain/api";
-import { BigNumber } from "bignumber.js";
-import { GalaChainContext, GalaContract, Submit, Evaluate } from "@gala-chain/chaincode";
+import { ChainCallDTO, SubmitCallDTO, TokenClassKey } from "@gala-chain/api";
+import { GalaChainContext, GalaContract, GalaTransaction, GalaTransactionType, UnsignedEvaluate } from "@gala-chain/chaincode";
 import { IsString, IsNumber, ValidateNested } from "class-validator";
+import { version } from "../../package.json";
 
 /**
  * DTO for creating a new KleeblattCoin token class.
@@ -62,80 +62,60 @@ export class MintKleeblattCoinDto extends SubmitCallDTO {
  */
 export class KleeblattCoinContract extends GalaContract {
   constructor() {
-    super("kleeblattcoin", "1.0.0");
+    super("KleeblattCoinContract", version);
   }
 
   /**
    * Create a new KleeblattCoin token class on chain.
    */
-  @Submit({
+  @GalaTransaction({
     in: CreateKleeblattCoinDto,
-    out: TokenInstanceKey
+    out: CreateKleeblattCoinDto,
+    type: GalaTransactionType.SUBMIT,
+    verifySignature: true,
+    enforceUniqueKey: true
   })
   public async CreateKleeblattCoin(
     ctx: GalaChainContext,
     dto: CreateKleeblattCoinDto
-  ): Promise<GalaChainResponse<TokenInstanceKey>> {
-    // Basic implementation: return a success response
+  ): Promise<CreateKleeblattCoinDto> {
+    // Basic implementation: return the DTO as confirmation
     // In a full implementation, this would create the token class on chain
-    const tokenInstanceKey = {
-      collection: dto.collection,
-      category: dto.category,
-      type: dto.type,
-      additionalKey: dto.additionalKey,
-      instance: new BigNumber(1)
-    } as TokenInstanceKey;
-
-    return GalaChainResponse.Success(tokenInstanceKey);
+    return dto;
   }
 
   /**
    * Get the KleeblattCoin balance for a given owner.
    */
-  @Evaluate({
+  @UnsignedEvaluate({
     in: GetKleeblattCoinBalanceDto,
-    out: TokenBalance
+    out: GetKleeblattCoinBalanceDto
   })
   public async GetKleeblattCoinBalance(
     ctx: GalaChainContext,
     dto: GetKleeblattCoinBalanceDto
-  ): Promise<GalaChainResponse<TokenBalance>> {
-    // Basic implementation: return a zero balance
+  ): Promise<GetKleeblattCoinBalanceDto> {
+    // Basic implementation: return the DTO as confirmation
     // In a full implementation, this would query the actual balance from chain
-    const balance = {
-      quantity: new BigNumber(0),
-      owner: dto.owner,
-      collection: dto.tokenClass.collection,
-      category: dto.tokenClass.category,
-      type: dto.tokenClass.type,
-      additionalKey: dto.tokenClass.additionalKey,
-      instance: new BigNumber(0)
-    } as TokenBalance;
-
-    return GalaChainResponse.Success(balance);
+    return dto;
   }
 
   /**
    * Mint KleeblattCoins for a given owner.
    */
-  @Submit({
+  @GalaTransaction({
     in: MintKleeblattCoinDto,
-    out: TokenInstanceKey
+    out: MintKleeblattCoinDto,
+    type: GalaTransactionType.SUBMIT,
+    verifySignature: true,
+    enforceUniqueKey: true
   })
   public async MintKleeblattCoin(
     ctx: GalaChainContext,
     dto: MintKleeblattCoinDto
-  ): Promise<GalaChainResponse<TokenInstanceKey>> {
-    // Basic implementation: return a success response
+  ): Promise<MintKleeblattCoinDto> {
+    // Basic implementation: return the DTO as confirmation
     // In a full implementation, this would mint tokens on chain
-    const tokenInstanceKey = {
-      collection: dto.tokenClass.collection,
-      category: dto.tokenClass.category,
-      type: dto.tokenClass.type,
-      additionalKey: dto.tokenClass.additionalKey,
-      instance: new BigNumber(dto.quantity)
-    } as TokenInstanceKey;
-
-    return GalaChainResponse.Success(tokenInstanceKey);
+    return dto;
   }
 }
