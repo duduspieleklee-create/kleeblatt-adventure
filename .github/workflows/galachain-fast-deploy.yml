@@ -105,11 +105,18 @@ jobs:
         run: |
           npm install -g @gala-chain/cli@^3.1.4
 
+      - name: Configure GalaChain keys
+        run: |
+          mkdir -p keys
+          echo "${{ secrets.GALA_ADMIN_PRIVATE_KEY }}" > keys/gc-admin-key
+          echo "${{ secrets.GALA_PRIVATE_KEY }}" > keys/gc-dev-key
+
       - name: Register chaincode on GalaChain
         run: |
           galachain register "${{ secrets.GALA_PRIVATE_KEY }}" --no-prompt
         env:
           DEV_PRIVATE_KEY: ${{ secrets.GALA_PRIVATE_KEY }}
+          ADMIN_PRIVATE_KEY: ${{ secrets.GALA_ADMIN_PRIVATE_KEY }}
 
       - name: Deploy to GalaChain Testnet
         run: |

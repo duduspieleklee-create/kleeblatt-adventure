@@ -1,0 +1,21 @@
+# Private keys - NEVER commit these
+keys/gc-admin-key
+keys/gc-dev-key
+*.key
+
+# Node modules
+node_modules/
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.local
+
+# Docker
+*.tar
+
+# Temporary scripts
+enable-virtualization.bat
+fix-hypervisor.bat
