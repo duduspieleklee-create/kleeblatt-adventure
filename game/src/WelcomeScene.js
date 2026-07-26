@@ -117,8 +117,8 @@ export default class WelcomeScene extends Phaser.Scene {
         logDebug('Requesting wallet connection...', 'info');
         const result = await wallet.connect();
         logDebug(`Wallet connected: ${result.account}`, 'info');
+        await new Promise(r => setTimeout(r, 500));
 
-        walletText.setText('Pick username...');
         const username = await promptUsername('Pick your username', 'Choose a permanent username', false);
         if (!username) return;
 
