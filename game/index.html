@@ -169,59 +169,133 @@
       border-radius: 12px;
       text-align: center;
       border: 2px solid #f6416c;
-      max-width: 340px;
+      max-width: 360px;
       width: 90%;
     }
     
     #username-box h3 {
       color: white;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       font-size: 18px;
     }
     
-    #username-box p {
+    #username-box .desc {
       color: #a0aec0;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       font-size: 13px;
     }
     
-    #username-box input {
+    .username-input-row {
+      position: relative;
+      margin-bottom: 10px;
+    }
+    
+    .username-input-row input {
       width: 100%;
-      padding: 10px;
+      padding: 10px 44px 10px 14px;
       border-radius: 6px;
-      border: 1px solid #4a5568;
+      border: 2px solid #4a5568;
       background: #2d3748;
       color: white;
       font-size: 16px;
       text-align: center;
-      margin-bottom: 16px;
       outline: none;
+      transition: border-color 0.2s;
     }
     
-    #username-box input:focus {
-      border-color: #f6416c;
+    .username-input-row input:focus {
+      border-color: #a0aec0;
+    }
+    
+    .username-input-row input.valid {
+      border-color: #22c55e;
+    }
+    
+    .username-input-row input.invalid {
+      border-color: #ef4444;
+    }
+    
+    #username-status {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    
+    #username-status .checking {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid #f6416c;
+      border-radius: 50%;
+      animation: username-spin 0.8s linear infinite;
+    }
+    
+    #username-status .available {
+      color: #22c55e;
+    }
+    
+    #username-status .taken {
+      color: #ef4444;
+    }
+    
+    @keyframes username-spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    #username-hint {
+      font-size: 11px;
+      color: #718096;
+      margin-bottom: 14px;
+      min-height: 16px;
+    }
+    
+    #username-hint.error {
+      color: #ef4444;
+    }
+    
+    #username-box .btn-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
     }
     
     #username-box button {
-      background: #f6416c;
-      color: white;
       border: none;
       padding: 10px 24px;
       border-radius: 6px;
       font-size: 16px;
       cursor: pointer;
-      margin: 0 4px;
     }
     
-    #username-box button:hover {
+    #username-confirm {
+      background: #f6416c;
+      color: white;
+    }
+    
+    #username-confirm:hover:not(:disabled) {
       background: #d6335c;
     }
     
-    #username-box .skip-btn {
+    #username-confirm:disabled {
       background: #4a5568;
+      cursor: not-allowed;
+      opacity: 0.6;
     }
     
-    #username-box .skip-btn:hover {
+    #username-skip {
+      background: #4a5568;
+      color: #e2e8f0;
+    }
+    
+    #username-skip:hover {
       background: #3a4568;
     }
     
@@ -248,11 +322,15 @@
   <div id="username-overlay">
     <div id="username-box">
       <h3 id="username-title">Choose your username</h3>
-      <p id="username-desc">Or leave empty for a random one</p>
-      <input id="username-input" type="text" placeholder="Your username" maxlength="24" autocomplete="off">
-      <div>
-        <button id="username-confirm">Confirm</button>
-        <button id="username-skip" class="skip-btn">Skip</button>
+      <div id="username-desc" class="desc">Pick a permanent username</div>
+      <div class="username-input-row">
+        <input id="username-input" type="text" placeholder="Your username" maxlength="24" autocomplete="off" autocomplete="off">
+        <div id="username-status"></div>
+      </div>
+      <div id="username-hint">3-24 characters: a-z, A-Z, 0-9, _ , -</div>
+      <div class="btn-row">
+        <button id="username-confirm" disabled>Confirm</button>
+        <button id="username-skip">Skip</button>
       </div>
     </div>
   </div>
@@ -263,34 +341,131 @@
   <script type="module" src="/src/main.js"></script>
   <script>
     let _usernameCallback = null;
+    let _usernameSkip = true;
+    let _usernameTimer = null;
     
-    window._showUsernamePrompt = function(title, desc, callback) {
+    const API_BASE = 'https://game.kleeblatt.space/api/game';
+    const $overlay = document.getElementById('username-overlay');
+    const $title = document.getElementById('username-title');
+    const $desc = document.getElementById('username-desc');
+    const $input = document.getElementById('username-input');
+    const $status = document.getElementById('username-status');
+    const $hint = document.getElementById('username-hint');
+    const $confirm = document.getElementById('username-confirm');
+    const $skip = document.getElementById('username-skip');
+    
+    function setStatus(html) {
+      $status.innerHTML = html;
+    }
+    
+    function clearStatus() {
+      $status.innerHTML = '';
+      $input.className = '';
+      $confirm.disabled = true;
+    }
+    
+    async function validateUsername(val) {
+      if (val.length < 3) {
+        $hint.textContent = 'Minimum 3 characters';
+        $hint.className = 'error';
+        setStatus('');
+        $input.className = '';
+        $confirm.disabled = true;
+        return;
+      }
+      
+      if (!/^[a-zA-Z0-9_-]+$/.test(val)) {
+        $hint.textContent = 'Only letters, numbers, _ and - allowed';
+        $hint.className = 'error';
+        setStatus('');
+        $input.className = '';
+        $confirm.disabled = true;
+        return;
+      }
+      
+      setStatus('<div class="checking"></div>');
+      $hint.textContent = 'Checking availability...';
+      $hint.className = '';
+      $input.className = '';
+      $confirm.disabled = true;
+      
+      try {
+        const res = await fetch(API_BASE + '/check-username?username=' + encodeURIComponent(val));
+        const data = await res.json();
+        
+        if (data.available) {
+          $input.className = 'valid';
+          setStatus('<span class="available">&#10003;</span>');
+          $hint.textContent = 'Username available!';
+          $hint.className = '';
+          $confirm.disabled = false;
+        } else {
+          $input.className = 'invalid';
+          setStatus('<span class="taken">&#10007;</span>');
+          $hint.textContent = 'Username already taken';
+          $hint.className = 'error';
+          $confirm.disabled = true;
+        }
+      } catch {
+        setStatus('');
+        $hint.textContent = 'Unable to check. Try again.';
+        $hint.className = 'error';
+        $input.className = '';
+        $confirm.disabled = true;
+      }
+    }
+    
+    $input.addEventListener('input', function() {
+      clearTimeout(_usernameTimer);
+      const val = this.value.trim();
+      if (!val) {
+        clearStatus();
+        $hint.textContent = '3-24 characters: a-z, A-Z, 0-9, _ , -';
+        $hint.className = '';
+        return;
+      }
+      _usernameTimer = setTimeout(() => validateUsername(val), 400);
+    });
+    
+    window._showUsernamePrompt = function(title, desc, canSkip, callback) {
       _usernameCallback = callback;
-      document.getElementById('username-title').textContent = title || 'Choose your username';
-      document.getElementById('username-desc').textContent = desc || 'Or leave empty for a random one';
-      document.getElementById('username-input').value = '';
-      document.getElementById('username-overlay').classList.add('visible');
-      document.getElementById('username-input').focus();
+      _usernameSkip = canSkip !== false;
+      $title.textContent = title || 'Choose your username';
+      $desc.textContent = desc || 'Pick a permanent username';
+      $input.value = '';
+      $input.className = '';
+      clearStatus();
+      $hint.textContent = '3-24 characters: a-z, A-Z, 0-9, _ , -';
+      $hint.className = '';
+      $confirm.disabled = true;
+      $skip.style.display = _usernameSkip ? '' : 'none';
+      $overlay.classList.add('visible');
+      $input.focus();
     };
     
     window._hideUsernamePrompt = function() {
-      document.getElementById('username-overlay').classList.remove('visible');
+      $overlay.classList.remove('visible');
       _usernameCallback = null;
+      clearTimeout(_usernameTimer);
     };
     
-    document.getElementById('username-confirm').addEventListener('click', function() {
-      const val = document.getElementById('username-input').value.trim() || null;
+    $confirm.addEventListener('click', function() {
+      const val = $input.value.trim();
+      if (!val || $confirm.disabled) return;
       window._hideUsernamePrompt();
       if (_usernameCallback) _usernameCallback(val);
     });
     
-    document.getElementById('username-skip').addEventListener('click', function() {
+    $skip.addEventListener('click', function() {
       window._hideUsernamePrompt();
-      if (_usernameCallback) _usernameCallback(null);
+      if (_usernameCallback === null) return;
+      _usernameCallback(null);
     });
     
-    document.getElementById('username-input').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') document.getElementById('username-confirm').click();
+    $input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !$confirm.disabled) {
+        $confirm.click();
+      }
     });
   </script>
 </body>

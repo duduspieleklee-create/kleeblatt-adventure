@@ -83,6 +83,12 @@ export async function updateUsername(token, username) {
   return data;
 }
 
+export async function checkUsername(username) {
+  const res = await fetch(`${API_BASE}/check-username?username=${encodeURIComponent(username)}`);
+  if (!res.ok) throw new Error(`Check username failed: ${res.status}`);
+  return res.json();
+}
+
 export async function getProfile(token) {
   const res = await fetch(`${API_BASE}/profile?token=${token}`);
   if (!res.ok) throw new Error(`Profile fetch failed: ${res.status}`);
