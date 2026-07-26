@@ -92,7 +92,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ env.IMAGE_NAME }}:latest -f game-api/chaincode/kleeblattcoin/Dockerfile .
+          docker build -t ${{ env.IMAGE_NAME }}:latest game-api/chaincode/kleeblattcoin/
 
       - name: Run container security scan
         run: |

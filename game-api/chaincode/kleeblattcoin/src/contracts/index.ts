@@ -1,4 +1,5 @@
+import { KleeblattCoinContract } from "./KleeblattCoinContract";
+
 export { KleeblattCoinContract } from "./KleeblattCoinContract";
-export { KleeblattCoin } from "./KleeblattCoinContract";
 
 export const contracts = [KleeblattCoinContract];
