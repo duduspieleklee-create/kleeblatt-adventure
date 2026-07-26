@@ -526,16 +526,15 @@ export default class KleeblattAdventure extends Phaser.Scene {
   }
 
   async flushScoreQueue(time) {
-    if (!this.token) return;
-    for (const entry of this.scoreSubmitQueue) {
-      try {
-        await submitScore(this.token, entry.score, entry.collections);
-        logDebug(`Score saved: ${entry.score}`, 'info');
-      } catch (err) {
-        logDebug(`Score save failed: ${err.message}`, 'warn');
-      }
-    }
+    if (!this.token || this.scoreSubmitQueue.length === 0) return;
+    const latest = this.scoreSubmitQueue[this.scoreSubmitQueue.length - 1];
     this.scoreSubmitQueue = [];
+    try {
+      await submitScore(this.token, latest.score, latest.collections);
+      logDebug(`Score saved: ${latest.score} (${latest.collections} treasures)`, 'info');
+    } catch (err) {
+      logDebug(`Score save failed: ${err.message}`, 'warn');
+    }
     this.lastScoreSubmit = time;
   }
 
