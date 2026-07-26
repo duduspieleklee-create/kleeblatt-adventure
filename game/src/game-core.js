@@ -1,13 +1,19 @@
 import Phaser from 'phaser';
-import { TREASURE_CATEGORIES, addTreasure } from './core/index.js';
+import { TREASURE_CATEGORIES, addTreasure, gameData } from './core/index.js';
+import WalletService from './wallet.js';
 
-export const gameData = {
-  score: 0,
-  collections: 0,
-  achievements: [],
-  wallet: null,
-  isValid: false
+const logDebug = (message, type = 'info') => {
+  if (typeof window !== 'undefined' && window.__debugLog) {
+    window.__debugLog(message, type);
+  }
+  console.log(`[${type}] ${message}`);
 };
+
+try {
+  window.__debugLog && window.__debugLog('game-core.js module loaded successfully', 'info');
+} catch (e) {
+  console.log('game-core.js module loaded');
+}
 
 export default class KleeblattAdventure extends Phaser.Scene {
   constructor() {
@@ -19,70 +25,120 @@ export default class KleeblattAdventure extends Phaser.Scene {
     this.scoreText = null;
     this.infoText = null;
     this.celebrationComplete = false;
+    this.joystick = null;
+    this.isMobile = false;
+    this.walletService = null;
+    this.walletText = null;
   }
 
   preload() {
-    const graphics = this.make.graphics({ x: 0, y: 0 });
+    try {
+      logDebug('Scene preload starting', 'info');
+      const graphics = this.make.graphics({ x: 0, y: 0 });
 
-    graphics.beginFill(0x2d3748).drawRect(0, 0, 64, 64).endFill();
-    graphics.generateTexture('gameBackground', 64, 64);
-    graphics.clear();
+      graphics.fillStyle(0x2d3748, 1);
+      graphics.fillRect(0, 0, 64, 64);
+      graphics.generateTexture('gameBackground', 64, 64);
+      graphics.clear();
 
-    graphics.beginFill(0x4ade80).drawCircle(32, 32, 30).endFill();
-    graphics.generateTexture('player', 64, 64);
-    graphics.clear();
+      graphics.fillStyle(0x4ade80, 1);
+      graphics.fillCircle(32, 32, 30);
+      graphics.generateTexture('player', 64, 64);
+      graphics.clear();
 
-    graphics.beginFill(0xfbbf24).drawCircle(32, 32, 30).endFill();
-    graphics.generateTexture('treasure', 64, 64);
-    graphics.clear();
+      graphics.fillStyle(0xfbbf24, 1);
+      graphics.fillCircle(32, 32, 30);
+      graphics.generateTexture('treasure', 64, 64);
+      graphics.clear();
+      logDebug('Scene preload complete', 'info');
+    } catch (error) {
+      logDebug(`preload error: ${error.message}`, 'error');
+      logDebug(`Stack: ${error.stack}`, 'error');
+    }
   }
 
   create() {
-    gameData.score = 0;
-    gameData.collections = 0;
-    gameData.achievements = [];
-    this.treasures = [];
-    this.celebrationComplete = false;
+    try {
+      logDebug('Scene create starting', 'info');
+      gameData.score = 0;
+      gameData.collections = 0;
+      gameData.achievements = [];
+      gameData.treasures = [];
+      this.treasures = [];
+      this.celebrationComplete = false;
 
-    this.add.rectangle(400, 300, 800, 600, 0x2d3748);
-    this.add.rectangle(410, 305, 820, 620, 0x1a1a2e).setOrigin(0.5);
+      this.add.rectangle(400, 300, 800, 600, 0x2d3748);
+      this.add.rectangle(410, 305, 820, 620, 0x1a1a2e).setOrigin(0.5);
 
-    this.player = this.physics.add.sprite(400, 300, 'player');
-    this.player.setCircle(20);
-    this.player.body.setCollideWorldBounds(true);
-    this.player.setDisplaySize(40, 40);
+      this.player = this.physics.add.sprite(400, 300, 'player');
+      this.player.setCircle(20);
+      this.player.body.setCollideWorldBounds(true);
+      this.player.setDisplaySize(40, 40);
 
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.keys = this.input.keyboard.addKeys({
-      up: Phaser.Input.Keyboard.KeyCodes.W,
-      down: Phaser.Input.Keyboard.KeyCodes.S,
-      left: Phaser.Input.Keyboard.KeyCodes.A,
-      right: Phaser.Input.Keyboard.KeyCodes.D
-    });
+      this.cursors = this.input.keyboard.createCursorKeys();
+      this.keys = this.input.keyboard.addKeys({
+        up: Phaser.Input.Keyboard.KeyCodes.W,
+        down: Phaser.Input.Keyboard.KeyCodes.S,
+        left: Phaser.Input.Keyboard.KeyCodes.A,
+        right: Phaser.Input.Keyboard.KeyCodes.D
+      });
 
-    this.physics.world.setBounds(0, 0, 800, 600);
+      this.joystick = this.game.registry.get('joystick');
+      this.isMobile = this.game.registry.get('isMobile') || false;
 
-    this.createUI();
-    this.spawnTreasures(5);
+      this.walletService = new WalletService();
+      window.wallet = this.walletService;
+
+      this.physics.world.setBounds(0, 0, 800, 600);
+
+      this.createUI();
+      this.spawnTreasures(5);
+      logDebug(`Scene create complete. Mobile: ${this.isMobile}, Joystick: ${!!this.joystick}`, 'info');
+    } catch (error) {
+      logDebug(`create error: ${error.message}`, 'error');
+      logDebug(`Stack: ${error.stack}`, 'error');
+    }
   }
 
   update() {
-    const speed = 300;
-    this.player.setVelocity(0);
+    try {
+      const speed = 300;
+      this.player.setVelocity(0);
 
-    if (this.cursors.left.isDown || this.keys.left.isDown) {
-      this.player.setVelocityX(-speed);
-    } else if (this.cursors.right.isDown || this.keys.right.isDown) {
-      this.player.setVelocityX(speed);
+      let moveX = 0;
+      let moveY = 0;
+
+      if (this.isMobile && this.joystick) {
+        const axis = this.joystick.getAxis();
+        moveX = axis.x;
+        moveY = axis.y;
+
+        if (Math.abs(moveX) > 0.1) {
+          this.player.setVelocityX(moveX * speed);
+        }
+        if (Math.abs(moveY) > 0.1) {
+          this.player.setVelocityY(moveY * speed);
+        }
+      } else {
+        if (this.cursors.left.isDown || this.keys.left.isDown) {
+          this.player.setVelocityX(-speed);
+        } else if (this.cursors.right.isDown || this.keys.right.isDown) {
+          this.player.setVelocityX(speed);
+        }
+
+        if (this.cursors.up.isDown || this.keys.up.isDown) {
+          this.player.setVelocityY(-speed);
+        } else if (this.cursors.down.isDown || this.keys.down.isDown) {
+          this.player.setVelocityY(speed);
+        }
+      }
+
+      this.checkCollisions();
+      this.updateWalletUI();
+    } catch (error) {
+      logDebug(`update error: ${error.message}`, 'error');
+      logDebug(`Stack: ${error.stack}`, 'error');
     }
-
-    if (this.cursors.up.isDown || this.keys.up.isDown) {
-      this.player.setVelocityY(-speed);
-    } else if (this.cursors.down.isDown || this.keys.down.isDown) {
-      this.player.setVelocityY(speed);
-    }
-
-    this.checkCollisions();
   }
 
   createUI() {
@@ -93,10 +149,58 @@ export default class KleeblattAdventure extends Phaser.Scene {
       padding: { x: 10, y: 5 }
     }).setScrollFactor(0);
 
-    this.infoText = this.add.text(20, 60, 'Find treasures! WASD/Arrows to move', {
-      fontSize: '16px',
-      fill: '#ffffff'
-    }).setScrollFactor(0);
+    if (this.isMobile) {
+      this.infoText = this.add.text(20, 60, 'Use joystick to move', {
+        fontSize: '16px',
+        fill: '#ffffff'
+      }).setScrollFactor(0);
+    } else {
+      this.infoText = this.add.text(20, 60, 'Find treasures! WASD/Arrows to move', {
+        fontSize: '16px',
+        fill: '#ffffff'
+      }).setScrollFactor(0);
+    }
+
+    this.walletText = this.add.text(400, 20, 'Connect Wallet', {
+      fontSize: '18px',
+      fill: '#ffffff',
+      backgroundColor: '#f6416c',
+      padding: { x: 15, y: 8 }
+    }).setOrigin(0.5).setScrollFactor(0).setInteractive({ useHandCursor: true });
+
+    this.walletText.on('pointerdown', () => {
+      this.connectWallet();
+    });
+
+    this.updateWalletUI();
+  }
+
+  async connectWallet() {
+    try {
+      logDebug('Connecting wallet...', 'info');
+      const result = await this.walletService.connect();
+      logDebug(`Wallet connected: ${result.account}`, 'info');
+      this.updateWalletUI();
+      this.infoText.setText('Wallet connected! Start playing!');
+    } catch (error) {
+      logDebug(`Wallet connection failed: ${error.message}`, 'error');
+      this.infoText.setText('Wallet connection failed');
+    }
+  }
+
+  updateWalletUI() {
+    if (!this.walletText) return;
+    const status = this.walletService.getConnectedStatus();
+    if (status.isConnected) {
+      this.walletText.setText(`Wallet: ${status.address}`);
+      this.walletText.setBackgroundColor('#4ade80');
+    } else if (status.isSupported) {
+      this.walletText.setText('Connect Wallet');
+      this.walletText.setBackgroundColor('#f6416c');
+    } else {
+      this.walletText.setText('No Wallet');
+      this.walletText.setBackgroundColor('#888888');
+    }
   }
 
   spawnTreasures(count) {
