@@ -42,26 +42,16 @@ export const initGame = (config = {}) => {
 
 // Add treasure to collection
 export const addTreasure = (categoryId) => {
-  // Check if already collected
-  const exists = gameData.treasures.find(t => t.categoryId === categoryId);
-  if (exists) {
-    console.log('Treasure already collected!');
-    return false;
-  }
-  
-  // Add to collection
   gameData.treasures.push({
     id: Date.now(),
     categoryId,
     timestamp: Date.now(),
     score: 100
   });
-  
-  // Update game stats
+
   gameData.score += 100;
   gameData.collections++;
-  
-  console.log('Treasure collected:', TREASURE_CATEGORIES.find(c => c.id === categoryId));
+
   return true;
 };
 
