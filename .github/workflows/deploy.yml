@@ -1,4 +1,17 @@
 name: Auto Deploy with PR & Changelog
+
+# ═══════════════════════════════════════════════════════
+# Required GitHub Secrets (Settings → Secrets → Actions)
+# ═══════════════════════════════════════════════════════
+#
+#   DEPLOY_SSH_KEY       — SSH private key for server access
+#   GALA_PRIVATE_KEY     — Publisher wallet private key for GalaChain signing
+#   GALA_CHAINCODE_URL   — Deployed chaincode REST API URL on GalaChain gateway
+#   GALA_REST_API        — GalaChain gateway base URL (optional, defaults to testnet)
+#
+# See: game-api/chaincode/.env.example for details
+# ═══════════════════════════════════════════════════════
+
 on:
   push:
     branches:
@@ -34,6 +47,16 @@ jobs:
           scp ./game-api/chaincode/server.mjs ./game-api/chaincode/package.json root@57.130.64.126:/opt/game-api/chaincode/
           scp ./game-api/chaincode/kleeblatt-chaincode.service root@57.130.64.126:/etc/systemd/system/
           ssh root@57.130.64.126 "cd /opt/game-api/chaincode && npm ci && systemctl daemon-reload && systemctl restart kleeblatt-chaincode || true"
+      - name: Write chaincode .env from secrets
+        run: |
+          cat > /tmp/chaincode.env << SECRETS
+          GALA_PRIVATE_KEY=${{ secrets.GALA_PRIVATE_KEY }}
+          GALA_CHAINCODE_URL=${{ secrets.GALA_CHAINCODE_URL }}
+          GALA_REST_API=${{ secrets.GALA_REST_API || 'https://gateway-testnet.galachain.com/api' }}
+          PORT=8002
+          SECRETS
+          scp /tmp/chaincode.env root@57.130.64.126:/opt/game-api/chaincode/.env
+          ssh root@57.130.64.126 "systemctl restart kleeblatt-chaincode || true"
       - uses: peter-evans/create-pull-request@v5
         with:
           base: main
