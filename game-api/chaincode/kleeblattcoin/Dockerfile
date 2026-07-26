@@ -23,5 +23,19 @@ USER nextjs
 
 # Note: GalaChain contracts don't typically run as standalone applications
 # This Dockerfile is for packaging the contract for deployment to GalaChain
+# The contract will be deployed using GalaChain CLI tools
+
+# Copy package-lock.json if available
+COPY package-lock.json ./
+
+# Install all dependencies (including dev dependencies for building)
+RUN npm install
+
+# Build the contract
+RUN npm run build
+
+# Verify build output
+RUN ls -la dist/
+
 # Define a default command (can be overridden during deployment)
-CMD ["sh", "-c", "echo 'GalaChain contract packaged successfully'"]
+CMD ["sh", "-c", "echo 'GalaChain contract built and packaged successfully'"]
