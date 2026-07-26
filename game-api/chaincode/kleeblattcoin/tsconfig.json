@@ -21,7 +21,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node16"
+    "moduleResolution": "nodenext"
   },
   "exclude": [
     "dist",
