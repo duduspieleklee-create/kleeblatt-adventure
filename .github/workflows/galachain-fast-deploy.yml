@@ -5,12 +5,15 @@ on:
     branches: [ main ]
     paths:
       - 'game-api/chaincode/kleeblattcoin/**'
+      - 'keys/**'
       - '.github/workflows/galachain-fast-deploy.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'game-api/chaincode/kleeblattcoin/**'
+      - 'keys/**'
       - '.github/workflows/galachain-fast-deploy.yml'
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
