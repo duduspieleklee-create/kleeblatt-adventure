@@ -1,13 +1,5 @@
 import Phaser from 'phaser';
-import { TREASURE_CATEGORIES, addTreasure } from './core/index.js';
-
-export const gameData = {
-  score: 0,
-  collections: 0,
-  achievements: [],
-  wallet: null,
-  isValid: false
-};
+import { TREASURE_CATEGORIES, addTreasure, gameData } from './core/index.js';
 
 export default class KleeblattAdventure extends Phaser.Scene {
   constructor() {
@@ -41,6 +33,7 @@ export default class KleeblattAdventure extends Phaser.Scene {
     gameData.score = 0;
     gameData.collections = 0;
     gameData.achievements = [];
+    gameData.treasures = [];
     this.treasures = [];
     this.celebrationComplete = false;
 

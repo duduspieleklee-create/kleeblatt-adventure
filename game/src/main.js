@@ -3,7 +3,7 @@ import KleeblattAdventure from './game-core.js';
 import WalletService from './wallet.js';
 
 const config = {
-  type: Phaser.AUTO,
+  type: Phaser.CANVAS,
   width: 800,
   height: 600,
   parent: 'game-container',
@@ -19,16 +19,24 @@ const config = {
       gravity: { y: 0 },
       debug: false
     }
-  }
+  },
+  disableVisibilityChange: true
 };
 
-const game = new Phaser.Game(config);
+let game = null;
+try {
+  game = new Phaser.Game(config);
+  window.game = game;
+} catch (error) {
+  console.error('Failed to initialize Phaser:', error);
+  document.getElementById('game-container').innerHTML = '<p style="color:white;text-align:center;padding:20px;">Failed to load game. Please refresh.</p>';
+}
 
 const wallet = new WalletService();
-window.game = game;
 window.wallet = wallet;
 
 const initGame = async () => {
+  if (!game) return;
   try {
     const status = wallet.getConnectedStatus();
     if (status.isConnected) {
