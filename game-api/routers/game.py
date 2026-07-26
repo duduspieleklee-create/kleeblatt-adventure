@@ -4,7 +4,8 @@ from sqlalchemy import func
 from database import get_db
 from models import User, GameScore
 from schemas import (
-    WalletLoginRequest, TokenResponse, ProfileResponse,
+    WalletLoginRequest, GuestLoginRequest, LinkWalletRequest,
+    UpdateUsernameRequest, TokenResponse, ProfileResponse,
     ScoreSubmitRequest, ScoreResponse,
 )
 from auth import create_token, decode_token, generate_guest_username
@@ -22,44 +23,7 @@ def get_current_user(token: str, db: Session) -> User | None:
     return db.query(User).filter(User.id == int(user_id)).first()
 
 
-#
-# Authentication
-#
-
-@router.post("/guest", response_model=TokenResponse)
-def guest_login(db: Session = Depends(get_db)):
-    username = generate_guest_username()
-    while db.query(User).filter(User.username == username).first():
-        username = generate_guest_username()
-
-    user = User(username=username, is_guest=True)
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    token = create_token(user.id, user.username)
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "user_id": user.id,
-        "username": user.username,
-        "wallet_address": None,
-        "is_guest": True,
-    }
-
-
-@router.post("/wallet", response_model=TokenResponse)
-def wallet_login(body: WalletLoginRequest, db: Session = Depends(get_db)):
-    addr = body.wallet_address.lower()
-    user = db.query(User).filter(User.wallet_address == addr).first()
-
-    if user is None:
-        username = f"wallet-{addr[2:8]}"
-        user = User(username=username, wallet_address=addr, is_guest=False)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
+def _token_response(user: User) -> dict:
     token = create_token(user.id, user.username)
     return {
         "access_token": token,
@@ -69,6 +33,108 @@ def wallet_login(body: WalletLoginRequest, db: Session = Depends(get_db)):
         "wallet_address": user.wallet_address,
         "is_guest": user.is_guest,
     }
+
+
+def _ensure_username_unique(username: str, db: Session) -> bool:
+    existing = db.query(User).filter(User.username == username).first()
+    return existing is None
+
+
+#
+# Authentication
+#
+
+@router.post("/guest", response_model=TokenResponse)
+def guest_login(body: GuestLoginRequest = GuestLoginRequest(), db: Session = Depends(get_db)):
+    if body.username:
+        if not _ensure_username_unique(body.username, db):
+            raise HTTPException(409, "Username already taken")
+        username = body.username
+    else:
+        username = generate_guest_username()
+        while not _ensure_username_unique(username, db):
+            username = generate_guest_username()
+
+    user = User(username=username, is_guest=True)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return _token_response(user)
+
+
+@router.post("/wallet", response_model=TokenResponse)
+def wallet_login(body: WalletLoginRequest, db: Session = Depends(get_db)):
+    addr = body.wallet_address.lower()
+    user = db.query(User).filter(User.wallet_address == addr).first()
+
+    if user is None:
+        if body.username:
+            if not _ensure_username_unique(body.username, db):
+                raise HTTPException(409, "Username already taken")
+            username = body.username
+        else:
+            username = f"wallet-{addr[2:8]}"
+            while not _ensure_username_unique(username, db):
+                username = f"wallet-{addr[2:8]}-{addr[8:12]}"
+
+        user = User(username=username, wallet_address=addr, is_guest=False)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    return _token_response(user)
+
+
+#
+# Link wallet to existing account
+#
+
+@router.post("/link-wallet", response_model=TokenResponse)
+def link_wallet(body: LinkWalletRequest, token: str, db: Session = Depends(get_db)):
+    user = get_current_user(token, db)
+    if user is None:
+        raise HTTPException(401, "Invalid or expired token")
+
+    addr = body.wallet_address.lower()
+
+    existing = db.query(User).filter(User.wallet_address == addr, User.id != user.id).first()
+    if existing:
+        raise HTTPException(409, "Wallet already linked to another account")
+
+    user.wallet_address = addr
+    user.is_guest = False
+
+    if body.username:
+        if body.username != user.username:
+            if not _ensure_username_unique(body.username, db):
+                raise HTTPException(409, "Username already taken")
+            user.username = body.username
+
+    db.commit()
+    db.refresh(user)
+
+    return _token_response(user)
+
+
+#
+# Update username
+#
+
+@router.patch("/username", response_model=TokenResponse)
+def update_username(body: UpdateUsernameRequest, token: str, db: Session = Depends(get_db)):
+    user = get_current_user(token, db)
+    if user is None:
+        raise HTTPException(401, "Invalid or expired token")
+
+    if not _ensure_username_unique(body.username, db):
+        raise HTTPException(409, "Username already taken")
+
+    user.username = body.username
+    db.commit()
+    db.refresh(user)
+
+    return _token_response(user)
 
 
 #

@@ -148,6 +148,83 @@
       box-shadow: 0 0 10px rgba(246, 65, 108, 0.5);
     }
     
+    #username-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 20000;
+      flex-direction: column;
+    }
+    
+    #username-overlay.visible {
+      display: flex;
+    }
+    
+    #username-box {
+      background: #1a1a2e;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      border: 2px solid #f6416c;
+      max-width: 340px;
+      width: 90%;
+    }
+    
+    #username-box h3 {
+      color: white;
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+    
+    #username-box p {
+      color: #a0aec0;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+    
+    #username-box input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #4a5568;
+      background: #2d3748;
+      color: white;
+      font-size: 16px;
+      text-align: center;
+      margin-bottom: 16px;
+      outline: none;
+    }
+    
+    #username-box input:focus {
+      border-color: #f6416c;
+    }
+    
+    #username-box button {
+      background: #f6416c;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 0 4px;
+    }
+    
+    #username-box button:hover {
+      background: #d6335c;
+    }
+    
+    #username-box .skip-btn {
+      background: #4a5568;
+    }
+    
+    #username-box .skip-btn:hover {
+      background: #3a4568;
+    }
+    
     @media (max-width: 768px) {
       #mobile-controls {
         display: block;
@@ -168,9 +245,53 @@
     </div>
   </div>
   
+  <div id="username-overlay">
+    <div id="username-box">
+      <h3 id="username-title">Choose your username</h3>
+      <p id="username-desc">Or leave empty for a random one</p>
+      <input id="username-input" type="text" placeholder="Your username" maxlength="24" autocomplete="off">
+      <div>
+        <button id="username-confirm">Confirm</button>
+        <button id="username-skip" class="skip-btn">Skip</button>
+      </div>
+    </div>
+  </div>
+  
   <div id="debug-panel"></div>
   <button id="debug-toggle" onclick="toggleDebug()">Debug</button>
   
   <script type="module" src="/src/main.js"></script>
+  <script>
+    let _usernameCallback = null;
+    
+    window._showUsernamePrompt = function(title, desc, callback) {
+      _usernameCallback = callback;
+      document.getElementById('username-title').textContent = title || 'Choose your username';
+      document.getElementById('username-desc').textContent = desc || 'Or leave empty for a random one';
+      document.getElementById('username-input').value = '';
+      document.getElementById('username-overlay').classList.add('visible');
+      document.getElementById('username-input').focus();
+    };
+    
+    window._hideUsernamePrompt = function() {
+      document.getElementById('username-overlay').classList.remove('visible');
+      _usernameCallback = null;
+    };
+    
+    document.getElementById('username-confirm').addEventListener('click', function() {
+      const val = document.getElementById('username-input').value.trim() || null;
+      window._hideUsernamePrompt();
+      if (_usernameCallback) _usernameCallback(val);
+    });
+    
+    document.getElementById('username-skip').addEventListener('click', function() {
+      window._hideUsernamePrompt();
+      if (_usernameCallback) _usernameCallback(null);
+    });
+    
+    document.getElementById('username-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('username-confirm').click();
+    });
+  </script>
 </body>
 </html>

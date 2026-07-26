@@ -5,6 +5,20 @@ from datetime import datetime
 
 class WalletLoginRequest(BaseModel):
     wallet_address: str = Field(..., min_length=42, max_length=42, pattern=r"^0x[a-fA-F0-9]{40}$")
+    username: Optional[str] = Field(None, min_length=3, max_length=24, pattern=r"^[a-zA-Z0-9_-]+$")
+
+
+class GuestLoginRequest(BaseModel):
+    username: Optional[str] = Field(None, min_length=3, max_length=24, pattern=r"^[a-zA-Z0-9_-]+$")
+
+
+class LinkWalletRequest(BaseModel):
+    wallet_address: str = Field(..., min_length=42, max_length=42, pattern=r"^0x[a-fA-F0-9]{40}$")
+    username: Optional[str] = Field(None, min_length=3, max_length=24, pattern=r"^[a-zA-Z0-9_-]+$")
+
+
+class UpdateUsernameRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=24, pattern=r"^[a-zA-Z0-9_-]+$")
 
 
 class TokenResponse(BaseModel):
