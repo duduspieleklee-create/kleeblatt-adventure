@@ -377,8 +377,8 @@ export default class KleeblattAdventure extends Phaser.Scene {
       text.setText('Connecting...');
       const result = await wallet.connect();
       logDebug(`Wallet connected for linking: ${result.account}`, 'info');
+      await new Promise(r => setTimeout(r, 500));
 
-      text.setText('Pick username...');
       const username = await promptUsername('Pick your username', 'Choose a permanent username to become registered', false);
       if (!username) {
         text.setText('Link Wallet');
