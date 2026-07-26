@@ -24,6 +24,8 @@ export default class KleeblattAdventure extends Phaser.Scene {
     this.scoreText = null;
     this.infoText = null;
     this.celebrationComplete = false;
+    this.joystick = null;
+    this.isMobile = false;
   }
 
   preload() {
@@ -78,11 +80,14 @@ export default class KleeblattAdventure extends Phaser.Scene {
         right: Phaser.Input.Keyboard.KeyCodes.D
       });
 
+      this.joystick = this.game.registry.get('joystick');
+      this.isMobile = this.game.registry.get('isMobile') || false;
+
       this.physics.world.setBounds(0, 0, 800, 600);
 
       this.createUI();
       this.spawnTreasures(5);
-      logDebug('Scene create complete', 'info');
+      logDebug(`Scene create complete. Mobile: ${this.isMobile}, Joystick: ${!!this.joystick}`, 'info');
     } catch (error) {
       logDebug(`create error: ${error.message}`, 'error');
       logDebug(`Stack: ${error.stack}`, 'error');
@@ -94,16 +99,32 @@ export default class KleeblattAdventure extends Phaser.Scene {
       const speed = 300;
       this.player.setVelocity(0);
 
-      if (this.cursors.left.isDown || this.keys.left.isDown) {
-        this.player.setVelocityX(-speed);
-      } else if (this.cursors.right.isDown || this.keys.right.isDown) {
-        this.player.setVelocityX(speed);
-      }
+      let moveX = 0;
+      let moveY = 0;
 
-      if (this.cursors.up.isDown || this.keys.up.isDown) {
-        this.player.setVelocityY(-speed);
-      } else if (this.cursors.down.isDown || this.keys.down.isDown) {
-        this.player.setVelocityY(speed);
+      if (this.isMobile && this.joystick) {
+        const axis = this.joystick.getAxis();
+        moveX = axis.x;
+        moveY = axis.y;
+
+        if (Math.abs(moveX) > 0.1) {
+          this.player.setVelocityX(moveX * speed);
+        }
+        if (Math.abs(moveY) > 0.1) {
+          this.player.setVelocityY(moveY * speed);
+        }
+      } else {
+        if (this.cursors.left.isDown || this.keys.left.isDown) {
+          this.player.setVelocityX(-speed);
+        } else if (this.cursors.right.isDown || this.keys.right.isDown) {
+          this.player.setVelocityX(speed);
+        }
+
+        if (this.cursors.up.isDown || this.keys.up.isDown) {
+          this.player.setVelocityY(-speed);
+        } else if (this.cursors.down.isDown || this.keys.down.isDown) {
+          this.player.setVelocityY(speed);
+        }
       }
 
       this.checkCollisions();
@@ -121,10 +142,17 @@ export default class KleeblattAdventure extends Phaser.Scene {
       padding: { x: 10, y: 5 }
     }).setScrollFactor(0);
 
-    this.infoText = this.add.text(20, 60, 'Find treasures! WASD/Arrows to move', {
-      fontSize: '16px',
-      fill: '#ffffff'
-    }).setScrollFactor(0);
+    if (this.isMobile) {
+      this.infoText = this.add.text(20, 60, 'Use joystick to move', {
+        fontSize: '16px',
+        fill: '#ffffff'
+      }).setScrollFactor(0);
+    } else {
+      this.infoText = this.add.text(20, 60, 'Find treasures! WASD/Arrows to move', {
+        fontSize: '16px',
+        fill: '#ffffff'
+      }).setScrollFactor(0);
+    }
   }
 
   spawnTreasures(count) {
