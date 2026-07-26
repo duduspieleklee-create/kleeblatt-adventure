@@ -8,6 +8,12 @@ const logDebug = (message, type = 'info') => {
   }
 };
 
+function promptUsername(title, desc) {
+  return new Promise((resolve) => {
+    window._showUsernamePrompt(title, desc, resolve);
+  });
+}
+
 export default class WelcomeScene extends Phaser.Scene {
   constructor() {
     super('WelcomeScene');
@@ -49,23 +55,25 @@ export default class WelcomeScene extends Phaser.Scene {
       guestText.disableInteractive();
       walletBg.disableInteractive();
       walletText.disableInteractive();
-      guestText.setText('Connecting...');
 
       try {
-        logDebug('Guest login started', 'info');
-        const session = await guestLogin();
+        const username = await promptUsername('Choose your username', 'Pick a name or skip for random');
+        guestText.setText('Connecting...');
+        logDebug(`Guest login with username: ${username || 'random'}`, 'info');
+        const session = await guestLogin(username);
         logDebug(`Guest logged in: ${session.username}`, 'info');
         this.scene.start('KleeblattAdventure', {
           token: session.access_token,
           username: session.username,
           userId: session.user_id,
+          walletAddress: session.wallet_address,
           isGuest: true,
         });
       } catch (err) {
         logDebug(`Guest login error: ${err.message}`, 'error');
         guestText.setText('Error - Try again');
-        guestBg.disableInteractive();
-        guestText.disableInteractive();
+        guestBg.setInteractive({ useHandCursor: true });
+        guestText.setInteractive({ useHandCursor: true });
         walletBg.setInteractive({ useHandCursor: true });
         walletText.setInteractive({ useHandCursor: true });
       }
@@ -73,7 +81,6 @@ export default class WelcomeScene extends Phaser.Scene {
 
     guestBg.on('pointerdown', onGuestClick);
     guestText.on('pointerdown', onGuestClick);
-
     guestBg.on('pointerover', () => guestBg.setFillStyle(0x22c55e));
     guestBg.on('pointerout', () => guestBg.setFillStyle(0x4ade80));
 
@@ -95,7 +102,6 @@ export default class WelcomeScene extends Phaser.Scene {
       guestText.disableInteractive();
       walletBg.disableInteractive();
       walletText.disableInteractive();
-      walletText.setText('Connecting...');
 
       try {
         const wallet = new WalletService();
@@ -109,11 +115,13 @@ export default class WelcomeScene extends Phaser.Scene {
           return;
         }
 
+        const username = await promptUsername('Choose your username', 'Pick a name or skip for auto-generated');
+        walletText.setText('Connecting...');
         logDebug('Requesting wallet connection...', 'info');
         const result = await wallet.connect();
         logDebug(`Wallet connected: ${result.account}`, 'info');
 
-        const session = await walletLogin(result.account);
+        const session = await walletLogin(result.account, username);
         logDebug(`Wallet logged in: ${session.username}`, 'info');
         this.scene.start('KleeblattAdventure', {
           token: session.access_token,
@@ -125,8 +133,8 @@ export default class WelcomeScene extends Phaser.Scene {
       } catch (err) {
         logDebug(`Wallet login error: ${err.message}`, 'error');
         walletText.setText('Error - Try again');
-        walletBg.disableInteractive();
-        walletText.disableInteractive();
+        walletBg.setInteractive({ useHandCursor: true });
+        walletText.setInteractive({ useHandCursor: true });
         guestBg.setInteractive({ useHandCursor: true });
         guestText.setInteractive({ useHandCursor: true });
       }
@@ -134,7 +142,6 @@ export default class WelcomeScene extends Phaser.Scene {
 
     walletBg.on('pointerdown', onWalletClick);
     walletText.on('pointerdown', onWalletClick);
-
     walletBg.on('pointerover', () => walletBg.setFillStyle(0xd6335c));
     walletBg.on('pointerout', () => walletBg.setFillStyle(0xf6416c));
 
@@ -152,10 +159,10 @@ export default class WelcomeScene extends Phaser.Scene {
 
     logDebug('WelcomeScene created', 'info');
 
-    this.tryAutoLogin(width, height);
+    this.tryAutoLogin();
   }
 
-  async tryAutoLogin(w, h) {
+  async tryAutoLogin() {
     const session = getSession();
     if (!session || !session.access_token) return;
 

@@ -18,21 +18,66 @@ export function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
-export async function guestLogin() {
-  const res = await fetch(`${API_BASE}/guest`, { method: 'POST' });
-  if (!res.ok) throw new Error(`Guest login failed: ${res.status}`);
+export async function guestLogin(username = null) {
+  const body = username ? { username } : {};
+  const res = await fetch(`${API_BASE}/guest`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Guest login failed: ${res.status}`);
+  }
   const data = await res.json();
   saveSession(data);
   return data;
 }
 
-export async function walletLogin(walletAddress) {
+export async function walletLogin(walletAddress, username = null) {
+  const body = { wallet_address: walletAddress };
+  if (username) body.username = username;
   const res = await fetch(`${API_BASE}/wallet`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ wallet_address: walletAddress }),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`Wallet login failed: ${res.status}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Wallet login failed: ${res.status}`);
+  }
+  const data = await res.json();
+  saveSession(data);
+  return data;
+}
+
+export async function linkWallet(token, walletAddress, username = null) {
+  const body = { wallet_address: walletAddress };
+  if (username) body.username = username;
+  const res = await fetch(`${API_BASE}/link-wallet?token=${token}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Link wallet failed: ${res.status}`);
+  }
+  const data = await res.json();
+  saveSession(data);
+  return data;
+}
+
+export async function updateUsername(token, username) {
+  const res = await fetch(`${API_BASE}/username?token=${token}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Update username failed: ${res.status}`);
+  }
   const data = await res.json();
   saveSession(data);
   return data;
