@@ -2,10 +2,8 @@ name: Auto Deploy with PR & Changelog
 on:
   push:
     branches:
-      - master
-      - 'gh-pages'
-  schedule:
-    - cron: '0 0 * * *'
+      - main
+  workflow_dispatch:
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -23,26 +21,15 @@ jobs:
           publish_dir: ./game/dist
           publish_branch: gh-pages
       - uses: peter-evans/create-pull-request@v5
-        if: github.ref == 'refs/heads/master'
         with:
-          title: '🚀 Deployed to kleeblatt.space'
+          base: main
+          branch: deploy/update-logs
+          title: "🚀 Deployed ${{ github.event.head_commit.sha }}"
           body: |
-            ## Deployment Log
-            Source: ${{ github.ref }}
-            Time: ${{ github.event.head_commit.timestamp }}
-            
-            ### Live at
-            https://kleeblatt.space/game
-            
-            ### Build Details
-            Platform: GitHub Actions/Vite
-            Files: game/dist/*
-            
-            ### Auto-changelog
-            Labels: deploy auto-update v1.0
-            
-            Review: https://github.com/pull/new/deploy
-          labels: 'deploy auto-update changelog'
+            ## Live Deployment
+            - Source: ${{ github.ref }}
+            - Live: https://kleeblatt.space/game
+            - Files: game/dist/*
+          labels: 'deploy auto-update'
           reviewers: ${{ github.repository_owner }}
           assignees: ${{ github.actor }}
-
