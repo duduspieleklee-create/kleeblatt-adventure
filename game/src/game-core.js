@@ -232,6 +232,7 @@ export default class KleeblattAdventure extends Phaser.Scene {
     dimmer.setInteractive();
     this.settingsElements.push(dimmer);
 
+    const panelW = 320;
     const panelH = this.isGuest ? 300 : 320;
     const panel = this.add.rectangle(w / 2, h / 2, panelW, panelH, 0x1a1a2e)
       .setDepth(51).setScrollFactor(0);
