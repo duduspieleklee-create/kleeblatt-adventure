@@ -110,3 +110,23 @@ export async function getLeaderboard(limit = 20) {
   if (!res.ok) throw new Error(`Leaderboard fetch failed: ${res.status}`);
   return res.json();
 }
+
+export async function getDailyLeaderboard(date = null) {
+  const params = date ? `?date=${date}` : '';
+  const res = await fetch(`${API_BASE}/daily-leaderboard${params}`);
+  if (!res.ok) throw new Error(`Daily leaderboard fetch failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getDailyAwards(date = null) {
+  const params = date ? `?date=${date}` : '';
+  const res = await fetch(`${API_BASE}/daily-awards${params}`);
+  if (!res.ok) throw new Error(`Daily awards fetch failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getLeaderpoints() {
+  const res = await fetch(`${API_BASE}/leaderpoints`);
+  if (!res.ok) throw new Error(`Leaderpoints fetch failed: ${res.status}`);
+  return res.json();
+}

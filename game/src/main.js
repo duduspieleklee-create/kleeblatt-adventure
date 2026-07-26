@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import KleeblattAdventure from './game-core.js';
 import WelcomeScene from './WelcomeScene.js';
+import DailyLeaderboard from './DailyLeaderboard.js';
 
 const debugPanel = document.getElementById('debug-panel');
 let debugVisible = false;
@@ -136,7 +137,7 @@ const config = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  scene: [WelcomeScene, KleeblattAdventure],
+  scene: [WelcomeScene, KleeblattAdventure, DailyLeaderboard],
   physics: {
     default: 'arcade',
     arcade: {
