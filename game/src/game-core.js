@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TREASURE_CATEGORIES, addTreasure, gameData } from './core/index.js';
-import { submitScore, getProfile, linkWallet, updateUsername, clearSession } from './api.js';
+import { submitScore, getProfile, linkWallet, updateUsername, clearSession, getDailyLeaderboard, getLeaderpoints } from './api.js';
 import WalletService from './wallet.js';
 
 const logDebug = (message, type = 'info') => {
@@ -46,6 +46,9 @@ export default class KleeblattAdventure extends Phaser.Scene {
     this.highScore = 0;
     this.settingsOpen = false;
     this.settingsElements = [];
+    this.totalPoints = 0;
+    this.todayPoints = 0;
+    this.totalPointsText = null;
   }
 
   init(data) {
@@ -184,7 +187,21 @@ export default class KleeblattAdventure extends Phaser.Scene {
       padding: { x: 10, y: 5 },
     }).setScrollFactor(0);
 
-    this.highScoreText = this.add.text(20, 82, 'Best: ...', {
+    this.todayPointsText = this.add.text(20, 78, 'Today: ...', {
+      fontSize: '13px',
+      fill: '#fbbf24',
+      backgroundColor: '#00000080',
+      padding: { x: 6, y: 2 },
+    }).setScrollFactor(0);
+
+    this.totalPointsText = this.add.text(20, 98, 'Total: ...', {
+      fontSize: '13px',
+      fill: '#a0aec0',
+      backgroundColor: '#00000080',
+      padding: { x: 6, y: 2 },
+    }).setScrollFactor(0);
+
+    this.highScoreText = this.add.text(20, 118, 'Best: ...', {
       fontSize: '14px',
       fill: '#a0aec0',
       backgroundColor: '#00000080',
@@ -312,7 +329,28 @@ export default class KleeblattAdventure extends Phaser.Scene {
       y += 50;
     }
 
-    y += 10;
+    y += 5;
+
+    const lbBg = this.add.rectangle(w / 2, y, 240, 40, 0xfbbf24)
+      .setDepth(52).setScrollFactor(0);
+    lbBg.setStrokeStyle(1, 0xd97706);
+    lbBg.setInteractive({ useHandCursor: true });
+    const lbText = this.add.text(w / 2, y, 'Leaderboard \uD83C\uDFC6', {
+      fontSize: '16px',
+      color: '#000',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(53).setScrollFactor(0);
+    lbBg.on('pointerdown', () => {
+      this.closeSettings();
+      this.scene.start('DailyLeaderboard', {
+        token: this.token,
+        username: this.username,
+      });
+    });
+    lbBg.on('pointerover', () => lbBg.setFillStyle(0xd97706));
+    lbBg.on('pointerout', () => lbBg.setFillStyle(0xfbbf24));
+    this.settingsElements.push(lbBg, lbText);
+    y += 50;
 
     const logoutBg = this.add.rectangle(w / 2, y, 200, 34, 0x718096)
       .setDepth(52).setScrollFactor(0);
@@ -412,10 +450,24 @@ export default class KleeblattAdventure extends Phaser.Scene {
     try {
       const profile = await getProfile(this.token);
       this.highScore = profile.high_score;
+      this.totalPoints = profile.total_points || 0;
       this.highScoreText.setText(`Best: ${this.highScore}`);
-      logDebug(`Profile: high=${this.highScore}, games=${profile.games_played}`, 'info');
+      this.totalPointsText.setText(`Total: ${this.totalPoints} pts`);
+      logDebug(`Profile: high=${this.highScore}, total=${this.totalPoints}, games=${profile.games_played}`, 'info');
     } catch (err) {
       logDebug(`Profile fetch failed: ${err.message}`, 'warn');
+    }
+
+    try {
+      const daily = await getDailyLeaderboard();
+      this.todayPoints = 0;
+      if (this.username && daily) {
+        const me = daily.find(d => d.username === this.username);
+        if (me) this.todayPoints = me.points_today;
+      }
+      this.todayPointsText.setText(`Today: ${this.todayPoints} pts`);
+    } catch {
+      this.todayPointsText.setText('Today: ...');
     }
   }
 
