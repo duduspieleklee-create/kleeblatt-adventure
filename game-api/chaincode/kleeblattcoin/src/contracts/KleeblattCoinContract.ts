@@ -1,7 +1,6 @@
 import { ChainCallDTO, SubmitCallDTO, TokenClassKey } from "@gala-chain/api";
 import { GalaChainContext, GalaContract, GalaTransaction, GalaTransactionType, UnsignedEvaluate } from "@gala-chain/chaincode";
 import { IsString, IsNumber, ValidateNested } from "class-validator";
-import { version } from "../../package.json";
 
 /**
  * DTO for creating a new KleeblattCoin token class.
@@ -62,7 +61,7 @@ export class MintKleeblattCoinDto extends SubmitCallDTO {
  */
 export class KleeblattCoinContract extends GalaContract {
   constructor() {
-    super("KleeblattCoinContract", version);
+    super("KleeblattCoinContract", "1.0.0");
   }
 
   /**
