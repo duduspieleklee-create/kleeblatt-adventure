@@ -105,14 +105,19 @@ jobs:
         run: |
           npm install -g @gala-chain/cli@^3.1.4
 
+      - name: Register chaincode on GalaChain
+        run: |
+          galachain register "${{ secrets.GALA_PRIVATE_KEY }}" --no-prompt
+        env:
+          DEV_PRIVATE_KEY: ${{ secrets.GALA_PRIVATE_KEY }}
+
       - name: Deploy to GalaChain Testnet
         run: |
-          # This step would run the actual deployment
-          # The exact command depends on the GalaChain deployment process
-          echo "Deployment to GalaChain testnet would happen here"
-          
-          # Example command (would need proper credentials):
-          # galachain deploy ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ secrets.GALA_PRIVATE_KEY }}
+          IMAGE_ID=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          galachain deploy "$IMAGE_ID:${{ github.sha }}" "${{ secrets.GALA_PRIVATE_KEY }}" --no-prompt
+        env:
+          DEV_PRIVATE_KEY: ${{ secrets.GALA_PRIVATE_KEY }}
 
   # Lightweight security scan that runs in parallel for reporting only
   security-report:
