@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TREASURE_CATEGORIES, addTreasure, gameData } from './core/index.js';
+import WalletService from './wallet.js';
 
 const logDebug = (message, type = 'info') => {
   if (typeof window !== 'undefined' && window.__debugLog) {
@@ -26,6 +27,8 @@ export default class KleeblattAdventure extends Phaser.Scene {
     this.celebrationComplete = false;
     this.joystick = null;
     this.isMobile = false;
+    this.walletService = null;
+    this.walletText = null;
   }
 
   preload() {
@@ -83,6 +86,9 @@ export default class KleeblattAdventure extends Phaser.Scene {
       this.joystick = this.game.registry.get('joystick');
       this.isMobile = this.game.registry.get('isMobile') || false;
 
+      this.walletService = new WalletService();
+      window.wallet = this.walletService;
+
       this.physics.world.setBounds(0, 0, 800, 600);
 
       this.createUI();
@@ -128,6 +134,7 @@ export default class KleeblattAdventure extends Phaser.Scene {
       }
 
       this.checkCollisions();
+      this.updateWalletUI();
     } catch (error) {
       logDebug(`update error: ${error.message}`, 'error');
       logDebug(`Stack: ${error.stack}`, 'error');
@@ -152,6 +159,47 @@ export default class KleeblattAdventure extends Phaser.Scene {
         fontSize: '16px',
         fill: '#ffffff'
       }).setScrollFactor(0);
+    }
+
+    this.walletText = this.add.text(400, 20, 'Connect Wallet', {
+      fontSize: '18px',
+      fill: '#ffffff',
+      backgroundColor: '#f6416c',
+      padding: { x: 15, y: 8 }
+    }).setOrigin(0.5).setScrollFactor(0).setInteractive({ useHandCursor: true });
+
+    this.walletText.on('pointerdown', () => {
+      this.connectWallet();
+    });
+
+    this.updateWalletUI();
+  }
+
+  async connectWallet() {
+    try {
+      logDebug('Connecting wallet...', 'info');
+      const result = await this.walletService.connect();
+      logDebug(`Wallet connected: ${result.account}`, 'info');
+      this.updateWalletUI();
+      this.infoText.setText('Wallet connected! Start playing!');
+    } catch (error) {
+      logDebug(`Wallet connection failed: ${error.message}`, 'error');
+      this.infoText.setText('Wallet connection failed');
+    }
+  }
+
+  updateWalletUI() {
+    if (!this.walletText) return;
+    const status = this.walletService.getConnectedStatus();
+    if (status.isConnected) {
+      this.walletText.setText(`Wallet: ${status.address}`);
+      this.walletText.setBackgroundColor('#4ade80');
+    } else if (status.isSupported) {
+      this.walletText.setText('Connect Wallet');
+      this.walletText.setBackgroundColor('#f6416c');
+    } else {
+      this.walletText.setText('No Wallet');
+      this.walletText.setBackgroundColor('#888888');
     }
   }
 
