@@ -1,6 +1,6 @@
-# 🎮 Kleinanzeigen Adventure - Gala Playworks 2D Browser Game
+# Kleeblatt Adventure Game
 
-A simple 2D browser-based adventure game built for the **Gala/Playworks ecosystem**. Move around with WASD or Arrow keys, collect glowing treasure gems, and save your score!
+Welcome to Kleeblatt Adventure, an exciting 2D adventure game featuring GalaChain blockchain integration! Players explore the world, find clovers, and earn KleeblattCoin (KLB) tokens that are backed by the GalaChain blockchain.
 
 ## ✨ Features
 
