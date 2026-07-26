@@ -38,6 +38,21 @@ The deployment process is automated using GitHub Actions with the following stag
 
 ## Security Measures
 
+### Optimized Security Scanning
+
+The deployment process includes optimized security measures that balance security with deployment speed:
+
+1. **Fast Deployments**: The primary deployment workflow (`galachain-fast-deploy.yml`) focuses on essential checks that don't slow down the deployment process
+2. **Lightweight Security Scanning**: Basic security checks run during the deployment workflow to catch obvious issues
+3. **Periodic Deep Scanning**: Comprehensive security scans run weekly via the `periodic-security-audit.yml` workflow
+4. **Parallel Security Reporting**: Security scans run in parallel to deployment, allowing faster releases while still providing security feedback
+
+### Security Workflow Details
+
+- `galachain-fast-deploy.yml`: Primary deployment workflow with essential security checks
+- `galachain-testnet-deploy.yml`: Alternative workflow with more comprehensive but configurable security scanning
+- `periodic-security-audit.yml`: Runs comprehensive security scans weekly to catch issues missed by lighter scans
+
 ### Secrets Management
 - All secrets are stored in GitHub Actions encrypted secrets
 - Private keys for GalaChain deployment are never exposed in logs
