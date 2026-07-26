@@ -20,7 +20,7 @@ Top 10 players each day receive KLB coins → cumulative on-chain Leaderpoints r
 - [x] Update `GET /api/game/profile` to include `total_points` field
 - [x] Add schemas: `DailyLeaderboardEntry`, `DailyAwardResponse`
 
----
+----
 
 ## Step 2: GalaChain KleeblattCoin Chaincode + Node.js Mint Service ✅
 
