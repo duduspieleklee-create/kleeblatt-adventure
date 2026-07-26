@@ -8,12 +8,6 @@ const logDebug = (message, type = 'info') => {
   }
 };
 
-function promptUsername(title, desc, canSkip = true) {
-  return new Promise((resolve) => {
-    window._showUsernamePrompt(title, desc, canSkip, resolve);
-  });
-}
-
 export default class WelcomeScene extends Phaser.Scene {
   constructor() {
     super('WelcomeScene');
@@ -117,12 +111,8 @@ export default class WelcomeScene extends Phaser.Scene {
         logDebug('Requesting wallet connection...', 'info');
         const result = await wallet.connect();
         logDebug(`Wallet connected: ${result.account}`, 'info');
-        await new Promise(r => setTimeout(r, 500));
 
-        const username = await promptUsername('Pick your username', 'Choose a permanent username', false);
-        if (!username) return;
-
-        const session = await walletLogin(result.account, username);
+        const session = await walletLogin(result.account);
         logDebug(`Wallet logged in: ${session.username}`, 'info');
         this.scene.start('KleeblattAdventure', {
           token: session.access_token,
@@ -146,7 +136,7 @@ export default class WelcomeScene extends Phaser.Scene {
     walletBg.on('pointerover', () => walletBg.setFillStyle(0xd6335c));
     walletBg.on('pointerout', () => walletBg.setFillStyle(0xf6416c));
 
-    this.add.text(width / 2, 440, 'Your progress is saved automatically', {
+    this.add.text(width / 2, 440, 'You can set your username in Settings later', {
       fontSize: '13px',
       fontFamily: 'Arial',
       color: '#718096',
