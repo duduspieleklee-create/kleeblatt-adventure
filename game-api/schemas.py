@@ -35,9 +35,25 @@ class ProfileResponse(BaseModel):
     username: str
     wallet_address: Optional[str]
     is_guest: bool
+    total_points: int
     high_score: int
     total_treasures: int
     games_played: int
+
+
+class DailyLeaderboardEntry(BaseModel):
+    rank: int
+    user_id: int
+    username: str
+    points_today: int
+
+
+class DailyAwardResponse(BaseModel):
+    rank: int
+    username: str
+    coins_awarded: int
+    tx_hash: Optional[str]
+    date: str
 
 
 class ScoreSubmitRequest(BaseModel):

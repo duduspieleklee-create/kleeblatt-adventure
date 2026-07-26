@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import date, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
-from models import User, GameScore
+from models import User, GameScore, DailyAward
 from schemas import (
     WalletLoginRequest, GuestLoginRequest, LinkWalletRequest,
     UpdateUsernameRequest, TokenResponse, ProfileResponse,
-    ScoreSubmitRequest, ScoreResponse,
+    ScoreSubmitRequest, ScoreResponse, DailyLeaderboardEntry,
+    DailyAwardResponse,
 )
 from auth import create_token, decode_token, generate_guest_username
 
@@ -167,6 +170,7 @@ def get_profile(token: str, db: Session = Depends(get_db)):
         "username": user.username,
         "wallet_address": user.wallet_address,
         "is_guest": user.is_guest,
+        "total_points": user.total_points,
         "high_score": max_score,
         "total_treasures": total_treasures,
         "games_played": games_played,
@@ -189,6 +193,11 @@ def submit_score(body: ScoreSubmitRequest, token: str, db: Session = Depends(get
         treasures_collected=body.treasures_collected,
     )
     db.add(score)
+
+    user.total_points += body.score
+    if body.treasures_collected:
+        user.total_points += body.treasures_collected
+
     db.commit()
     db.refresh(score)
 
@@ -199,6 +208,75 @@ def submit_score(body: ScoreSubmitRequest, token: str, db: Session = Depends(get
         "username": user.username,
         "created_at": score.created_at,
     }
+
+
+#
+# Daily Leaderboard
+#
+
+@router.get("/daily-leaderboard", response_model=list[DailyLeaderboardEntry])
+def get_daily_leaderboard(
+    target_date: date = Query(None),
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    target = target_date or date.today()
+    next_day = target + timedelta(days=1)
+
+    scores = (
+        db.query(
+            GameScore.user_id,
+            func.sum(GameScore.score).label("points_today"),
+            User.username,
+        )
+        .join(User, GameScore.user_id == User.id)
+        .filter(GameScore.created_at >= target, GameScore.created_at < next_day)
+        .group_by(GameScore.user_id, User.username)
+        .order_by(func.sum(GameScore.score).desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            "rank": i + 1,
+            "user_id": row.user_id,
+            "username": row.username,
+            "points_today": row.points_today,
+        }
+        for i, row in enumerate(scores)
+    ]
+
+
+#
+# Daily Awards
+#
+
+@router.get("/daily-awards", response_model=list[DailyAwardResponse])
+def get_daily_awards(
+    target_date: date = Query(None),
+    db: Session = Depends(get_db),
+):
+    target = target_date or date.today()
+
+    awards = (
+        db.query(DailyAward, User.username)
+        .join(User, DailyAward.user_id == User.id)
+        .filter(DailyAward.date == target)
+        .order_by(DailyAward.rank)
+        .all()
+    )
+
+    return [
+        {
+            "rank": a.rank,
+            "username": uname,
+            "coins_awarded": a.coins_awarded,
+            "tx_hash": a.tx_hash,
+            "date": str(a.date),
+        }
+        for a, uname in awards
+    ]
 
 
 #
