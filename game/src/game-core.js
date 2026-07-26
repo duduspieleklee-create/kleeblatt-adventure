@@ -368,16 +368,17 @@ export default class KleeblattAdventure extends Phaser.Scene {
 
   async handleLinkWallet(bg, text) {
     bg.disableInteractive();
-    text.setText('Connecting...');
     try {
       const wallet = new WalletService();
       if (!wallet.isSupported()) {
         text.setText('MetaMask required');
         return;
       }
+      text.setText('Connecting...');
       const result = await wallet.connect();
       logDebug(`Wallet connected for linking: ${result.account}`, 'info');
 
+      text.setText('Pick username...');
       const username = await promptUsername('Pick your username', 'Choose a permanent username to become registered', false);
       if (!username) {
         text.setText('Link Wallet');
