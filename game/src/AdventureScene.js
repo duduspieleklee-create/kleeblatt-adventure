@@ -11,7 +11,7 @@ export const gameData = {
 };
 
 // Main ADVENTURE game class
-export default class KleinanzeigenAdventure extends Phaser.Scene {
+export default class KleeblattAdventure extends Phaser.Scene {
   constructor(config) {
     super('ADVENTURE', config);
     this.player = null;

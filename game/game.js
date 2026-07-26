@@ -3,7 +3,7 @@
  * Simple player movement and treasure collection game
  */
 
-class KleinanzeigenAdventure {
+class KleeblattAdventure {
   constructor() {
     this.canvas = null;
     this.ctx = null;
@@ -283,7 +283,7 @@ function showCollectionMessage(treasure) {
 class Game {
   constructor() {
     window.addEventListener('DOMContentLoaded', () => {
-      new KleinanzeigenAdventure();
+      new KleeblattAdventure();
     });
   }
 }
