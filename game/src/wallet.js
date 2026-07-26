@@ -1,39 +1,27 @@
-// Wallet connection for Gala Games
 export class WalletService {
   constructor() {
     this.isConnected = false;
     this.account = null;
     this.gameSession = null;
-    this.galaSDK = null;
-    
-    // GALA mainnet = 71394, testnet = 71337 (use appropriate chain ID)
-    this.chainId = 71394;
+    this.chainId = 71337;
   }
-  
-  // Check if WalletSDK is available
+
   isSupported() {
     return typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
   }
-  
-  // Request wallet connection
+
   async connect() {
     if (!this.isSupported()) {
       throw new Error('Wallet not found. Please install MetaMask or connect Coinbase Wallet.');
     }
-    
+
     try {
-      // Request account access
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts',
       });
-      
-      // Set connected state
+
       this.account = accounts[0];
       this.isConnected = true;
-      
-      // Initialize Gala session
-      await this.initGalaSession();
-      
       return { success: true, account: this.account };
     } catch (error) {
       console.error('Wallet connection failed:', error);
@@ -43,44 +31,36 @@ export class WalletService {
       throw error;
     }
   }
-  
-  // Disconnect wallet
+
   async disconnect() {
     this.isConnected = false;
     this.account = null;
     this.gameSession = null;
     return true;
   }
-  
-  // Initialize Gala Games SDK session
+
   async initGalaSession() {
     try {
-      // Import Gala SDK
-      const GalaSDK = await import('@gala/gala-games-defi-start-sdk');
-      
-      this.galaSDK = new GalaSDK();
-      
-      // Connect to Gala network
+      const GalaSDK = await import('@gala-chain/sdk');
+      const SDK = GalaSDK.default || GalaSDK;
+      this.galaSDK = new SDK();
       this.gameSession = await this.galaSDK.connectAccount(this.account, this.chainId);
-      
       return { success: true, session: this.gameSession };
     } catch (error) {
       console.error('Gala session failed:', error);
       throw error;
     }
   }
-  
-  // Get current account address
+
   getAddress() {
     return this.account;
   }
-  
-  // Check WALLET connection status
+
   getConnectedStatus() {
     const isSupported = this.isSupported();
     const isWallet = this.isConnected;
     const address = this.isConnected ? this.account.slice(0, 6) + '...' + this.account.slice(-4) : null;
-    
+
     return {
       isSupported,
       isConnected: isWallet,
@@ -88,8 +68,7 @@ export class WalletService {
       chainId: this.chainId
     };
   }
-  
-  // Request specific network (Chain ID)
+
   async switchNetwork(chainId) {
     try {
       await window.ethereum.request({
@@ -99,12 +78,10 @@ export class WalletService {
       this.chainId = chainId;
       return true;
     } catch (error) {
-      // Network not added, try to add it
       throw new Error('Gala network not found. Please add the network manually.');
     }
   }
-  
-  // Get formatted network name
+
   getNetworkName(chainId) {
     const networks = {
       71337: 'Gala Games Testnet',
@@ -112,8 +89,7 @@ export class WalletService {
     };
     return networks[chainId] || `Chain ${chainId}`;
   }
-  
-  // Reset wallet state
+
   async reset() {
     await this.disconnect();
     this.galaSDK = null;
@@ -121,7 +97,6 @@ export class WalletService {
   }
 }
 
-// HTML helper functions for UI updates
 export function updateWalletUI(connStatus) {
   const button = document.getElementById('wallet-button');
   if (button) {

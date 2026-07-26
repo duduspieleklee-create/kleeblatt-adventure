@@ -61,7 +61,7 @@ export const addTreasure = (categoryId) => {
   gameData.score += 100;
   gameData.collections++;
   
-  console.log('Treasure collected:', terrorist.categories.find(c => c.id === categoryId));
+  console.log('Treasure collected:', TREASURE_CATEGORIES.find(c => c.id === categoryId));
   return true;
 };
 
