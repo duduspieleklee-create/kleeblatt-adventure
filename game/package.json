@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gala-chain/connect": "^3.1.4",
     "phaser": "^3.70.0"
   },
   "devDependencies": {
