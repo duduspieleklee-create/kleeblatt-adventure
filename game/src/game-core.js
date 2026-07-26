@@ -10,9 +10,9 @@ const logDebug = (message, type = 'info') => {
   console.log(`[${type}] ${message}`);
 };
 
-function promptUsername(title, desc) {
+function promptUsername(title, desc, canSkip = false) {
   return new Promise((resolve) => {
-    window._showUsernamePrompt(title, desc, resolve);
+    window._showUsernamePrompt(title, desc, canSkip, resolve);
   });
 }
 
@@ -232,8 +232,7 @@ export default class KleeblattAdventure extends Phaser.Scene {
     dimmer.setInteractive();
     this.settingsElements.push(dimmer);
 
-    const panelW = 320;
-    const panelH = this.isGuest ? 350 : 300;
+    const panelH = this.isGuest ? 300 : 320;
     const panel = this.add.rectangle(w / 2, h / 2, panelW, panelH, 0x1a1a2e)
       .setDepth(51).setScrollFactor(0);
     panel.setStrokeStyle(2, 0xf6416c);
@@ -248,13 +247,23 @@ export default class KleeblattAdventure extends Phaser.Scene {
 
     let y = h / 2 - panelH / 2 + 75;
 
+    const accountType = this.isGuest ? 'Guest Account' : 'Registered Account';
+    const typeColor = this.isGuest ? '#fbbf24' : '#4ade80';
+    const typeLine = this.add.text(w / 2, y, accountType, {
+      fontSize: '14px',
+      color: typeColor,
+    }).setOrigin(0.5).setDepth(52).setScrollFactor(0);
+    this.settingsElements.push(typeLine);
+
+    y += 28;
+
     const userLine = this.add.text(w / 2, y, `Username: ${this.username}`, {
       fontSize: '16px',
       color: '#4ade80',
     }).setOrigin(0.5).setDepth(52).setScrollFactor(0);
     this.settingsElements.push(userLine);
 
-    y += 35;
+    y += 30;
 
     if (this.walletAddress) {
       const shortAddr = this.walletAddress.slice(0, 6) + '...' + this.walletAddress.slice(-4);
@@ -268,21 +277,22 @@ export default class KleeblattAdventure extends Phaser.Scene {
 
     y += 10;
 
-    const changeNameBg = this.add.rectangle(w / 2, y, 240, 40, 0x4ade80)
-      .setDepth(52).setScrollFactor(0);
-    changeNameBg.setStrokeStyle(1, 0x22c55e);
-    changeNameBg.setInteractive({ useHandCursor: true });
-    const changeNameText = this.add.text(w / 2, y, 'Change Username', {
-      fontSize: '16px',
-      color: '#000',
-      fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(53).setScrollFactor(0);
-    changeNameBg.on('pointerdown', () => this.handleChangeUsername(changeNameBg, changeNameText));
-    changeNameBg.on('pointerover', () => changeNameBg.setFillStyle(0x22c55e));
-    changeNameBg.on('pointerout', () => changeNameBg.setFillStyle(0x4ade80));
-    this.settingsElements.push(changeNameBg, changeNameText);
-
-    y += 50;
+    if (!this.isGuest) {
+      const changeNameBg = this.add.rectangle(w / 2, y, 240, 40, 0x4ade80)
+        .setDepth(52).setScrollFactor(0);
+      changeNameBg.setStrokeStyle(1, 0x22c55e);
+      changeNameBg.setInteractive({ useHandCursor: true });
+      const changeNameText = this.add.text(w / 2, y, 'Change Username', {
+        fontSize: '16px',
+        color: '#000',
+        fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(53).setScrollFactor(0);
+      changeNameBg.on('pointerdown', () => this.handleChangeUsername(changeNameBg, changeNameText));
+      changeNameBg.on('pointerover', () => changeNameBg.setFillStyle(0x22c55e));
+      changeNameBg.on('pointerout', () => changeNameBg.setFillStyle(0x4ade80));
+      this.settingsElements.push(changeNameBg, changeNameText);
+      y += 50;
+    }
 
     if (this.isGuest) {
       const linkBg = this.add.rectangle(w / 2, y, 240, 40, 0xf6416c)
@@ -298,7 +308,6 @@ export default class KleeblattAdventure extends Phaser.Scene {
       linkBg.on('pointerover', () => linkBg.setFillStyle(0xd6335c));
       linkBg.on('pointerout', () => linkBg.setFillStyle(0xf6416c));
       this.settingsElements.push(linkBg, linkText);
-
       y += 50;
     }
 
@@ -339,7 +348,7 @@ export default class KleeblattAdventure extends Phaser.Scene {
     bg.disableInteractive();
     text.setText('...');
     try {
-      const username = await promptUsername('New username', 'Enter a new username');
+      const username = await promptUsername('New username', 'Pick a new permanent username', false);
       if (!username) {
         text.setText('Change Username');
         bg.setInteractive({ useHandCursor: true });
@@ -368,7 +377,12 @@ export default class KleeblattAdventure extends Phaser.Scene {
       const result = await wallet.connect();
       logDebug(`Wallet connected for linking: ${result.account}`, 'info');
 
-      const username = await promptUsername('Set permanent username', 'Choose your registered username');
+      const username = await promptUsername('Pick your username', 'Choose a permanent username to become registered', false);
+      if (!username) {
+        text.setText('Link Wallet');
+        bg.setInteractive({ useHandCursor: true });
+        return;
+      }
       text.setText('Linking...');
 
       const session = await linkWallet(this.token, result.account, username);

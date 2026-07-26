@@ -8,9 +8,9 @@ const logDebug = (message, type = 'info') => {
   }
 };
 
-function promptUsername(title, desc) {
+function promptUsername(title, desc, canSkip = true) {
   return new Promise((resolve) => {
-    window._showUsernamePrompt(title, desc, resolve);
+    window._showUsernamePrompt(title, desc, canSkip, resolve);
   });
 }
 
@@ -55,12 +55,10 @@ export default class WelcomeScene extends Phaser.Scene {
       guestText.disableInteractive();
       walletBg.disableInteractive();
       walletText.disableInteractive();
+      guestText.setText('Connecting...');
 
       try {
-        const username = await promptUsername('Choose your username', 'Pick a name or skip for random');
-        guestText.setText('Connecting...');
-        logDebug(`Guest login with username: ${username || 'random'}`, 'info');
-        const session = await guestLogin(username);
+        const session = await guestLogin();
         logDebug(`Guest logged in: ${session.username}`, 'info');
         this.scene.start('KleeblattAdventure', {
           token: session.access_token,
@@ -115,7 +113,8 @@ export default class WelcomeScene extends Phaser.Scene {
           return;
         }
 
-        const username = await promptUsername('Choose your username', 'Pick a name or skip for auto-generated');
+        const username = await promptUsername('Pick your username', 'Choose a permanent username', false);
+        if (!username) return;
         walletText.setText('Connecting...');
         logDebug('Requesting wallet connection...', 'info');
         const result = await wallet.connect();

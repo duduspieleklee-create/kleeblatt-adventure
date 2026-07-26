@@ -138,6 +138,16 @@ def update_username(body: UpdateUsernameRequest, token: str, db: Session = Depen
 
 
 #
+# Username check
+#
+
+@router.get("/check-username")
+def check_username(username: str, db: Session = Depends(get_db)):
+    available = _ensure_username_unique(username, db)
+    return {"username": username, "available": available}
+
+
+#
 # Profile
 #
 
