@@ -1,0 +1,15 @@
+[Unit]
+Description=Kleeblatt Chaincode Mint Service
+After=network.target
+
+[Service]
+Type=simple
+User=debian
+WorkingDirectory=/opt/game-api/chaincode
+EnvironmentFile=/opt/game-api/chaincode/.env
+ExecStart=/usr/bin/node /opt/game-api/chaincode/server.mjs
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

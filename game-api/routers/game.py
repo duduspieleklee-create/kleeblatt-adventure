@@ -249,6 +249,35 @@ def get_daily_leaderboard(
 
 
 #
+# Leaderpoints (proxied from chain)
+#
+
+@router.get("/leaderpoints")
+def get_leaderpoints(db: Session = Depends(get_db)):
+    awards = (
+        db.query(
+            DailyAward.user_id,
+            func.sum(DailyAward.coins_awarded).label("coins"),
+            func.max(User.username).label("username"),
+        )
+        .join(User, DailyAward.user_id == User.id)
+        .group_by(DailyAward.user_id)
+        .order_by(func.sum(DailyAward.coins_awarded).desc())
+        .limit(50)
+        .all()
+    )
+    return [
+        {
+            "rank": i + 1,
+            "user_id": row.user_id,
+            "username": row.username,
+            "coins": row.coins,
+        }
+        for i, row in enumerate(awards)
+    ]
+
+
+#
 # Daily Awards
 #
 
