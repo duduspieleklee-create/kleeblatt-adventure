@@ -195,8 +195,6 @@ def submit_score(body: ScoreSubmitRequest, token: str, db: Session = Depends(get
     db.add(score)
 
     user.total_points += body.score
-    if body.treasures_collected:
-        user.total_points += body.treasures_collected
 
     db.commit()
     db.refresh(score)
