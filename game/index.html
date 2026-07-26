@@ -452,22 +452,24 @@
     $confirm.addEventListener('click', function() {
       const val = $input.value.trim();
       if (!val || val.length < 3) return;
+      const cb = _usernameCallback;
       window._hideUsernamePrompt();
-      if (_usernameCallback) _usernameCallback(val);
+      if (cb) cb(val);
     });
     
     $skip.addEventListener('click', function() {
+      const cb = _usernameCallback;
       window._hideUsernamePrompt();
-      if (_usernameCallback === null) return;
-      _usernameCallback(null);
+      if (cb) cb(null);
     });
     
     $input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
         const val = $input.value.trim();
         if (!val || val.length < 3) return;
+        const cb = _usernameCallback;
         window._hideUsernamePrompt();
-        if (_usernameCallback) _usernameCallback(val);
+        if (cb) cb(val);
       }
     });
   </script>
