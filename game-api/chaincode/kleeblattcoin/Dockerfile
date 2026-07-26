@@ -21,8 +21,7 @@ RUN adduser -S nextjs -u 1001
 RUN chown -R nextjs:nodejs /app
 USER nextjs
 
-# Expose the port the app runs on
-EXPOSE 3000
-
-# Define the command to run the application
-CMD ["npm", "start"]
+# Note: GalaChain contracts don't typically run as standalone applications
+# This Dockerfile is for packaging the contract for deployment to GalaChain
+# Define a default command (can be overridden during deployment)
+CMD ["sh", "-c", "echo 'GalaChain contract packaged successfully'"]
