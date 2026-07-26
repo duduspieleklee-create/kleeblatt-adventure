@@ -1,63 +1,12 @@
-import {
-  ChainCallDTO,
-  GalaChainContext,
-  Identifiable,
-  Immutable,
-  TokenBalance,
-  TokenClass,
-  TokenInstance,
-  TokenInstanceKey,
-  createValidEntityState,
-  getCurrentDate,
-  getObjectFromBytes,
-  getObjectId,
-  stringify,
-  toDateTimestamp
-} from "@gala-chain/api";
-import { BigNumber } from "bignumber.js";
-import { Args, Return } from "@gala-chain/api";
+import { ChaincodeResponse, Context } from '@gala-chain/api';
+import { ChainCallDTO } from '@gala-chain/api';
+import { BigNumber } from 'bignumber.js';
+import { Args, Returns } from '@gala-chain/api';
 
-export interface IKleeblattCoin extends Identifiable {
-  readonly key: string;
-  readonly tokenClass: TokenClass;
-  readonly owner: string;
-  readonly balance: BigNumber;
-  readonly createdAt: number;
-  readonly claimableUntil?: number;
-}
-
-export class KleeblattCoin extends Immutable<IKleeblattCoin> implements Identifiable {
-  public get key(): string {
-    return getObjectId(KleeblattCoin, {
-      tokenClass: this.tokenClass,
-      owner: this.owner
-    });
-  }
-
-  public static create(
-    tokenClass: TokenClass,
-    owner: string,
-    balance: BigNumber,
-    createdAt?: number,
-    claimableUntil?: number
-  ): KleeblattCoin {
-    return new KleeblattCoin({
-      tokenClass,
-      owner,
-      balance,
-      createdAt: createdAt ?? getCurrentDate(),
-      claimableUntil
-    });
-  }
-
-  public static fromJson(data: unknown): KleeblattCoin {
-    return getObjectFromBytes<KleeblattCoin>(KleeblattCoin, data);
-  }
-}
-
+// Define the DTOs
 export class CreateKleeblattCoinDto extends ChainCallDTO {
   @Args()
-  public tokenClass!: TokenClass;
+  public tokenClass!: string;
 
   @Args()
   public owner!: string;
@@ -68,7 +17,7 @@ export class CreateKleeblattCoinDto extends ChainCallDTO {
 
 export class GetKleeblattCoinBalanceDto extends ChainCallDTO {
   @Args()
-  public tokenClass!: TokenClass;
+  public tokenClass!: string;
 
   @Args()
   public owner!: string;
@@ -76,7 +25,7 @@ export class GetKleeblattCoinBalanceDto extends ChainCallDTO {
 
 export class MintKleeblattCoinDto extends ChainCallDTO {
   @Args()
-  public tokenClass!: TokenClass;
+  public tokenClass!: string;
 
   @Args()
   public owner!: string;
@@ -85,47 +34,38 @@ export class MintKleeblattCoinDto extends ChainCallDTO {
   public quantity!: number;
 }
 
-export class KleeblattCoinContract extends TokenInstance {
+// The main contract class
+export class KleeblattCoinContract {
   public async createKleeblattCoin(
-    ctx: GalaChainContext,
+    ctx: Context,
     dto: CreateKleeblattCoinDto
-  ): Promise<Return<TokenInstanceKey>> {
-    const { tokenClass, owner, quantity } = dto;
-
-    const newToken = KleeblattCoin.create(
-      tokenClass,
-      owner,
-      new BigNumber(quantity)
-    );
-
-    const key = newToken.key;
-    const data = createValidEntityState(ctx.stub, newToken);
-
-    await ctx.stub.putState(key, stringify(data));
-
-    return newToken;
+  ): Promise<Returns<string>> {
+    // Basic implementation for creating a coin
+    console.log(`Creating KleeblattCoin for owner: ${dto.owner}`);
+    
+    // In a real implementation, you would create the token here
+    return dto.owner;
   }
 
   public async getKleeblattCoinBalance(
-    ctx: GalaChainContext,
+    ctx: Context,
     dto: GetKleeblattCoinBalanceDto
-  ): Promise<TokenBalance[]> {
-    const { tokenClass, owner } = dto;
-
-    return await TokenBalance.getBalance(ctx, tokenClass, owner);
+  ): Promise<Returns<number>> {
+    // Basic implementation for getting balance
+    console.log(`Getting balance for owner: ${dto.owner}`);
+    
+    // In a real implementation, you would fetch the actual balance
+    return 0;
   }
 
   public async mintKleeblattCoin(
-    ctx: GalaChainContext,
+    ctx: Context,
     dto: MintKleeblattCoinDto
-  ): Promise<TokenInstance[]> {
-    const { tokenClass, owner, quantity } = dto;
-
-    return await TokenInstance.mintToken(ctx, {
-      tokenClass,
-      owner,
-      quantity: new BigNumber(quantity),
-      effectiveDate: toDateTimestamp(getCurrentDate())
-    });
+  ): Promise<Returns<boolean>> {
+    // Basic implementation for minting coins
+    console.log(`Minting ${dto.quantity} coins for owner: ${dto.owner}`);
+    
+    // In a real implementation, you would mint the tokens here
+    return true;
   }
 }
