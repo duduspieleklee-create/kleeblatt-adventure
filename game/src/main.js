@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import KleeblattAdventure from './game-core.js';
-import WalletService from './wallet.js';
+import WelcomeScene from './WelcomeScene.js';
 
 const debugPanel = document.getElementById('debug-panel');
 let debugVisible = false;
@@ -136,7 +136,7 @@ const config = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  scene: [KleeblattAdventure],
+  scene: [WelcomeScene, KleeblattAdventure],
   physics: {
     default: 'arcade',
     arcade: {
@@ -190,25 +190,7 @@ try {
   showDebug();
 }
 
-const wallet = new WalletService();
-window.wallet = wallet;
-
-const initGame = async () => {
-  if (!game) return;
-  try {
-    const status = wallet.getConnectedStatus();
-    if (status.isConnected) {
-      logDebug(`Wallet connected: ${status.address}`, 'info');
-    }
-    logDebug('Game initialized', 'info');
-    logDebug(`Wallet status: ${JSON.stringify(status)}`, 'info');
-  } catch (error) {
-    logDebug(`Game initialization failed: ${error.message}`, 'error');
-    logDebug(`Stack: ${error.stack}`, 'error');
-  }
-};
-
-initGame();
+logDebug('Game initialized', 'info');
 
 setTimeout(() => {
   logDebug('Debug panel ready. Tap Debug button to toggle.', 'info');

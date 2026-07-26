@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TREASURE_CATEGORIES, addTreasure, gameData } from './core/index.js';
-import WalletService from './wallet.js';
+import { submitScore, getProfile } from './api.js';
 
 const logDebug = (message, type = 'info') => {
   if (typeof window !== 'undefined' && window.__debugLog) {
@@ -27,8 +27,22 @@ export default class KleeblattAdventure extends Phaser.Scene {
     this.celebrationComplete = false;
     this.joystick = null;
     this.isMobile = false;
-    this.walletService = null;
-    this.walletText = null;
+    this.userText = null;
+    this.highScoreText = null;
+    this.token = null;
+    this.username = null;
+    this.userId = null;
+    this.isGuest = false;
+    this.scoreSubmitQueue = [];
+    this.lastScoreSubmit = 0;
+    this.highScore = 0;
+  }
+
+  init(data) {
+    this.token = data?.token || null;
+    this.username = data?.username || 'Player';
+    this.userId = data?.userId || null;
+    this.isGuest = data?.isGuest !== false;
   }
 
   preload() {
@@ -53,19 +67,20 @@ export default class KleeblattAdventure extends Phaser.Scene {
       logDebug('Scene preload complete', 'info');
     } catch (error) {
       logDebug(`preload error: ${error.message}`, 'error');
-      logDebug(`Stack: ${error.stack}`, 'error');
     }
   }
 
   create() {
     try {
-      logDebug('Scene create starting', 'info');
+      logDebug(`Scene create starting - User: ${this.username}`, 'info');
       gameData.score = 0;
       gameData.collections = 0;
       gameData.achievements = [];
       gameData.treasures = [];
       this.treasures = [];
       this.celebrationComplete = false;
+      this.scoreSubmitQueue = [];
+      this.lastScoreSubmit = 0;
 
       this.add.rectangle(400, 300, 800, 600, 0x2d3748);
       this.add.rectangle(410, 305, 820, 620, 0x1a1a2e).setOrigin(0.5);
@@ -80,27 +95,25 @@ export default class KleeblattAdventure extends Phaser.Scene {
         up: Phaser.Input.Keyboard.KeyCodes.W,
         down: Phaser.Input.Keyboard.KeyCodes.S,
         left: Phaser.Input.Keyboard.KeyCodes.A,
-        right: Phaser.Input.Keyboard.KeyCodes.D
+        right: Phaser.Input.Keyboard.KeyCodes.D,
       });
 
       this.joystick = this.game.registry.get('joystick');
       this.isMobile = this.game.registry.get('isMobile') || false;
 
-      this.walletService = new WalletService();
-      window.wallet = this.walletService;
-
       this.physics.world.setBounds(0, 0, 800, 600);
 
       this.createUI();
       this.spawnTreasures(5);
-      logDebug(`Scene create complete. Mobile: ${this.isMobile}, Joystick: ${!!this.joystick}`, 'info');
+      this.fetchProfile();
+
+      logDebug(`Scene create complete. Mobile: ${this.isMobile}`, 'info');
     } catch (error) {
       logDebug(`create error: ${error.message}`, 'error');
-      logDebug(`Stack: ${error.stack}`, 'error');
     }
   }
 
-  update() {
+  update(time) {
     try {
       const speed = 300;
       this.player.setVelocity(0);
@@ -112,94 +125,61 @@ export default class KleeblattAdventure extends Phaser.Scene {
         const axis = this.joystick.getAxis();
         moveX = axis.x;
         moveY = axis.y;
-
-        if (Math.abs(moveX) > 0.1) {
-          this.player.setVelocityX(moveX * speed);
-        }
-        if (Math.abs(moveY) > 0.1) {
-          this.player.setVelocityY(moveY * speed);
-        }
+        if (Math.abs(moveX) > 0.1) this.player.setVelocityX(moveX * speed);
+        if (Math.abs(moveY) > 0.1) this.player.setVelocityY(moveY * speed);
       } else {
-        if (this.cursors.left.isDown || this.keys.left.isDown) {
-          this.player.setVelocityX(-speed);
-        } else if (this.cursors.right.isDown || this.keys.right.isDown) {
-          this.player.setVelocityX(speed);
-        }
-
-        if (this.cursors.up.isDown || this.keys.up.isDown) {
-          this.player.setVelocityY(-speed);
-        } else if (this.cursors.down.isDown || this.keys.down.isDown) {
-          this.player.setVelocityY(speed);
-        }
+        if (this.cursors.left.isDown || this.keys.left.isDown) this.player.setVelocityX(-speed);
+        else if (this.cursors.right.isDown || this.keys.right.isDown) this.player.setVelocityX(speed);
+        if (this.cursors.up.isDown || this.keys.up.isDown) this.player.setVelocityY(-speed);
+        else if (this.cursors.down.isDown || this.keys.down.isDown) this.player.setVelocityY(speed);
       }
 
       this.checkCollisions();
-      this.updateWalletUI();
+      this.flushScoreQueue(time);
     } catch (error) {
       logDebug(`update error: ${error.message}`, 'error');
-      logDebug(`Stack: ${error.stack}`, 'error');
     }
   }
 
   createUI() {
-    this.scoreText = this.add.text(20, 20, 'Score: 0', {
-      fontSize: '28px',
-      fill: '#00ff00',
+    const guestLabel = this.isGuest ? ' (Guest)' : '';
+    this.userText = this.add.text(20, 10, `${this.username}${guestLabel}`, {
+      fontSize: '16px',
+      fill: '#4ade80',
       backgroundColor: '#00000080',
-      padding: { x: 10, y: 5 }
+      padding: { x: 8, y: 4 },
     }).setScrollFactor(0);
 
-    if (this.isMobile) {
-      this.infoText = this.add.text(20, 60, 'Use joystick to move', {
-        fontSize: '16px',
-        fill: '#ffffff'
-      }).setScrollFactor(0);
-    } else {
-      this.infoText = this.add.text(20, 60, 'Find treasures! WASD/Arrows to move', {
-        fontSize: '16px',
-        fill: '#ffffff'
-      }).setScrollFactor(0);
-    }
+    this.scoreText = this.add.text(20, 44, 'Score: 0', {
+      fontSize: '26px',
+      fill: '#fbbf24',
+      backgroundColor: '#00000080',
+      padding: { x: 10, y: 5 },
+    }).setScrollFactor(0);
 
-    this.walletText = this.add.text(400, 20, 'Connect Wallet', {
-      fontSize: '18px',
-      fill: '#ffffff',
-      backgroundColor: '#f6416c',
-      padding: { x: 15, y: 8 }
-    }).setOrigin(0.5).setScrollFactor(0).setInteractive({ useHandCursor: true });
+    this.highScoreText = this.add.text(20, 82, 'Best: ...', {
+      fontSize: '14px',
+      fill: '#a0aec0',
+      backgroundColor: '#00000080',
+      padding: { x: 8, y: 3 },
+    }).setScrollFactor(0);
 
-    this.walletText.on('pointerdown', () => {
-      this.connectWallet();
-    });
-
-    this.updateWalletUI();
+    const hint = this.isMobile ? 'Use joystick to move' : 'WASD/Arrows to move';
+    this.infoText = this.add.text(400, 580, hint, {
+      fontSize: '15px',
+      fill: '#718096',
+    }).setOrigin(0.5).setScrollFactor(0);
   }
 
-  async connectWallet() {
+  async fetchProfile() {
+    if (!this.token) return;
     try {
-      logDebug('Connecting wallet...', 'info');
-      const result = await this.walletService.connect();
-      logDebug(`Wallet connected: ${result.account}`, 'info');
-      this.updateWalletUI();
-      this.infoText.setText('Wallet connected! Start playing!');
-    } catch (error) {
-      logDebug(`Wallet connection failed: ${error.message}`, 'error');
-      this.infoText.setText('Wallet connection failed');
-    }
-  }
-
-  updateWalletUI() {
-    if (!this.walletText) return;
-    const status = this.walletService.getConnectedStatus();
-    if (status.isConnected) {
-      this.walletText.setText(`Wallet: ${status.address}`);
-      this.walletText.setBackgroundColor('#4ade80');
-    } else if (status.isSupported) {
-      this.walletText.setText('Connect Wallet');
-      this.walletText.setBackgroundColor('#f6416c');
-    } else {
-      this.walletText.setText('No Wallet');
-      this.walletText.setBackgroundColor('#888888');
+      const profile = await getProfile(this.token);
+      this.highScore = profile.high_score;
+      this.highScoreText.setText(`Best: ${this.highScore}`);
+      logDebug(`Profile: high=${this.highScore}, games=${profile.games_played}`, 'info');
+    } catch (err) {
+      logDebug(`Profile fetch failed: ${err.message}`, 'warn');
     }
   }
 
@@ -228,14 +208,19 @@ export default class KleeblattAdventure extends Phaser.Scene {
 
       if (dist < 30) {
         const categoryId = treasure.getData('categoryId');
-        const category = treasure.getData('category');
         const collected = addTreasure(categoryId);
 
         if (collected) {
           treasure.destroy();
           this.treasures.splice(i, 1);
           this.scoreText.setText(`Score: ${gameData.score}`);
-          this.infoText.setText(`Collected: ${gameData.collections}/10`);
+
+          if (this.highScore > 0 && gameData.score > this.highScore) {
+            this.highScore = gameData.score;
+            this.highScoreText.setText(`Best: ${this.highScore} NEW!`);
+          }
+
+          this.queueScoreSubmit(gameData.score, gameData.collections);
 
           if (this.treasures.length === 0) {
             this.spawnTreasures(5);
@@ -250,7 +235,42 @@ export default class KleeblattAdventure extends Phaser.Scene {
     }
   }
 
+  queueScoreSubmit(score, collections) {
+    this.scoreSubmitQueue.push({ score, collections });
+  }
+
+  async flushScoreQueue(time) {
+    if (!this.token) return;
+    for (const entry of this.scoreSubmitQueue) {
+      try {
+        await submitScore(this.token, entry.score, entry.collections);
+        logDebug(`Score saved: ${entry.score}`, 'info');
+      } catch (err) {
+        logDebug(`Score save failed: ${err.message}`, 'warn');
+      }
+    }
+    this.scoreSubmitQueue = [];
+    this.lastScoreSubmit = time;
+  }
+
   showCelebration() {
-    this.infoText.setText('Congratulations! Found 5+ treasures!');
+    const { width, height } = this.scale;
+    const popup = this.add.text(width / 2, height / 2, '5 Treasures!\nWell done!', {
+      fontSize: '32px',
+      fill: '#fbbf24',
+      backgroundColor: '#000000cc',
+      padding: { x: 20, y: 15 },
+      align: 'center',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(10);
+
+    this.tweens.add({
+      targets: popup,
+      alpha: 0,
+      y: height / 2 - 60,
+      duration: 3000,
+      ease: 'Power2',
+      onComplete: () => popup.destroy(),
+    });
   }
 }
