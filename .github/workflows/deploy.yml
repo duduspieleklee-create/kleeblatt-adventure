@@ -27,7 +27,13 @@ jobs:
       - name: Deploy game API
         run: |
           scp -r ./game-api/*.py ./game-api/routers/ ./game-api/requirements.txt root@57.130.64.126:/opt/game-api/
-          ssh root@57.130.64.126 "systemctl daemon-reload && systemctl restart game-api"
+          scp ./game-api/daily-awards.service ./game-api/daily-awards.timer root@57.130.64.126:/etc/systemd/system/
+          ssh root@57.130.64.126 "systemctl daemon-reload && systemctl restart game-api && systemctl enable daily-awards.timer"
+      - name: Deploy chaincode service
+        run: |
+          scp ./game-api/chaincode/server.mjs ./game-api/chaincode/package.json root@57.130.64.126:/opt/game-api/chaincode/
+          scp ./game-api/chaincode/kleeblatt-chaincode.service root@57.130.64.126:/etc/systemd/system/
+          ssh root@57.130.64.126 "cd /opt/game-api/chaincode && npm ci && systemctl daemon-reload && systemctl restart kleeblatt-chaincode || true"
       - uses: peter-evans/create-pull-request@v5
         with:
           base: main
