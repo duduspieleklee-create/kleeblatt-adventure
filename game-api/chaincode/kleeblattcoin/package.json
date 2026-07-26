@@ -1,0 +1,29 @@
+{
+  "name": "kleeblattcoin",
+  "version": "1.0.0",
+  "description": "Kleeblatt Coin contract for GalaChain",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "galachain",
+    "token",
+    "fungible-token"
+  ],
+  "author": "Kleeblatt Adventure",
+  "license": "MIT",
+  "dependencies": {
+    "@gala-chain/api": "^3.1.4",
+    "@gala-chain/chaincode": "^3.1.4",
+    "bignumber.js": "^9.1.2",
+    "@gala-chain/connect": "^3.1.4"
+  },
+  "devDependencies": {
+    "@types/node": "^18.18.0",
+    "typescript": "^4.9.5",
+    "@types/bn.js": "^5.1.1"
+  }
+}

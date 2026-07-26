@@ -15,12 +15,6 @@
  *   additionalKey: v1
  */
 
-import { GalaContract } from "@gala-chain/chaincode";
-
-export class KleeblattCoinContract extends GalaContract {
-  constructor() {
-    super("KleeblattCoinContract");
-  }
-}
+export { KleeblattCoinContract } from "./contracts/KleeblattCoinContract";
 
 export { contracts } from "./contracts";
