@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 
 // Import custom modules
-import KleinanzeigenAdventure from './game-core';
+import KleeblattAdventure from './game-core';
 import WalletService, { updateWalletUI } from './wallet';
 
 // Create game instance - must use different name to avoid conflicts
@@ -21,7 +21,7 @@ const adventureGame = new Phaser.Game(
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    scene: [KleinanzeigenAdventure],
+    scene: [KleeblattAdventure],
     physics: {
       default: 'arcade',
       arcade: {
@@ -82,7 +82,7 @@ bootstrap.preload = function() {
 
 bootstrap.create = () => {
   // Add loading spinner or progress
-  this.game.scene.start('KleinanzeigenAdventure');
+  this.game.scene.start('KleeblattAdventure');
 };
 
 adventureGame.addScene(bootstrap);

@@ -7,7 +7,7 @@
 import { initGame, getProgress, TREASURE_CATEGORIES } from './core/index.js';
 
 // Game state
-class KleinanzeigenAdventure {
+class KleeblattAdventure {
   constructor() {
     this.canvas = null;
     this.ctx = null;
@@ -288,7 +288,7 @@ class KleinanzeigenAdventure {
 }
 
 // Auto-start game on page load
-const game = new KleinanzeigenAdventure();
+const game = new KleeblattAdventure();
 window.addEventListener('DOMContentLoaded', () => {
   game.init();
 });

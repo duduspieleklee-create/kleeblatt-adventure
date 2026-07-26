@@ -9,9 +9,9 @@ export const gameData = {
   isValid: false
 };
 
-class KleinanzeigenAdventure extends Phaser.Scene {
+class KleeblattAdventure extends Phaser.Scene {
   constructor(config) {
-    super('KleinanzeigenAdventure', config);
+    super('KleeblattAdventure', config);
     this.player = null;
     this.treasure = null;
     this.isLeft = false;
@@ -99,4 +99,4 @@ class KleinanzeigenAdventure extends Phaser.Scene {
   }
 }
 
-export default KleinanzeigenAdventure;
+export default KleeblattAdventure;
