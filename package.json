@@ -1,0 +1,29 @@
+{
+  "name": "kleinanzeigen-adventure",
+  "version": "1.0.0",
+  "description": "A 2D browser adventure game for Gala Chain built with Playworks AI",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && bash scripts/deploy.sh",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "deploy:gala": "npm run build && cd contracts && cast deploy --network gala"
+  },
+  "dependencies": {
+    "phaser": "^3.70.0",
+    "@coinbase/wallet-sdk": "^3.9.0",
+    "@gala-chain/sdk": "^0.9.0",
+    "ethers": "^5.7.2"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0",
+    "vitest": "^1.4.0",
+    "playwright": "^1.42.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
