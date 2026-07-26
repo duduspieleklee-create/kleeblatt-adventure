@@ -4,13 +4,13 @@
   "description": "A 2D browser adventure game for Gala Chain built with Playworks AI",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "deploy": "npm run build && bash scripts/deploy.sh",
-    "test": "vitest",
-    "test:coverage": "vitest --coverage",
-    "deploy:gala": "npm run build && cd contracts && cast deploy --network gala"
+    "dev": "cd game && vite",
+    "build": "cd game && vite build",
+    "preview": "cd game && vite preview",
+    "deploy": "cd game && npm run build && bash ../scripts/deploy.sh",
+    "test": "cd game && vitest",
+    "test:coverage": "cd game && vitest --coverage",
+    "deploy:gala": "cd game && npm run build && cd contracts && cast deploy --network gala"
   },
   "dependencies": {
     "phaser": "^3.70.0",

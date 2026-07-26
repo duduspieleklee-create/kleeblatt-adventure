@@ -4,7 +4,10 @@ export default defineConfig(({ mode }) => ({
   root: '.',
   build: {
     outDir: './dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      external: ['@gala-chain/sdk']
+    }
   },
   server: {
     port: 3000,
