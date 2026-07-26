@@ -1,6 +1,19 @@
 import Phaser from 'phaser';
 import { TREASURE_CATEGORIES, addTreasure, gameData } from './core/index.js';
 
+const logDebug = (message, type = 'info') => {
+  if (typeof window !== 'undefined' && window.__debugLog) {
+    window.__debugLog(message, type);
+  }
+  console.log(`[${type}] ${message}`);
+};
+
+try {
+  window.__debugLog && window.__debugLog('game-core.js module loaded successfully', 'info');
+} catch (e) {
+  console.log('game-core.js module loaded');
+}
+
 export default class KleeblattAdventure extends Phaser.Scene {
   constructor() {
     super('KleeblattAdventure');
@@ -14,71 +27,90 @@ export default class KleeblattAdventure extends Phaser.Scene {
   }
 
   preload() {
-    const graphics = this.make.graphics({ x: 0, y: 0 });
+    try {
+      logDebug('Scene preload starting', 'info');
+      const graphics = this.make.graphics({ x: 0, y: 0 });
 
-    graphics.fillStyle(0x2d3748, 1);
-    graphics.fillRect(0, 0, 64, 64);
-    graphics.generateTexture('gameBackground', 64, 64);
-    graphics.clear();
+      graphics.fillStyle(0x2d3748, 1);
+      graphics.fillRect(0, 0, 64, 64);
+      graphics.generateTexture('gameBackground', 64, 64);
+      graphics.clear();
 
-    graphics.fillStyle(0x4ade80, 1);
-    graphics.fillCircle(32, 32, 30);
-    graphics.generateTexture('player', 64, 64);
-    graphics.clear();
+      graphics.fillStyle(0x4ade80, 1);
+      graphics.fillCircle(32, 32, 30);
+      graphics.generateTexture('player', 64, 64);
+      graphics.clear();
 
-    graphics.fillStyle(0xfbbf24, 1);
-    graphics.fillCircle(32, 32, 30);
-    graphics.generateTexture('treasure', 64, 64);
-    graphics.clear();
+      graphics.fillStyle(0xfbbf24, 1);
+      graphics.fillCircle(32, 32, 30);
+      graphics.generateTexture('treasure', 64, 64);
+      graphics.clear();
+      logDebug('Scene preload complete', 'info');
+    } catch (error) {
+      logDebug(`preload error: ${error.message}`, 'error');
+      logDebug(`Stack: ${error.stack}`, 'error');
+    }
   }
 
   create() {
-    gameData.score = 0;
-    gameData.collections = 0;
-    gameData.achievements = [];
-    gameData.treasures = [];
-    this.treasures = [];
-    this.celebrationComplete = false;
+    try {
+      logDebug('Scene create starting', 'info');
+      gameData.score = 0;
+      gameData.collections = 0;
+      gameData.achievements = [];
+      gameData.treasures = [];
+      this.treasures = [];
+      this.celebrationComplete = false;
 
-    this.add.rectangle(400, 300, 800, 600, 0x2d3748);
-    this.add.rectangle(410, 305, 820, 620, 0x1a1a2e).setOrigin(0.5);
+      this.add.rectangle(400, 300, 800, 600, 0x2d3748);
+      this.add.rectangle(410, 305, 820, 620, 0x1a1a2e).setOrigin(0.5);
 
-    this.player = this.physics.add.sprite(400, 300, 'player');
-    this.player.setCircle(20);
-    this.player.body.setCollideWorldBounds(true);
-    this.player.setDisplaySize(40, 40);
+      this.player = this.physics.add.sprite(400, 300, 'player');
+      this.player.setCircle(20);
+      this.player.body.setCollideWorldBounds(true);
+      this.player.setDisplaySize(40, 40);
 
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.keys = this.input.keyboard.addKeys({
-      up: Phaser.Input.Keyboard.KeyCodes.W,
-      down: Phaser.Input.Keyboard.KeyCodes.S,
-      left: Phaser.Input.Keyboard.KeyCodes.A,
-      right: Phaser.Input.Keyboard.KeyCodes.D
-    });
+      this.cursors = this.input.keyboard.createCursorKeys();
+      this.keys = this.input.keyboard.addKeys({
+        up: Phaser.Input.Keyboard.KeyCodes.W,
+        down: Phaser.Input.Keyboard.KeyCodes.S,
+        left: Phaser.Input.Keyboard.KeyCodes.A,
+        right: Phaser.Input.Keyboard.KeyCodes.D
+      });
 
-    this.physics.world.setBounds(0, 0, 800, 600);
+      this.physics.world.setBounds(0, 0, 800, 600);
 
-    this.createUI();
-    this.spawnTreasures(5);
+      this.createUI();
+      this.spawnTreasures(5);
+      logDebug('Scene create complete', 'info');
+    } catch (error) {
+      logDebug(`create error: ${error.message}`, 'error');
+      logDebug(`Stack: ${error.stack}`, 'error');
+    }
   }
 
   update() {
-    const speed = 300;
-    this.player.setVelocity(0);
+    try {
+      const speed = 300;
+      this.player.setVelocity(0);
 
-    if (this.cursors.left.isDown || this.keys.left.isDown) {
-      this.player.setVelocityX(-speed);
-    } else if (this.cursors.right.isDown || this.keys.right.isDown) {
-      this.player.setVelocityX(speed);
+      if (this.cursors.left.isDown || this.keys.left.isDown) {
+        this.player.setVelocityX(-speed);
+      } else if (this.cursors.right.isDown || this.keys.right.isDown) {
+        this.player.setVelocityX(speed);
+      }
+
+      if (this.cursors.up.isDown || this.keys.up.isDown) {
+        this.player.setVelocityY(-speed);
+      } else if (this.cursors.down.isDown || this.keys.down.isDown) {
+        this.player.setVelocityY(speed);
+      }
+
+      this.checkCollisions();
+    } catch (error) {
+      logDebug(`update error: ${error.message}`, 'error');
+      logDebug(`Stack: ${error.stack}`, 'error');
     }
-
-    if (this.cursors.up.isDown || this.keys.up.isDown) {
-      this.player.setVelocityY(-speed);
-    } else if (this.cursors.down.isDown || this.keys.down.isDown) {
-      this.player.setVelocityY(speed);
-    }
-
-    this.checkCollisions();
   }
 
   createUI() {

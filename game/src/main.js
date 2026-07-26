@@ -33,6 +33,10 @@ window.toggleDebug = function() {
   }
 };
 
+window.__debugLog = function(message, type = 'info') {
+  logDebug(message, type);
+};
+
 window.addEventListener('error', (event) => {
   logDebug(`ERROR: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`, 'error');
   showDebug();
@@ -67,15 +71,7 @@ const config = {
       debug: false
     }
   },
-  disableVisibilityChange: true,
-  callbacks: {
-    preBoot: (game) => {
-      logDebug('Phaser preBoot callback', 'info');
-    },
-    postBoot: (game) => {
-      logDebug('Phaser postBoot callback', 'info');
-    }
-  }
+  disableVisibilityChange: true
 };
 
 let game = null;
@@ -84,6 +80,34 @@ try {
   game = new Phaser.Game(config);
   window.game = game;
   logDebug('Phaser initialized successfully', 'info');
+  
+  game.events.on('error', (err) => {
+    logDebug(`Phaser error event: ${err.message}`, 'error');
+    logDebug(`Stack: ${err.stack}`, 'error');
+    showDebug();
+  });
+  
+  game.events.on('ready', () => {
+    logDebug('Phaser game ready', 'info');
+    const scene = game.scene.getScene('KleeblattAdventure');
+    if (scene) {
+      logDebug('KleeblattAdventure scene found', 'info');
+    } else {
+      logDebug('KleeblattAdventure scene NOT found', 'error');
+    }
+  });
+  
+  game.events.on('create', () => {
+    logDebug('Phaser create event fired', 'info');
+  });
+  
+  game.events.on('poststep', () => {
+    if (!window.__gameStepLogged) {
+      window.__gameStepLogged = true;
+      logDebug('Phaser poststep event fired - game loop running', 'info');
+    }
+  });
+  
 } catch (error) {
   logDebug(`Failed to initialize Phaser: ${error.message}`, 'error');
   logDebug(`Stack: ${error.stack}`, 'error');
@@ -113,4 +137,22 @@ initGame();
 
 setTimeout(() => {
   logDebug('Debug panel ready. Tap Debug button to toggle.', 'info');
-}, 1000);
+  
+  if (game) {
+    const scene = game.scene.getScene('KleeblattAdventure');
+    if (scene && scene.scene.isActive()) {
+      logDebug('Scene is active', 'info');
+    } else if (scene) {
+      logDebug('Scene exists but is NOT active', 'error');
+    } else {
+      logDebug('Scene does not exist after 3 seconds', 'error');
+    }
+    
+    const canvas = document.querySelector('canvas');
+    if (canvas) {
+      logDebug(`Canvas found: ${canvas.width}x${canvas.height}`, 'info');
+    } else {
+      logDebug('No canvas element found', 'error');
+    }
+  }
+}, 3000);
