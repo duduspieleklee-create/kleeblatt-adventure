@@ -407,11 +407,11 @@
           $confirm.disabled = true;
         }
       } catch {
-        setStatus('');
-        $hint.textContent = 'Unable to check. Try again.';
-        $hint.className = 'error';
-        $input.className = '';
-        $confirm.disabled = true;
+        setStatus('<span style="color:#fbbf24">&#9888;</span>');
+        $hint.textContent = 'Could not verify. You can still try.';
+        $hint.className = '';
+        $input.className = 'valid';
+        $confirm.disabled = false;
       }
     }
     
@@ -451,7 +451,7 @@
     
     $confirm.addEventListener('click', function() {
       const val = $input.value.trim();
-      if (!val || $confirm.disabled) return;
+      if (!val || val.length < 3) return;
       window._hideUsernamePrompt();
       if (_usernameCallback) _usernameCallback(val);
     });
@@ -463,8 +463,11 @@
     });
     
     $input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !$confirm.disabled) {
-        $confirm.click();
+      if (e.key === 'Enter') {
+        const val = $input.value.trim();
+        if (!val || val.length < 3) return;
+        window._hideUsernamePrompt();
+        if (_usernameCallback) _usernameCallback(val);
       }
     });
   </script>
