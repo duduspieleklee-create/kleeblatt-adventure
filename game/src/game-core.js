@@ -16,15 +16,18 @@ export default class KleeblattAdventure extends Phaser.Scene {
   preload() {
     const graphics = this.make.graphics({ x: 0, y: 0 });
 
-    graphics.beginFill(0x2d3748).drawRect(0, 0, 64, 64).endFill();
+    graphics.fillStyle(0x2d3748, 1);
+    graphics.fillRect(0, 0, 64, 64);
     graphics.generateTexture('gameBackground', 64, 64);
     graphics.clear();
 
-    graphics.beginFill(0x4ade80).drawCircle(32, 32, 30).endFill();
+    graphics.fillStyle(0x4ade80, 1);
+    graphics.fillCircle(32, 32, 30);
     graphics.generateTexture('player', 64, 64);
     graphics.clear();
 
-    graphics.beginFill(0xfbbf24).drawCircle(32, 32, 30).endFill();
+    graphics.fillStyle(0xfbbf24, 1);
+    graphics.fillCircle(32, 32, 30);
     graphics.generateTexture('treasure', 64, 64);
     graphics.clear();
   }
