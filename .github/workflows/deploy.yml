@@ -49,12 +49,10 @@ jobs:
           ssh root@57.130.64.126 "cd /opt/game-api/chaincode && npm ci && systemctl daemon-reload && systemctl restart kleeblatt-chaincode || true"
       - name: Write chaincode .env from secrets
         run: |
-          cat > /tmp/chaincode.env << SECRETS
-          GALA_PRIVATE_KEY=${{ secrets.GALA_PRIVATE_KEY }}
-          GALA_CHAINCODE_URL=${{ secrets.GALA_CHAINCODE_URL }}
-          GALA_REST_API=${{ secrets.GALA_REST_API || 'https://gateway-testnet.galachain.com/api' }}
-          PORT=8002
-          SECRETS
+          echo "GALA_PRIVATE_KEY=${{ secrets.GALA_PRIVATE_KEY }}" > /tmp/chaincode.env
+          echo "GALA_CHAINCODE_URL=${{ secrets.GALA_CHAINCODE_URL }}" >> /tmp/chaincode.env
+          echo "GALA_REST_API=${{ secrets.GALA_REST_API || 'https://gateway-testnet.galachain.com/api' }}" >> /tmp/chaincode.env
+          echo "PORT=8002" >> /tmp/chaincode.env
           scp /tmp/chaincode.env root@57.130.64.126:/opt/game-api/chaincode/.env
           ssh root@57.130.64.126 "systemctl restart kleeblatt-chaincode || true"
       - uses: peter-evans/create-pull-request@v5
