@@ -25,7 +25,11 @@ RUN adduser -S nextjs -u 1001
 
 # Change ownership of the app directory to the non-root user
 RUN chown -R nextjs:nodejs /app
-USER nextjs
+
+# Copy built dist folder to lib/src/cli.js structure
+RUN mkdir -p /app/lib/src && \
+    cp -r /app/dist/contracts/* /app/lib/src/cli.js /app/lib/ 2>/dev/null || \
+    ln -sf /app/dist/index.js /app/lib/src/cli.js
 
 # Note: GalaChain contracts don't typically run as standalone applications
 # This Dockerfile is for packaging the contract for deployment to GalaChain
