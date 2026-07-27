@@ -8,8 +8,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./lib/src",
-    "rootDir": "./src",
+    "outDir": "./lib",
+    "rootDir": ".",
     "strict": true,
     "strictFunctionTypes": false,
     "noImplicitReturns": true,
@@ -23,8 +23,12 @@
     "resolveJsonModule": true,
     "moduleResolution": "nodenext"
   },
+  "include": [
+    "src/**/*.ts"
+  ],
   "exclude": [
     "dist",
+    "lib",
     "node_modules",
     "__tests__",
     "**/*.spec.ts",
