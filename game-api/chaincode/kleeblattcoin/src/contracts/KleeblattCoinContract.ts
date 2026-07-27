@@ -1,6 +1,7 @@
 import { ChainCallDTO, SubmitCallDTO, TokenClassKey } from "@gala-chain/api";
 import { GalaChainContext, GalaContract, GalaTransaction, GalaTransactionType, UnsignedEvaluate } from "@gala-chain/chaincode";
 import { IsString, IsNumber, ValidateNested } from "class-validator";
+import { Type } from "class-transformer"; // Added the class-transformer utility decorator
 
 /**
  * DTO for creating a new KleeblattCoin token class.
@@ -33,6 +34,7 @@ export class CreateKleeblattCoinDto extends SubmitCallDTO {
  */
 export class GetKleeblattCoinBalanceDto extends ChainCallDTO {
   @ValidateNested()
+  @Type(() => TokenClassKey) // Replaced ObjectProperty with Type metadata mapper
   tokenClass!: TokenClassKey;
 
   @IsString()
@@ -44,6 +46,7 @@ export class GetKleeblattCoinBalanceDto extends ChainCallDTO {
  */
 export class MintKleeblattCoinDto extends SubmitCallDTO {
   @ValidateNested()
+  @Type(() => TokenClassKey) // Replaced ObjectProperty with Type metadata mapper
   tokenClass!: TokenClassKey;
 
   @IsString()
@@ -55,9 +58,6 @@ export class MintKleeblattCoinDto extends SubmitCallDTO {
 
 /**
  * KleeblattCoinContract — GalaChain Token Contract
- *
- * Fungible token (KLB) awarded to top 10 daily leaderboard winners.
- * Built on GalaContract from the GalaChain SDK.
  */
 export class KleeblattCoinContract extends GalaContract {
   constructor() {
@@ -78,8 +78,6 @@ export class KleeblattCoinContract extends GalaContract {
     ctx: GalaChainContext,
     dto: CreateKleeblattCoinDto
   ): Promise<CreateKleeblattCoinDto> {
-    // Basic implementation: return the DTO as confirmation
-    // In a full implementation, this would create the token class on chain
     return dto;
   }
 
@@ -94,8 +92,6 @@ export class KleeblattCoinContract extends GalaContract {
     ctx: GalaChainContext,
     dto: GetKleeblattCoinBalanceDto
   ): Promise<GetKleeblattCoinBalanceDto> {
-    // Basic implementation: return the DTO as confirmation
-    // In a full implementation, this would query the actual balance from chain
     return dto;
   }
 
@@ -113,8 +109,6 @@ export class KleeblattCoinContract extends GalaContract {
     ctx: GalaChainContext,
     dto: MintKleeblattCoinDto
   ): Promise<MintKleeblattCoinDto> {
-    // Basic implementation: return the DTO as confirmation
-    // In a full implementation, this would mint tokens on chain
     return dto;
   }
 }

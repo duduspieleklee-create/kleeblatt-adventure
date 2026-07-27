@@ -4,9 +4,7 @@ set -euo pipefail
 echo "=== GalaChain Deploy Script ==="
 echo "Started at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-REGISTRY="${REGISTRY:-ghcr.io}"
-IMAGE_NAME="${IMAGE_NAME:-kleeblattcoin}"
-GITHUB_SHA="${GITHUB_SHA:-$(git rev-parse HEAD)}"
+IMAGE_TAG="${IMAGE_TAG:-${{ github.repository }}-kleeblattcoin:${{ github.sha }}}"
 GC_API_URL="${GC_API_URL:-https://gateway-dev.galachain.com/cli/}"
 DEV_PRIVATE_KEY="${DEV_PRIVATE_KEY:-}"
 
@@ -15,28 +13,12 @@ if [ -z "$DEV_PRIVATE_KEY" ]; then
   exit 1
 fi
 
-echo "Registry: $REGISTRY"
-echo "Image: $IMAGE_NAME"
-echo "SHA: $GITHUB_SHA"
+echo "Image tag: $IMAGE_TAG"
 echo "GC_API_URL: $GC_API_URL"
 
 mkdir -p keys
 printf '%s\n' "$DEV_PRIVATE_KEY" > keys/gc-dev-key
 chmod 600 keys/gc-dev-key
-
-IMAGE_ID="${REGISTRY}/${IMAGE_NAME}"
-IMAGE_ID=$(echo "$IMAGE_ID" | tr '[A-Z]' '[a-z]')
-VERSION="$GITHUB_SHA"
-
-echo "Building Docker image..."
-docker build -t "${IMAGE_NAME}:latest" game-api/chaincode/kleeblattcoin/
-docker tag "${IMAGE_NAME}:latest" "${IMAGE_ID}:${VERSION}"
-docker tag "${IMAGE_NAME}:latest" "${IMAGE_ID}:latest"
-
-echo "Pushing ${IMAGE_ID}:${VERSION}..."
-docker push "${IMAGE_ID}:${VERSION}"
-echo "Pushing ${IMAGE_ID}:latest..."
-docker push "${IMAGE_ID}:latest"
 
 echo "Registering chaincode..."
 set +e
@@ -52,7 +34,7 @@ if [ "${REGISTER_EXIT}" -ne 0 ]; then
 fi
 
 echo "Deploying chaincode..."
-galachain deploy "${IMAGE_ID}:${VERSION}" --no-prompt --json > /tmp/galachain-debug/deploy.json 2>&1
+galachain deploy "$IMAGE_TAG" --no-prompt --json > /tmp/galachain-debug/deploy.json 2>&1
 DEPLOY_EXIT=$?
 echo "Deploy exit code: ${DEPLOY_EXIT}"
 if [ "${DEPLOY_EXIT}" -ne 0 ]; then

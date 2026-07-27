@@ -28,12 +28,14 @@ RUN chown -R nextjs:nodejs /app
 
 # Copy built dist folder to lib/src/cli.js structure
 RUN mkdir -p /app/lib/src && \
-    cp -r /app/dist/contracts/* /app/lib/src/cli.js /app/lib/ 2>/dev/null || \
-    ln -sf /app/dist/index.js /app/lib/src/cli.js
+    cp /app/dist/cli.js /app/lib/src/cli.js && \
+    cp /app/dist/index.js /app/lib/src/index.js && \
+    cp -r /app/dist/contracts /app/lib/src/contracts
 
 # Note: GalaChain contracts don't typically run as standalone applications
 # This Dockerfile is for packaging the contract for deployment to GalaChain
 # The contract will be deployed using GalaChain CLI tools
 
 # Define a default command (can be overridden during deployment)
-CMD ["sh", "-c", "echo 'GalaChain contract built and packaged successfully'"]
+ENTRYPOINT ["node"]
+CMD ["lib/src/cli.js"]
