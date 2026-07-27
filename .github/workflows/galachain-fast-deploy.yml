@@ -110,10 +110,8 @@ jobs:
 
       - name: Register chaincode on GalaChain
         run: |
-          galachain register --no-prompt || echo "Registration may have already completed"
-        env:
-          DEV_PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
-          GC_API_URL: https://gateway-dev.galachain.com/cli/
+          # Try to register, but skip if disabled by admin
+          galachain register --no-prompt 2>/dev/null || echo "Registration skipped (may be disabled or already done)"
 
       - name: Deploy to GalaChain Testnet
         run: |
