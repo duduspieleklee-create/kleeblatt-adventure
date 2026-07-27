@@ -154,7 +154,7 @@ jobs:
         run: |
           mkdir -p keys
           printf '%s\n' "${{ secrets.ADMIN_PRIVATE_KEY }}" > keys/gc-admin-key
-          echo "${{ secrets.DEV_PRIVATE_KEY }}" > keys/gc-dev-key
+          printf '%s\n' "${{ secrets.DEV_PRIVATE_KEY }}" > keys/gc-dev-key
 
       - name: Initialize diagnostic log files
         run: |
