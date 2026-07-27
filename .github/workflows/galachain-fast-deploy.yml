@@ -111,7 +111,7 @@ jobs:
       - name: Configure GalaChain keys
         run: |
           mkdir -p ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0
-          echo "${{ secrets.DEV_PRIVATE_KEY }}" > ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0/gc-dev-key
+          printf '%s' "${{ secrets.DEV_PRIVATE_KEY }}" > ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0/gc-dev-key
           chmod 600 ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0/gc-dev-key
 
       - name: Register chaincode on GalaChain
