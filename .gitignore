@@ -2,6 +2,8 @@
 keys/gc-admin-key
 keys/gc-dev-key
 *.key
+game-api/chaincode/**/keys/
+.game-api/chaincode/**/keys/
 
 # Node modules
 node_modules/

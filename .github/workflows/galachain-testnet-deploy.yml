@@ -146,7 +146,7 @@ jobs:
         id: check-registration
         run: |
           set -x
-          galachain info "${{ secrets.DEV_PRIVATE_KEY }}" --json > /tmp/galachain-debug/info.json 2>&1 || true
+          galachain info --json > /tmp/galachain-debug/info.json 2>&1 || true
           echo "=== Chaincode info output ===" >> /tmp/galachain-debug/register.log
           cat /tmp/galachain-debug/info.json >> /tmp/galachain-debug/register.log
           echo "" >> /tmp/galachain-debug/register.log
@@ -158,7 +158,7 @@ jobs:
           echo "=== Register started at $(date -u +"%Y-%m-%dT%H:%M:%SZ") ===" >> /tmp/galachain-debug/register.log
           echo "GC_API_URL=${GC_API_URL}" >> /tmp/galachain-debug/register.log
           echo "Chaincode public keys configured" >> /tmp/galachain-debug/register.log
-          galachain register "${{ secrets.DEV_PRIVATE_KEY }}" --no-prompt --json > /tmp/galachain-debug/register.json 2>&1
+          galachain register --no-prompt --json > /tmp/galachain-debug/register.json 2>&1
           REGISTER_EXIT=$?
           echo "Register exit code: ${REGISTER_EXIT}" >> /tmp/galachain-debug/register.log
           cat /tmp/galachain-debug/register.json >> /tmp/galachain-debug/register.log
@@ -178,7 +178,7 @@ jobs:
           echo "=== Deploy started at $(date -u +"%Y-%m-%dT%H:%M:%SZ") ===" >> /tmp/galachain-debug/deploy.log
           IMAGE_ID=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          galachain deploy "$IMAGE_ID:${{ github.sha }}" "${{ secrets.DEV_PRIVATE_KEY }}" --no-prompt --json > /tmp/galachain-debug/deploy.json 2>&1
+          galachain deploy "$IMAGE_ID:${{ github.sha }}" --no-prompt --json > /tmp/galachain-debug/deploy.json 2>&1
           DEPLOY_EXIT=$?
           echo "Deploy exit code: ${DEPLOY_EXIT}" >> /tmp/galachain-debug/deploy.log
           cat /tmp/galachain-debug/deploy.json >> /tmp/galachain-debug/deploy.log
