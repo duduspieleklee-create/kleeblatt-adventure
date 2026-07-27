@@ -151,7 +151,7 @@ jobs:
           set -x
           echo "GC_API_URL=${GC_API_URL}"
           echo "Chaincode public keys configured"
-          galachain register "${{ secrets.GALA_PRIVATE_KEY }}" --no-prompt || {
+          galachain register "${{ secrets.GALA_PRIVATE_KEY }}" --no-prompt --log-level debug || {
             echo "::error::galachain register failed with exit code $?"
             exit 1
           }
@@ -164,7 +164,7 @@ jobs:
           set -x
           IMAGE_ID=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          galachain deploy "$IMAGE_ID:${{ github.sha }}" "${{ secrets.GALA_PRIVATE_KEY }}" --no-prompt || {
+          galachain deploy "$IMAGE_ID:${{ github.sha }}" "${{ secrets.GALA_PRIVATE_KEY }}" --no-prompt --log-level debug || {
             echo "::error::galachain deploy failed with exit code $?"
             exit 1
           }
