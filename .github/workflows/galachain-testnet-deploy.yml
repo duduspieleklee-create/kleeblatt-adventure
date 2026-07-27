@@ -131,7 +131,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set GC_API_URL
+      - name: Export GC_API_URL
         run: |
           echo "GC_API_URL=https://gateway-dev.galachain.com/cli/" >> $GITHUB_ENV
 

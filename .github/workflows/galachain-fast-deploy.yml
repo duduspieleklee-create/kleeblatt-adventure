@@ -29,8 +29,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      # Export GC_API_URL (fallback to GALA_REST_API if present)
-      - name: Set GC_API_URL
+      - name: Export GC_API_URL
         run: |
           echo "GC_API_URL=https://gateway-dev.galachain.com/cli/" >> $GITHUB_ENV
 
@@ -96,8 +95,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      # Export GC_API_URL (fallback to GALA_REST_API if present)
-      - name: Set GC_API_URL
+      - name: Export GC_API_URL
         run: |
           echo "GC_API_URL=https://gateway-dev.galachain.com/cli/" >> $GITHUB_ENV
 
@@ -196,8 +194,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      # Export GC_API_URL (fallback to GALA_REST_API if present)
-      - name: Set GC_API_URL
+      - name: Export GC_API_URL
         run: |
           echo "GC_API_URL=https://gateway-dev.galachain.com/cli/" >> $GITHUB_ENV
 
