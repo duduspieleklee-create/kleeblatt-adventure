@@ -1,6 +1,10 @@
 # Private keys - NEVER commit these
 keys/gc-admin-key
 keys/gc-dev-key
+game-api/chaincode/kleeblattcoin/keys/gc-admin-key
+game-api/chaincode/kleeblattcoin/keys/gc-dev-key
+gc-admin-key
+gc-dev-key
 *.key
 
 # Node modules
