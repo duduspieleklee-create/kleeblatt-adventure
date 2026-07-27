@@ -8,7 +8,7 @@
     "prepublishOnly": "npm run build",
     "dev": "tsc --watch",
     "test": "jest",
-    "lint": "sh ./node_modules/.bin/eslint src/**/*.ts"
+    "lint": "npx eslint src/**/*.ts"
   },
   "keywords": [
     "galachain",
