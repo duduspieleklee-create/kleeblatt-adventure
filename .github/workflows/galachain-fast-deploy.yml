@@ -136,18 +136,38 @@ jobs:
           echo "${{ secrets.GALA_ADMIN_PRIVATE_KEY }}" > keys/gc-admin-key
           echo "${{ secrets.GALA_PRIVATE_KEY }}" > keys/gc-dev-key
 
+      - name: Preflight GalaChain API check
+        run: |
+          set -x
+          curl -sSf -o /dev/null "${GC_API_URL}/health" || echo "Health check failed, continuing anyway"
+
+      - name: Check existing chaincode registration
+        run: |
+          set -x
+          galachain list --no-prompt || true
+
       - name: Register chaincode on GalaChain
         run: |
-          galachain register "${{ secrets.GALA_PRIVATE_KEY }}" --no-prompt
+          set -x
+          echo "GC_API_URL=${GC_API_URL}"
+          echo "Chaincode public keys configured"
+          galachain register "${{ secrets.GALA_PRIVATE_KEY }}" --no-prompt --verbose || {
+            echo "::error::galachain register failed with exit code $?"
+            exit 1
+          }
         env:
           DEV_PRIVATE_KEY: ${{ secrets.GALA_PRIVATE_KEY }}
           ADMIN_PRIVATE_KEY: ${{ secrets.GALA_ADMIN_PRIVATE_KEY }}
 
       - name: Deploy to GalaChain Testnet
         run: |
+          set -x
           IMAGE_ID=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          galachain deploy "$IMAGE_ID:${{ github.sha }}" "${{ secrets.GALA_PRIVATE_KEY }}" --no-prompt
+          galachain deploy "$IMAGE_ID:${{ github.sha }}" "${{ secrets.GALA_PRIVATE_KEY }}" --no-prompt --verbose || {
+            echo "::error::galachain deploy failed with exit code $?"
+            exit 1
+          }
         env:
           DEV_PRIVATE_KEY: ${{ secrets.GALA_PRIVATE_KEY }}
 
