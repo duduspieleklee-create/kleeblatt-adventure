@@ -25,7 +25,6 @@ jobs:
       # Export GC_API_URL (fallback to GALA_API_URL if present)
       - name: Export GC_API_URL
         run: |
-          # Prefer the dedicated GC_API_URL secret; otherwise reuse GALA_API_URL if it exists
           if [ -n "${{ secrets.GC_API_URL }}" ]; then
             echo "GC_API_URL=${{ secrets.GC_API_URL }}" >> $GITHUB_ENV
           elif [ -n "${{ secrets.GALA_API_URL }}" ]; then
@@ -33,6 +32,7 @@ jobs:
           else
             echo "❌ No GC_API_URL or GALA_API_URL secret found – deployment will fail" && exit 1
           fi
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
