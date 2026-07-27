@@ -127,9 +127,10 @@ jobs:
 
       - name: Configure GalaChain keys
         run: |
-          mkdir -p keys
-          printf '%s\n' "${{ secrets.ADMIN_PRIVATE_KEY }}" > keys/gc-admin-key
-          printf '%s\n' "${{ secrets.DEV_PRIVATE_KEY }}" > keys/gc-dev-key
+          mkdir -p ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0
+          printf '%s\n' "${{ secrets.DEV_PRIVATE_KEY }}" > ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0/gc-dev-key
+          chmod 700 ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0
+          chmod 600 ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0/gc-dev-key
 
       - name: Initialize diagnostic log files
         run: |
