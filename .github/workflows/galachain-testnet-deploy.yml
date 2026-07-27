@@ -31,10 +31,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run npm audit
-        run: |
-          cd game-api/chaincode/kleeblattcoin
-          npm audit --audit-level=high || echo "npm audit completed with warnings"
+      - name: Security Scan with CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, typescript
+          # Only scan the specific directories we care about
+          db-location: './codeql-db'
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript,typescript'
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          # Skip specific vulnerabilities that are false positives
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          security-checks: 'vuln,config'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
 
   build-and-test:
     runs-on: ubuntu-latest
@@ -106,10 +131,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Export GC_API_URL
-        run: |
-          echo "GC_API_URL=https://gateway-dev.galachain.com/cli/" >> $GITHUB_ENV
-
       - name: Login to Docker registry
         uses: docker/login-action@v3
         with:
@@ -128,73 +149,21 @@ jobs:
       - name: Configure GalaChain keys
         run: |
           mkdir -p ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0
-          printf '%s\n' "${{ secrets.DEV_PRIVATE_KEY }}" > ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0/gc-dev-key
-          chmod 700 ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0
+          echo "${{ secrets.DEV_PRIVATE_KEY }}" > ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0/gc-dev-key
           chmod 600 ~/.gc-keys/gc-539ab517490c1ccda4aa0af2c7133f00ec2cecf0/gc-dev-key
 
-      - name: Initialize diagnostic log files
-        run: |
-          mkdir -p /tmp/galachain-debug
-          echo "=== Galachain deploy diagnostics ===" > /tmp/galachain-debug/register.log
-          echo "Started at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> /tmp/galachain-debug/register.log
-
-      - name: Preflight GalaChain API check
-        run: |
-          set -x
-          curl -sSf -o /dev/null "${GC_API_URL}/health" || echo "Health check failed, continuing anyway"
-
-      - name: Check existing chaincode registration
-        id: check-registration
-        run: |
-          set -x
-          galachain info --json > /tmp/galachain-debug/info.json 2>&1 || true
-          echo "=== Chaincode info output ===" >> /tmp/galachain-debug/register.log
-          cat /tmp/galachain-debug/info.json >> /tmp/galachain-debug/register.log
-          echo "" >> /tmp/galachain-debug/register.log
-
       - name: Register chaincode on GalaChain
-        id: register
         run: |
-          set -x
-          echo "=== Register started at $(date -u +"%Y-%m-%dT%H:%M:%SZ") ===" >> /tmp/galachain-debug/register.log
-          echo "GC_API_URL=${GC_API_URL}" >> /tmp/galachain-debug/register.log
-          echo "Chaincode public keys configured" >> /tmp/galachain-debug/register.log
-          galachain register --no-prompt --json > /tmp/galachain-debug/register.json 2>&1
-          REGISTER_EXIT=$?
-          echo "Register exit code: ${REGISTER_EXIT}" >> /tmp/galachain-debug/register.log
-          cat /tmp/galachain-debug/register.json >> /tmp/galachain-debug/register.log
-          echo "" >> /tmp/galachain-debug/register.log
-          if [ "${REGISTER_EXIT}" -ne 0 ]; then
-            echo "::error::galachain register failed with exit code ${REGISTER_EXIT}"
-            exit 1
-          fi
+          galachain register --no-prompt
         env:
           DEV_PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
-          ADMIN_PRIVATE_KEY: ${{ secrets.GALA_ADMIN_PRIVATE_KEY }}
+          GC_API_URL: https://gateway-testnet.galachain.com/cli/
 
       - name: Deploy to GalaChain Testnet
-        id: deploy
         run: |
-          set -x
-          echo "=== Deploy started at $(date -u +"%Y-%m-%dT%H:%M:%SZ") ===" >> /tmp/galachain-debug/deploy.log
           IMAGE_ID=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          galachain deploy "$IMAGE_ID:${{ github.sha }}" --no-prompt --json > /tmp/galachain-debug/deploy.json 2>&1
-          DEPLOY_EXIT=$?
-          echo "Deploy exit code: ${DEPLOY_EXIT}" >> /tmp/galachain-debug/deploy.log
-          cat /tmp/galachain-debug/deploy.json >> /tmp/galachain-debug/deploy.log
-          echo "" >> /tmp/galachain-debug/deploy.log
-          if [ "${DEPLOY_EXIT}" -ne 0 ]; then
-            echo "::error::galachain deploy failed with exit code ${DEPLOY_EXIT}"
-            exit 1
-          fi
+          galachain deploy "$IMAGE_ID:${{ github.sha }}" --no-prompt
         env:
           DEV_PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
-
-      - name: Upload Galachain diagnostic logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: galachain-debug-logs
-          path: /tmp/galachain-debug/
-          retention-days: 7
+          GC_API_URL: https://gateway-testnet.galachain.com/cli/
