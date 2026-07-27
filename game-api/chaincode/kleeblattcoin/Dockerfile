@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Verify build output
-RUN ls -la dist/
+RUN ls -la lib/src/
 
 # Create a non-root user for security
 RUN addgroup -g 1001 -S nodejs
