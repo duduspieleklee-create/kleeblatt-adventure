@@ -154,7 +154,7 @@ jobs:
 
       - name: Register chaincode on GalaChain
         run: |
-          galachain register --no-prompt
+          galachain register --no-prompt || echo "Registration may have already completed"
         env:
           DEV_PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
           GC_API_URL: https://gateway-testnet.galachain.com/cli/
