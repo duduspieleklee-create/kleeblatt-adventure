@@ -1,4 +1,4 @@
-name: GalaChain Fast Testnet Deployment
+name: GalaChain Fast Testnet Deployment new
 
 on:
   push:
@@ -57,7 +57,7 @@ jobs:
 
       - name: Verify build output
         run: |
-          ls -la game-api/chaincode/kleeblattcoin/dist/
+          ls -la game-api/chaincode/kleeblattcoin/lib/src/
 
       - name: Build Docker image
         run: |
