@@ -1,0 +1,33 @@
+name: GalaChain Local Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  local-test:
+    runs-on: ubuntu-latest
+    env:
+      GC_API_URL: http://localhost:8080/cli
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install GalaChain CLI
+        run: npm install -g @gala-chain/cli
+
+      - name: Start local GalaChain network (reuse existing config)
+        run: |
+          cd game-api/chaincode/kleeblattcoin && galachain network-up -C localtest -t curator -n kleeblattcoin --no-chain-browser
+
+      # Register the chaincode on the local network
+      - name: Register chaincode
+        run: |
+          cd game-api/chaincode/kleeblattcoin && galachain register keys/gc-dev-key --no-prompt
