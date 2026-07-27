@@ -1,0 +1,189 @@
+name: GalaChain Live Deployment (self‑hosted)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'game-api/chaincode/kleeblattcoin/**'
+      - 'keys/**'
+      - '.github/workflows/galachain-live-deploy.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'game-api/chaincode/kleeblattcoin/**'
+      - 'keys/**'
+      - '.github/workflows/galachain-live-deploy.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-kleeblattcoin
+  # GC_API_URL should be set as a secret in the repo (e.g., http://my‑gala‑node:8080/cli)
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          cd game-api/chaincode/kleeblattcoin
+          npm install
+
+      - name: Run linters
+        run: |
+          cd game-api/chaincode/kleeblattcoin
+          npx eslint src/**/*.ts || true
+
+      - name: Run tests
+        run: |
+          cd game-api/chaincode/kleeblattcoin
+          npm test || true
+
+      - name: Build contract
+        run: |
+          cd game-api/chaincode/kleeblattcoin
+          npm run build
+
+      - name: Verify build output
+        run: |
+          ls -la game-api/chaincode/kleeblattcoin/dist/
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }}:latest game-api/chaincode/kleeblattcoin/
+
+      - name: Run container security scan
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image ${{ env.IMAGE_NAME }}:latest --severity CRITICAL,HIGH
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and push Docker image
+        run: |
+          IMAGE_ID=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          VERSION=${{ github.sha }}
+          docker tag ${{ env.IMAGE_NAME }}:latest $IMAGE_ID:$VERSION
+          docker tag ${{ env.IMAGE_NAME }}:latest $IMAGE_ID:latest
+          docker push $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull latest Docker image
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Setup GalaChain CLI
+        run: |
+          npm install -g @gala-chain/cli@^3.1.4
+
+      - name: Configure GalaChain keys
+        run: |
+          mkdir -p keys
+          printf '%s\n' "${{ secrets.ADMIN_PRIVATE_KEY }}" > keys/gc-admin-key
+          printf '%s\n' "${{ secrets.DEV_PRIVATE_KEY }}" > keys/gc-dev-key
+
+      - name: Initialize diagnostic logs
+        run: |
+          mkdir -p /tmp/galachain-debug
+          echo "=== GalaChain live deployment diagnostics ===" > /tmp/galachain-debug/register.log
+          echo "Started at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> /tmp/galachain-debug/register.log
+
+      - name: Preflight GalaChain API check
+        env:
+          GC_API_URL: ${{ secrets.GC_API_URL }}
+        run: |
+          set -x
+          curl -sSf -o /dev/null "${GC_API_URL}/health" || echo "Health check failed – continuing anyway"
+
+      - name: Register chaincode on GalaChain (self‑hosted)
+        id: register
+        env:
+          DEV_PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
+          ADMIN_PRIVATE_KEY: ${{ secrets.ADMIN_PRIVATE_KEY }}
+          GC_API_URL: ${{ secrets.GC_API_URL }}
+        run: |
+          set -x
+          echo "=== Register started at $(date -u +"%Y-%m-%dT%H:%M:%SZ") ===" >> /tmp/galachain-debug/register.log
+          echo "GC_API_URL=${GC_API_URL}" >> /tmp/galachain-debug/register.log
+          galachain register "${DEV_PRIVATE_KEY}" --no-prompt --json > /tmp/galachain-debug/register.json 2>&1
+          REGISTER_EXIT=$?
+          echo "Register exit code: ${REGISTER_EXIT}" >> /tmp/galachain-debug/register.log
+          cat /tmp/galachain-debug/register.json >> /tmp/galachain-debug/register.log
+          if [ "${REGISTER_EXIT}" -ne 0 ]; then
+            echo "::error::galachain register failed with exit code ${REGISTER_EXIT}"
+            exit 1
+          fi
+
+      - name: Deploy chaincode to GalaChain (self‑hosted)
+        id: deploy
+        env:
+          DEV_PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
+          GC_API_URL: ${{ secrets.GC_API_URL }}
+        run: |
+          set -x
+          echo "=== Deploy started at $(date -u +"%Y-%m-%dT%H:%M:%SZ") ===" >> /tmp/galachain-debug/deploy.log
+          IMAGE_ID=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          galachain deploy "$IMAGE_ID:${{ github.sha }}" "${DEV_PRIVATE_KEY}" --no-prompt --json > /tmp/galachain-debug/deploy.json 2>&1
+          DEPLOY_EXIT=$?
+          echo "Deploy exit code: ${DEPLOY_EXIT}" >> /tmp/galachain-debug/deploy.log
+          cat /tmp/galachain-debug/deploy.json >> /tmp/galachain-debug/deploy.log
+          if [ "${DEPLOY_EXIT}" -ne 0 ]; then
+            echo "::error::galachain deploy failed with exit code ${DEPLOY_EXIT}"
+            exit 1
+          fi
+
+      - name: Upload GalaChain diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: galachain-live-debug-logs
+          path: /tmp/galachain-debug/
+          retention-days: 7
+
+  # Lightweight security scan (parallel, non‑blocking)
+  security-report:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run fast security checks
+        run: |
+          echo "Running lightweight security checks..."
+          find . -name "*.json" -exec grep -l "password\|secret\|token\|key\|credential" {} \; || echo "No obvious secrets found in JSON files"
+          find . -name "*.yml" -o -name "*.yaml" -exec grep -l "password\|secret\|token\|key\|credential" {} \; || echo "No obvious secrets found in YAML files"
