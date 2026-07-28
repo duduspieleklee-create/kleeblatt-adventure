@@ -95,7 +95,7 @@ jobs:
 
       - name: Verify build output
         run: |
-          ls -la game-api/chaincode/kleeblattcoin/dist/
+          cd game-api/chaincode/kleeblattcoin && ls -la dist/
 
       - name: Build Docker image
         run: |
@@ -148,11 +148,22 @@ jobs:
 
       - name: Register chaincode on GalaChain
         run: |
-          # Try to register, but skip if disabled by admin
-          galachain register --no-prompt 2>/dev/null || echo "Registration skipped (may be disabled or already done)"
+          set -x
+          echo "=== Register started at $(date -u +\"%Y-%m-%dT%H:%M:%SZ\") ===" >> /tmp/galachain-debug/register.log
+          echo "GC_API_URL=${GC_API_URL}" >> /tmp/galachain-debug/register.log
+          echo "Chaincode public keys configured" >> /tmp/galachain-debug/register.log
+          galachain register "${{ secrets.DEV_PRIVATE_KEY }}" --no-prompt > /tmp/galachain-debug/register.json 2>&1
+          REGISTER_EXIT=$?
+          echo "Register exit code: ${REGISTER_EXIT}" >> /tmp/galachain-debug/register.log
+          cat /tmp/galachain-debug/register.json >> /tmp/galachain-debug/register.log
+          echo "" >> /tmp/galachain-debug/register.log
+          if [ "${REGISTER_EXIT}" -ne 0 ]; then
+            echo "::error::galachain register failed with exit code ${REGISTER_EXIT}"
+            exit 1
+          fi
         env:
           DEV_PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
-          GC_API_URL: https://gateway-testnet.galachain.com/cli/
+          ADMIN_PRIVATE_KEY: ${{ secrets.GALA_ADMIN_PRIVATE_KEY }}
 
       - name: Deploy to GalaChain Testnet
         run: |
