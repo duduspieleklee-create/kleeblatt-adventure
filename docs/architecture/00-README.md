@@ -1,6 +1,6 @@
 # Kleeblattadventure – Immutable zkEVM Architektur-Dokumentation
 
-**Version:** 1.3  
+**Version:** 1.4  
 **Stand:** 31. Juli 2026  
 **Zielplattform:** Immutable zkEVM (L2) + Web2 Game Backend
 
@@ -17,13 +17,15 @@
 | [06-wallet-abstraktionsschicht.md](./06-wallet-abstraktionsschicht.md) | Provider-agnostische Wallet Service Schicht |
 | [07-mpc-provider-vergleich.md](./07-mpc-provider-vergleich.md) | Vergleich Turnkey, Dfns, Fireblocks, Utila |
 | [08-entscheidungsmatrix.md](./08-entscheidungsmatrix.md) | Bewertungsmatrix & Empfehlung |
+| [09-waehrungs-und-shop-architektur.md](./09-waehrungs-und-shop-architektur.md) | **In-Game-Währung, Token, Mint-Credits, Shop, Sinks/Sources** |
 
 ## Kurzfassung des Modells
 
 - **Gameplay bleibt gasfrei** für den Spieler
 - Standardmäßig **Custodial** (Studio kontrolliert Keys über MPC-Provider)
 - Optionaler **Claim to Self-Custody**
-- **Zwei Währungen**: In-Game-Währung (Alltag) + Token (werthaltige Güter)
+- **Fiat-Shop** verkauft Mint-Credits & Kosmetik – **keine** frei auszahlbaren Token
+- **Token** entstehen vor allem durch Spielen und Wirtschaft
 - Händler in **Gilden** mit gemeinsamer Gilden-Bank
 - Automatisches NFT-Minten im Hintergrund
 - Alles Wertvolle läuft trotzdem on-chain auf Immutable zkEVM
@@ -32,3 +34,6 @@
 
 Am besten mit der Einführung starten:  
 → [00-einfuehrung-vorteile-usecases.md](./00-einfuehrung-vorteile-usecases.md)
+
+Währungs- und Shop-Logik:  
+→ [09-waehrungs-und-shop-architektur.md](./09-waehrungs-und-shop-architektur.md)
