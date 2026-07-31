@@ -1,6 +1,6 @@
 # Kleeblattadventure – Immutable zkEVM Architektur-Dokumentation
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Stand:** 31. Juli 2026  
 **Zielplattform:** Immutable zkEVM (L2) + Web2 Game Backend
 
@@ -8,6 +8,7 @@
 
 | Datei | Inhalt |
 |-------|--------|
+| [00-einfuehrung-vorteile-usecases.md](./00-einfuehrung-vorteile-usecases.md) | **Warum dieses Konzept?** Vorteile, Begründung, Use-Cases |
 | [01-konzept-uebersicht.md](./01-konzept-uebersicht.md) | Vision, Kernprinzipien, High-Level-Modell |
 | [02-architektur.md](./02-architektur.md) | Systemarchitektur, Komponenten, Datenflüsse |
 | [03-item-lifecycle.md](./03-item-lifecycle.md) | Vollständiger Lebenszyklus von Items & NFTs |
@@ -26,3 +27,8 @@
 - Händler in **Gilden** mit gemeinsamer Gilden-Bank
 - Automatisches NFT-Minten im Hintergrund
 - Alles Wertvolle läuft trotzdem on-chain auf Immutable zkEVM
+
+## Einstieg
+
+Am besten mit der Einführung starten:  
+→ [00-einfuehrung-vorteile-usecases.md](./00-einfuehrung-vorteile-usecases.md)
