@@ -1,6 +1,6 @@
 # 16 – Developer Guide
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Stand:** 3. August 2026  
 **Status:** Einstieg für Entwickler
 
@@ -21,7 +21,7 @@ Dieses Dokument ist der **Einstieg**, wenn du die Architektur-Doku zum ersten Ma
 - Persistenz: **PostgreSQL**; Jobs: **Redis/BullMQ**; Map-Präsenz: **Colyseus** (o. Ä.)
 - Keys: **MPC-Provider**, nicht Raw-Keys auf dem App-Server
 
-**Was dieses Doc dir gibt:** Lesereihenfolge, Stack, MVP-Build-Order, Non-Goals, offene Lücken.
+**Was dieses Doc dir gibt:** Lesereihenfolge, Stack, detaillierte MVP-Build-Order, Non-Goals, offene Lücken.
 
 ---
 
@@ -90,26 +90,207 @@ Nicht 00→15 linear lesen. Stattdessen:
 
 ---
 
-## 5. MVP – Build Order
+## 5. MVP – Build Order (Detail)
 
-Ziel: spielbarer Kern + Ownership-Pfad, ohne alles parallele Plattform-Building.
+Ziel: spielbarer Kern + Ownership-Pfad, ohne Open-World und ohne Token-Cash-out.
+
+### 5.1 Abhängigkeitsgraph
+
+```
+M0 ──► M1 ──► M2 ──► M3
+              │
+              ├──────────────► M7 (braucht auch M5, M6)
+M0 ──► M4 ──► M5 ──► M6 ──► M7 ──► M8
+M2 ──► M9 (kann parallel zu M4–M6)
+M2 + M7 ──► M10
+```
+
+**Kritischer Pfad „NFT im Inventar“:** M0→M1→M2 und M4→M5→M6→**M7**.  
+**Kritischer Pfad „Spielgefühl“:** M4 (ohne Gameplay-Spec unsicher).  
+**Kritischer Pfad „Map“:** M9 (entkoppelt von Mint).
+
+### 5.2 Übersichtstabelle
 
 | Phase | Lieferobjekt | Done wenn |
 |-------|--------------|-----------|
-| **M0** | Monorepo-Gerüst, Lint, lokale Postgres/Redis | `api` + `web` starten |
-| **M1** | Auth (Social/E-Mail; Wallet optional) + User in DB | Login → Session |
-| **M2** | Embedded Wallet ensure (MPC) + `wallets`-Row | Jeder User hat Adresse |
-| **M3** | Onboarding-Pfad + Intro-Flags + Analytics-Events | Funnel messbar |
-| **M4** | Phaser Match **ohne** Multiplayer (eine lokale/offline-Session) | Match start/ende über Bridge |
-| **M5** | Inventar Web2 + Loot nach Match in DB | Item mit State `web2` |
-| **M6** | Shop: Mint-Credits (Payment **mock** ok) | Credit-Balance |
-| **M7** | Secure/Mint-Queue → NFT custodial + State `secured` | Happy Path + Idempotenz |
-| **M8** | Activate/Deactivate (Stake) + Watcher/Webhook → `active_in_game` | Item im Match nutzbar |
-| **M9** | Hub-Room Colyseus: joinen, laufen, andere sehen | 2 Clients eine Zone |
-| **M10** | Claim to Self-Custody (Policies minimal) | Asset auf externer Adresse |
-| **Später** | Echter Fiat-Provider, Gilden-Token-Käufe, Contract-Härtung, Multi-Zone | — |
+| **M0** | Monorepo, Lint, Postgres/Redis lokal | `api` + `web` starten |
+| **M1** | Auth + User in DB | Login → Session |
+| **M2** | Embedded Wallet ensure | Jeder User hat Adresse |
+| **M3** | Onboarding-Pfad + Events | Funnel messbar |
+| **M4** | Phaser Match ohne Multiplayer | Match start/ende über Bridge |
+| **M5** | Inventar Web2 + Loot | Item State `web2` |
+| **M6** | Mint-Credits (Payment mock) | Credit-Balance |
+| **M7** | Secure/Mint-Queue | `secured` + Idempotenz |
+| **M8** | Activate/Deactivate | `active_in_game` im Match |
+| **M9** | Hub Colyseus | 2 Clients eine Zone |
+| **M10** | Claim | Asset auf externer Adresse |
 
-Phasen können leicht parallelisiert werden (z. B. M4 parallel zu M1–M3), aber **M7 hängt an M2+M5+M6**.
+### 5.3 M0 – Gerüst & Local Dev
+
+| | |
+|--|--|
+| **Ziel** | Team kann API + Web lokal starten |
+| **Lieferobjekte** | Monorepo (`apps/web`, `apps/api`, optional `apps/realtime`), TypeScript, Lint/Format, Docker Compose für Postgres + Redis, `.env.example`, `GET /health` |
+| **Abhängigkeiten** | — |
+| **Done wenn** | `docker compose up` + api + web ohne manuelle DB-Installation |
+| **Nicht in M0** | Auth, Phaser-Content, Chain |
+| **Richtaufwand** | 1–3 Tage |
+
+### 5.4 M1 – Auth & User
+
+| | |
+|--|--|
+| **Ziel** | Stabiler Account als Anker |
+| **Lieferobjekte** | Mind. ein Social-Provider und/oder E-Mail; Session (JWT/Cookie); `users` + `auth_identities`; `GET /me`; Logout |
+| **Abhängigkeiten** | M0 |
+| **Done wenn** | Login → Session → `/me` mit `userId`; geschützte Routen ohne Session → 401 |
+| **Nicht in M1** | Wallet-Connect muss nicht primär sein |
+| **Tests** | Happy path, ungültige Session, Logout |
+| **Richtaufwand** | 3–7 Tage |
+
+### 5.5 M2 – Embedded Wallet
+
+| | |
+|--|--|
+| **Ziel** | Jeder User hat custodiale Adresse (MPC) |
+| **Lieferobjekte** | Wallet-Service (`ensure`, `getAddress`); MPC-Adapter oder **MockAdapter**; Tabelle `wallets`; `ensure` nach Login |
+| **Abhängigkeiten** | M1 |
+| **Done wenn** | Genau eine Wallet-Row pro User; zweiter `ensure` idempotent |
+| **Nicht in M2** | On-Chain-Mint, Funding |
+| **Risiko** | Provider-Secrets nur Server-Env, nie Client |
+| **Richtaufwand** | 3–8 Tage (Mock schneller) |
+
+### 5.6 M3 – Onboarding-Pfad & Metriken
+
+| | |
+|--|--|
+| **Ziel** | Funnel messbar; Neuling vs. Experte |
+| **Lieferobjekte** | Choice-UI oder Ableitung; `user_onboarding`; Events `reg_completed`, `wallet_provisioned`, `path_chosen`, `intro_completed`; kurze Intro-Screens |
+| **Abhängigkeiten** | M1, ideal M2 |
+| **Done wenn** | Events persistiert/analytics; User erreicht Hub/Match-UI ohne Crash |
+| **Nicht in M3** | Langes Tutorial, Claim-Adresse Pflicht |
+| **Richtaufwand** | 2–4 Tage |
+
+### 5.7 M4 – Phaser Match (Single / offline)
+
+| | |
+|--|--|
+| **Ziel** | Kern-Gameplay ohne Multiplayer und ohne Chain |
+| **Lieferobjekte** | Phaser in React-Shell; `gameBridge`; Boot + Match; `match:start` / `match:ended` |
+| **Abhängigkeiten** | M0 (parallel zu M1–M3 möglich) |
+| **Done wenn** | Match starten → Phaser → Ende-Event → React-Ergebnis |
+| **Nicht in M4** | Colyseus, finale Balance |
+| **Hinweis** | **Größter Unsicherheitsfaktor ohne Gameplay-Spec** |
+| **Richtaufwand** | 1–3+ Wochen (Content) |
+
+### 5.8 M5 – Inventar Web2 + Loot
+
+| | |
+|--|--|
+| **Ziel** | Match belohnt persistent, noch ohne NFT |
+| **Lieferobjekte** | Tabelle `items` (`state=web2`); Inventar-API; server-authoritatives Loot nach Match; React-Liste |
+| **Abhängigkeiten** | M1, M4 |
+| **Done wenn** | Nach Match Item im Inventar mit `web2` |
+| **Wichtig** | Client vergibt Loot nicht final (Cheat-Schutz auch im MVP) |
+| **Richtaufwand** | 3–6 Tage |
+
+### 5.9 M6 – Mint-Credits (Payment mock)
+
+| | |
+|--|--|
+| **Ziel** | Sichern hat interne Währung ohne echten PSP |
+| **Lieferobjekte** | `mint_credits.balance`; Mock-Shop „+1 Credit“; UI Balance; **kein** Token-Kauf |
+| **Abhängigkeiten** | M1 |
+| **Done wenn** | Credit-Stand sichtbar und im Dev-Modus aufladbar |
+| **Nicht in M6** | Stripe/Transak |
+| **Richtaufwand** | 1–3 Tage |
+
+### 5.10 M7 – Secure / Mint-Pipeline
+
+| | |
+|--|--|
+| **Ziel** | Web2-Item → NFT auf custodialer Adresse |
+| **Lieferobjekte** | `POST secure` + `clientRequestId`; atomarer Credit-Verbrauch; BullMQ-Worker; States `pending_secure` → `secured`; Retry/Credit-Rückgabe bei Fail |
+| **Abhängigkeiten** | **M2 + M5 + M6** |
+| **Done wenn** | Happy Path + kein Doppel-Mint bei Doppelklick |
+| **Tests** | Idempotenz, Provider-Fail, parallele Requests |
+| **Richtaufwand** | 1–2 Wochen (mit Contract) |
+
+Mit **Mock Mint** kann UI/State parallel laufen, bevor Testnet steht.
+
+### 5.11 M8 – Activate / Deactivate (Stake)
+
+| | |
+|--|--|
+| **Ziel** | Gesichertes Item nur nutzbar wenn aktiv |
+| **Lieferobjekte** | activate/deactivate API + Chain/Watcher; State `active_in_game`; Match prüft Active; Unstake → sofort unusable |
+| **Abhängigkeiten** | M7 |
+| **Done wenn** | Activate → ausrüstbar; Deactivate → gesperrt |
+| **Richtaufwand** | 4–8 Tage |
+
+### 5.12 M9 – Hub Realtime (Colyseus)
+
+| | |
+|--|--|
+| **Ziel** | „Andere Spieler auf der Map“ technisch beweisen |
+| **Lieferobjekte** | Room `hub-*`; WS-Auth mit Session; Join/Leave; Move rate-limited; Phaser remote sprites; Kapazität → neue Instanz |
+| **Abhängigkeiten** | M1 (Token); **unabhängig von M7** |
+| **Done wenn** | Zwei Browser, gleiche Zone, sichtbare Bewegung |
+| **Nicht in M9** | Kampf/Loot/Handel auf der Map, Open World |
+| **Richtaufwand** | 1–2 Wochen |
+
+### 5.13 M10 – Claim to Self-Custody
+
+| | |
+|--|--|
+| **Ziel** | Ownership-Exit |
+| **Lieferobjekte** | Claim-UI + minimale Verifizierung (E-Mail/2FA); Transfer auf `toAddress`; State `self_custody`; Status-Polling |
+| **Abhängigkeiten** | M2, M7 |
+| **Done wenn** | Asset auf Test-Wallet (Explorer); custodialer In-Game-Besitz beendet |
+| **Nicht in M10** | Fiat-Off-Ramp |
+| **Richtaufwand** | 4–8 Tage |
+
+### 5.14 Parallelisierung (Team)
+
+| Track A – Platform | Track B – Game | Track C – Realtime |
+|--------------------|----------------|--------------------|
+| M0 → M1 → M2 → M3 | M0 → M4 → M5 | M0 → M1 → M9 |
+| M6 → M7 → M8 → M10 | andocken an M7 | |
+
+### 5.15 Meilenstein-Pakete
+
+| Meilenstein | Phases | Demo |
+|-------------|--------|------|
+| **Alpha Platform** | M0–M3 | Login, Wallet intern, Intro |
+| **Alpha Game** | + M4–M5 | Match + Item im Inventar |
+| **Beta Ownership** | + M6–M8 | Credit → Secure → Activate |
+| **Beta Social Map** | + M9 | 2 Spieler im Hub |
+| **RC Ownership Exit** | + M10 | Claim auf Testwallet |
+
+### 5.16 Ein-Satz pro Phase
+
+| Phase | Fokus |
+|-------|--------|
+| M0 | Lokal startbar |
+| M1 | User existiert |
+| M2 | User hat Wallet |
+| M3 | Funnel messbar |
+| M4 | Man kann „spielen“ |
+| M5 | Spielen belohnt |
+| M6 | Sichern hat Preis (Credit) |
+| M7 | Sichern schreibt Chain |
+| M8 | Chain-Item steuert Nutzbarkeit |
+| M9 | Andere sind sichtbar |
+| M10 | User kann Ownership übernehmen |
+
+### 5.17 Externe Blocker
+
+| Blocker | Betrifft |
+|---------|----------|
+| MVP-Gameplay-Spec fehlt | M4 Scope/Dauer |
+| MPC-Provider-Account | M2/M7 ohne Mock |
+| NFT-Contract Testnet | M7/M8/M10 echte Chain |
+| Fiat-PSP | erst nach stabilem M7 |
 
 ---
 
@@ -132,7 +313,7 @@ Phasen können leicht parallelisiert werden (z. B. M4 parallel zu M1–M3), aber
 
 1. **Ein Item logisch an einem Ort** – Web2, custodial secured, staked/active, oder self-custody.  
 2. **Mint-Credit** ist Gutschein, kein handelbarer Token.  
-3. **Sichern** verbraucht Credit (oder äquivalente Berechtigung), mintet auf custodiale Adresse.  
+3. **Sichern** verbraucht Credit, mintet auf custodiale Adresse.  
 4. **Aktivieren** = Stake; Unstake → im Spiel sofort unusable.  
 5. **Claim** = Ownership-Exit, mit Verifizierung/Policies im Game-Backend.  
 6. **Map** zeigt Presence/Cosmetics – keine Token-Balances als Source of Truth.
@@ -155,22 +336,20 @@ docs/
   architecture/        # diese Docs
 ```
 
-Konkrete Tooling-Wahl (Nest vs. Hono, Prisma vs. Drizzle) ist Team-Entscheidung – Defaults in Abschnitt 3.
-
 ---
 
 ## 9. Was in der Doku noch fehlt (ehrlich)
 
 | Lücke | Impact | Nächstes Artefakt |
 |-------|--------|-------------------|
-| **MVP-Gameplay-Spec** (Match-Regeln, Progression, Item-Effekte) | Ohne das kein „Spiel“ | `17-mvp-gameplay.md` |
-| **DB-Felder + State-Übergangstabelle** | Backend-Start | Schema-Doc / Migration |
+| **MVP-Gameplay-Spec** | Ohne das kein „Spiel“ | `17-mvp-gameplay.md` |
+| **DB-Felder + State-Übergänge** | Backend-Start | Schema-Doc / Migration |
 | **Smart-Contract-Interfaces + Events** | Mint/Stake on-chain | Contracts-Doc |
-| **E2E-Sequenzdiagramme** (Mint, Claim, Hub) | Weniger Fehlannahmen | 1–2 Diagramme |
+| **E2E-Sequenzdiagramme** | Weniger Fehlannahmen | 1–2 Diagramme |
 | **Local run + .env.example** | Clone & start | Root README / ops |
-| **Security-Matrix** (wer darf secure/claim) | Produktion | kurzes Security-Doc |
+| **Security-Matrix** | Produktion | kurzes Security-Doc |
 
-Wenn du nur Architektur umsetzt und auf Gameplay wartest: **M0–M3 + M9** sind trotzdem sinnvoll testbar.
+Ohne Gameplay-Spec sind **M0–M3 + M9** trotzdem sinnvoll testbar.
 
 ---
 
@@ -178,25 +357,25 @@ Wenn du nur Architektur umsetzt und auf Gameplay wartest: **M0–M3 + M9** sind 
 
 **MVP „plattform“** ungefähr erreicht wenn:
 
-- [ ] Reg → Wallet linked → Intro → Match start messbar (Events aus [11](./11-onboarding-journey.md))
+- [ ] Reg → Wallet linked → Intro → Match start messbar
 - [ ] Loot → Web2-Item → Secure mit Credit → on-chain custodial
 - [ ] Activate → im Match nutzbar; Deactivate sperrt
 - [ ] Zwei Browser im Hub sehen sich laufen
 - [ ] Claim happy path auf externe Testadresse
 - [ ] Keine Token-Fiat-Pakete, keine Keys im Klartext auf dem API-Host
 
-**MVP „Spiel“** braucht zusätzlich die Gameplay-Spec (Siegbedingungen, Content-Minimum).
+**MVP „Spiel“** braucht zusätzlich die Gameplay-Spec.
 
 ---
 
-## 11. Ansprechpartner-Themen (Decision Log)
+## 11. Decision Log
 
 | Thema | Status |
 |-------|--------|
 | Phaser 3 + React Bridge | Entschieden ([14](./14-phaser-react-bridge.md)) |
 | Postgres + Redis + Colyseus | Entschieden ([15](./15-game-backend-realtime.md)) |
 | Mint-Credits statt Token-Shop | Entschieden ([09](./09-waehrungs-und-shop-architektur.md)) |
-| MPC-Provider (Turnkey vs. Dfns) | Tendenz Turnkey zum Start ([08](./08-entscheidungsmatrix.md)) – final TBD |
+| MPC-Provider (Turnkey vs. Dfns) | Tendenz Turnkey – final TBD ([08](./08-entscheidungsmatrix.md)) |
 | Payment-Provider Fiat | TBD (MVP mock) |
 | Exact Match-Design | **Offen – Blocker für Content** |
 
@@ -204,7 +383,7 @@ Wenn du nur Architektur umsetzt und auf Gameplay wartest: **M0–M3 + M9** sind 
 
 ## 12. Ein-Satz-Zusammenfassung
 
-**Lies Pattern → Onboarding → Item/Shop → Backend/Client-Docs; baue in der MVP-Reihenfolge Auth→Wallet→Match→Loot→Secure→Stake→Hub→Claim; baue kein Token-Cash-out und warte auf eine Gameplay-Spec für das eigentliche Adventure.**
+**Lies Pattern → Onboarding → Item/Shop → Backend/Client-Docs; baue M0–M10 in der dokumentierten Reihenfolge (M9 parallel möglich); baue kein Token-Cash-out; Gameplay-Spec ist der Blocker für M4-Content.**
 
 ---
 
