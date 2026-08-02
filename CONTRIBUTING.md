@@ -37,16 +37,18 @@ npm run dev:web    # → http://localhost:5173
 
 ```
 apps/
-  api/          # Game API (Hono, TypeScript, port 4000)
-  web/          # React shell + Phaser (Vite, port 5173)
+  api/src/
+    routes/ services/ middleware/ config/ lib/
+  web/src/
+    pages/ components/ hooks/ lib/ styles/ game/scenes/
 packages/
-  shared/       # Shared types (item states, rule-engine interfaces)
-docs/
-  architecture/ # Architecture documentation (00–25)
-scripts/        # Seed, deploy helpers
+  shared/src/types/ constants/
+  tsconfig/                 # shared TS base
+docs/architecture/          # 00–25
+scripts/
 ```
 
-Active development path: `apps/` and `packages/` only.
+Details: [STRUCTURE.md](./STRUCTURE.md). Active path: `apps/` + `packages/` only.
 
 ## Architecture docs (read before coding)
 

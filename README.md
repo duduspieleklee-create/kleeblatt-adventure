@@ -32,11 +32,15 @@ npm run dev:web        # Web → http://localhost:5173
 
 | Path                | Role                                                          |
 | ------------------- | ------------------------------------------------------------- |
-| `apps/api`          | Game API (Hono, TypeScript)                                   |
-| `apps/web`          | React shell + Phaser                                          |
-| `packages/shared`   | Shared types                                                  |
+| `apps/api`          | Game API (Hono) – routes / services / config                  |
+| `apps/web`          | React shell + Phaser (`src/game`)                             |
+| `packages/shared`   | Shared types & constants (`@kleeblatt/shared`)                |
+| `packages/tsconfig` | Shared TypeScript base config                                 |
+| `scripts/`          | Seed & deploy helpers                                         |
 | `docs/architecture` | Architecture docs (00–25)                                     |
 | `game-config.json`  | All gameplay values (heroes, skills, enemies, XP, loot, auth) |
+
+Full tree: [STRUCTURE.md](./STRUCTURE.md)
 
 ## Important docs
 
