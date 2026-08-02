@@ -1,6 +1,6 @@
 # Kleeblattadventure – Immutable zkEVM Architektur-Dokumentation
 
-**Version:** 1.8  
+**Version:** 1.9  
 **Stand:** 3. August 2026  
 **Zielplattform:** Immutable zkEVM (L2) + Web2 Game Backend
 
@@ -21,14 +21,16 @@
 | [10-player-journeys.md](./10-player-journeys.md) | Player Journeys |
 | [11-onboarding-journey.md](./11-onboarding-journey.md) | Onboarding + Metriken |
 | [12-pattern-zusammenfassung.md](./12-pattern-zusammenfassung.md) | Pattern vs. Kleeblatt |
-| [13-sdk-api-skizze-v1.md](./13-sdk-api-skizze-v1.md) | **SDK API-Skizze v1** |
+| [13-sdk-api-skizze-v1.md](./13-sdk-api-skizze-v1.md) | SDK API-Skizze v1 |
+| [14-phaser-react-bridge.md](./14-phaser-react-bridge.md) | **Phaser 3 + React Kommunikation** |
 
 ## Kurzfassung
 
-Gameplay-first Blockchain-Integration: Reg + Embedded Wallet für alle, duale Intros, Custodial+MPC, optional Claim, Fiat-Shop nur Credits/Kosmetik, Token aus Spiel/Wirtschaft – auf Immutable zkEVM.
+Gameplay-first Blockchain-Integration: Reg + Embedded Wallet für alle, duale Intros, Custodial+MPC, optional Claim, Fiat-Shop nur Credits/Kosmetik – Client: **Phaser 3 + React Shell**.
 
 ## Einstieg
 
 - Pattern: [12-pattern-zusammenfassung.md](./12-pattern-zusammenfassung.md)
+- Client Bridge: [14-phaser-react-bridge.md](./14-phaser-react-bridge.md)
 - SDK-API: [13-sdk-api-skizze-v1.md](./13-sdk-api-skizze-v1.md)
 - Onboarding: [11-onboarding-journey.md](./11-onboarding-journey.md)
