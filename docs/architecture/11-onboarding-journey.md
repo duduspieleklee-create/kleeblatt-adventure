@@ -1,6 +1,6 @@
 # 11 – Onboarding-Journey Struktur
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Stand:** 2. August 2026  
 **Status:** Design Decision
 
@@ -219,16 +219,99 @@ Produkt: **zwei** Intro-Tiefen.
 
 ---
 
-## 12. Erfolgs- und Abbruch-Metriken (Vorschlag)
+## 12. Metriken für Onboarding-Erfolg
 
-| Metrik | Ziel-Richtung |
-|--------|----------------|
-| Reg → Wallet verknüpft | Nah an 100 % |
-| Reg → Intro abgeschlossen | Hoch |
-| Intro → erstes Match gestartet | Hoch (bes. Neuling) |
-| Drop-off auf Login-Screen | Senken |
-| Choice „Einfach spielen“ vs. Experte | Beobachten (kein hartes KPI) |
-| Zeit bis erster Match | Möglichst kurz |
+**Definition:** Onboarding ist erfolgreich, wenn ein neuer Account schnell eine verknüpfte Wallet hat, das Intro nicht abbricht und innerhalb der ersten Session ein Match startet – und idealerweise am nächsten Tag wiederkommt.
+
+### 12.1 Nordstern
+
+**% der Registrierungen, die innerhalb von X Minuten ein Match starten**  
+(z. B. X = 5–10 Minuten)
+
+### 12.2 Funnel-Metriken (Kern)
+
+| Schritt | Metrik | Was sie zeigt | Ziel-Richtung |
+|---------|--------|----------------|---------------|
+| Landing → Reg gestartet | Reg-Start-Rate | CTA wirkt | — |
+| Reg gestartet → Reg abgeschlossen | Reg-Completion-Rate | Login-Friction | Hoch |
+| Reg → Wallet verknüpft | Wallet-Provision-Rate | Technik stabil | ~100 % |
+| Wallet → Intro abgeschlossen | Intro-Completion-Rate | Intro zu lang/unklar? | Hoch (> 90 %) |
+| Intro → erstes Match gestartet | Match-Start-Rate | Onboarding liefert ins Gameplay | Hoch (z. B. > 70–85 %) |
+| Erstes Match → Match beendet | First-Match-Completion | Match/Tutorial zu hart? | > 60 % der Starter |
+
+**Hauptkette:** `Reg complete → Wallet OK → Intro done → First match started`
+
+### 12.3 Zeit-Metriken
+
+| Metrik | Definition | Warum |
+|--------|------------|--------|
+| Time-to-Register | Landing → Reg complete | Login zu schwer? |
+| Time-to-Wallet | Reg complete → Wallet linked | Provisioning-Latenz |
+| Time-to-Intro-Done | Wallet → Intro finished | Intro zu lang? |
+| **Time-to-First-Match (TTFM)** | Reg complete → Match start | **Wichtigste Zeit-KPI** |
+| Session-Länge Session 1 | Dauer erste Session | Bounce vs. Engagement |
+
+### 12.4 Pfad-Metriken (Neuling vs. Experte)
+
+| Metrik | Bedeutung |
+|--------|-----------|
+| Share „Einfach spielen“ | Anteil Neuling-Pfad |
+| Share „Ownership erklären“ | Anteil Experten-Pfad |
+| Switch-Rate | Wechsel vom Default-Pfad |
+| TTFM nach Pfad | Welcher Intro führt schneller ins Match? |
+| D1-Retention nach Pfad | Welcher Pfad behält besser? |
+
+Nicht auf „möglichst viele Experten“ optimieren – auf **Match-Start + Retention pro Pfad**.
+
+### 12.5 Qualität / Trust / Technik
+
+| Metrik | Bedeutung |
+|--------|-----------|
+| Wallet-Provision-Failure-Rate | Fehler bei Embedded Wallet |
+| Login-Failure-Rate (pro Methode) | Social vs. E-Mail vs. Wallet |
+| Support-Tickets / 1000 Regs (Onboarding) | Verwirrung, Account, Wallet |
+| FAQ-Öffnungen im Intro | Unklare Copy |
+| Drop-off auf Login- oder Choice-Screen | Reibungspunkte |
+
+### 12.6 Früh-Engagement (Onboarding hat gewirkt)
+
+| Metrik | Fenster |
+|--------|--------|
+| First Match completed | Session 1 |
+| 2. Match in Session 1 | Session 1 |
+| D1 Retention | Tag nach Reg |
+| D7 Retention | Woche 1 |
+
+### 12.7 Segmentierung
+
+Alle Kernmetriken nach Möglichkeit nach:
+
+- Login-Methode (Social / E-Mail / Wallet)
+- Intro-Pfad (Neuling / Experte)
+- Device / Plattform
+- Land (optional)
+
+### 12.8 Nicht als primären Onboarding-Erfolg zählen
+
+| Metrik | Warum nicht |
+|--------|-------------|
+| Mint-Conversion in Session 1 | Zu früh |
+| Claim-Rate | Spät, eher Experten |
+| Token-Saldo | Wirtschaft, nicht Onboarding |
+
+### 12.9 Richtwerte (Orientierung)
+
+| Metrik | Gesunder Bereich |
+|--------|------------------|
+| Reg → Wallet linked | > 98 % |
+| Wallet → Intro done | > 90 % |
+| Intro → First match started | > 70–85 % (genreabhängig) |
+| First match completed | > 60 % der Match-Starter |
+| D1 Retention | Intern benchmarken |
+
+### 12.10 Analytics-Events (Vorschlag)
+
+`onboarding_reg_started` · `onboarding_reg_completed` · `onboarding_wallet_provisioned` · `onboarding_wallet_failed` · `onboarding_path_chosen` · `onboarding_intro_completed` · `onboarding_first_match_started` · `onboarding_first_match_completed`
 
 ---
 
@@ -240,11 +323,12 @@ Produkt: **zwei** Intro-Tiefen.
 - [ ] Pfad-Wahl-Screen (oder Ableitung + Wechsel-Option)
 - [ ] Neuling-Intro ≤ 2 Screens, dann Match/Hub
 - [ ] Experten-Intro ≤ 60 s, optionales Adress-Setup, dann Match/Hub
-- [ ] Feature-Flags / Analytics-Events pro Phase
+- [ ] Feature-Flags / Analytics-Events pro Phase (siehe 12.10)
 - [ ] Fehlerpfade: Login fail, Wallet-Provision fail (Retry + Support)
+- [ ] Dashboard: Funnel + TTFM + Segmentierung nach Pfad/Login
 
 ---
 
 ## 14. Ein-Satz-Zusammenfassung
 
-**Alle registrieren sich gleich und bekommen eine Embedded Wallet – danach wählen sie einen kurzen Gameplay- oder Ownership-Einstieg, bevor sie ins Spiel gehen.**
+**Alle registrieren sich gleich und bekommen eine Embedded Wallet – danach wählen sie einen kurzen Gameplay- oder Ownership-Einstieg, bevor sie ins Spiel gehen; Erfolg misst sich an Wallet-Link, Intro-Abschluss und Time-to-First-Match.**
