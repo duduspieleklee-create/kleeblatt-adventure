@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import type { HealthResponse, HeroClass, ItemState } from "./index.js";
+import {
+  HERO_CLASSES,
+  type HealthResponse,
+  type HeroClass,
+  type ItemState,
+} from "./index.js";
 
 describe("shared types smoke", () => {
   it("accepts a valid HealthResponse shape", () => {
@@ -8,8 +13,8 @@ describe("shared types smoke", () => {
   });
 
   it("hero class union covers MVP classes", () => {
-    const classes: HeroClass[] = ["mage", "ranged", "melee"];
-    expect(classes).toHaveLength(3);
+    const classes: HeroClass[] = [...HERO_CLASSES];
+    expect(classes).toEqual(["mage", "ranged", "melee"]);
   });
 
   it("item states include web2 and secured", () => {

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
+    "@kleeblatt/shared": "*",
     "hono": "^4.6.12"
   },
   "devDependencies": {

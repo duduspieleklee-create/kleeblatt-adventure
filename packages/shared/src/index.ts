@@ -1,11 +1,13 @@
-/** Shared types for prototype – expand with rule-engine types from docs/architecture/19 */
+/**
+ * @kleeblatt/shared
+ * Shared types and constants for API + Web.
+ */
 
-export type HeroClass = "mage" | "ranged" | "melee";
+export type { HeroClass, Hero } from "./types/hero.js";
+export { HERO_CLASSES } from "./types/hero.js";
 
-export type ItemState = "web2" | "pending_secure" | "secured" | "active_in_game" | "self_custody";
+export type { ItemState, ItemSlot, ItemRarity, ItemTemplateRef, InventoryItem } from "./types/item.js";
 
-export interface HealthResponse {
-  status: string;
-  service?: string;
-  time?: string;
-}
+export type { HealthResponse, ApiErrorBody } from "./types/api.js";
+
+export { API_DEFAULT_PORT, WEB_DEFAULT_PORT, PROTOTYPE_MAP_ID } from "./constants/index.js";
