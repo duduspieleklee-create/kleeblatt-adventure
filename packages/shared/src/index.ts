@@ -2,12 +2,7 @@
 
 export type HeroClass = "mage" | "ranged" | "melee";
 
-export type ItemState =
-  | "web2"
-  | "pending_secure"
-  | "secured"
-  | "active_in_game"
-  | "self_custody";
+export type ItemState = "web2" | "pending_secure" | "secured" | "active_in_game" | "self_custody";
 
 export interface HealthResponse {
   status: string;

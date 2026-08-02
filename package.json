@@ -2,7 +2,8 @@
   "name": "kleeblatt-adventure",
   "version": "0.1.0",
   "private": true,
-  "description": "Kleeblattadventure – 2D browser adventure + Immutable zkEVM (prototype monorepo)",
+  "type": "module",
+  "description": "Kleeblatt Adventure – 2D browser adventure with optional Immutable zkEVM ownership (prototype monorepo)",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -13,14 +14,34 @@
     "dev:web": "npm run dev -w @kleeblatt/web",
     "dev:all": "npm run dev:api & npm run dev:web",
     "build": "npm run build -w @kleeblatt/shared && npm run build -w @kleeblatt/api && npm run build -w @kleeblatt/web",
-    "build:web": "npm run build -w @kleeblatt/web",
+    "build:shared": "npm run build -w @kleeblatt/shared",
     "build:api": "npm run build -w @kleeblatt/api",
+    "build:web": "npm run build -w @kleeblatt/web",
+    "typecheck": "npm run build -w @kleeblatt/shared && npm run build -w @kleeblatt/api && npm run build -w @kleeblatt/web --if-present",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:logs": "docker compose logs -f",
-    "legacy:game": "npm --prefix game run dev"
+    "db:seed": "node scripts/seed.mjs",
+    "prepare": "echo ready"
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.1",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^2.1.8"
   }
 }

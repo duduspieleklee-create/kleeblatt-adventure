@@ -1,9 +1,8 @@
-# Private keys - NEVER commit
+# Private keys – NEVER commit
 keys/
 *.key
 gc-admin-key
 gc-dev-key
-game-api/chaincode/**/keys/
 
 # Dependencies
 node_modules/
@@ -23,14 +22,26 @@ build/
 logs/
 *.log
 .DS_Store
+Thumbs.db
 
 # IDE
 .idea/
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 
 # Docker
 *.tar
 
 # Test / coverage
 coverage/
+.nyc_output/
+
+# Tooling caches
+.eslintcache
+.prettiercache
+*.cache
+
+# Misc
+*.local
+.turbo/
