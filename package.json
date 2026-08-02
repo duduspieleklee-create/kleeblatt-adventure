@@ -2,6 +2,7 @@
   "name": "kleeblatt-adventure",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Kleeblatt Adventure – 2D browser adventure with optional Immutable zkEVM ownership (prototype monorepo)",
   "workspaces": [
     "apps/*",
