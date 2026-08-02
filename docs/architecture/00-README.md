@@ -1,6 +1,6 @@
 # Kleeblattadventure – Immutable zkEVM Architektur-Dokumentation
 
-**Version:** 2.7  
+**Version:** 2.8  
 **Stand:** 3. August 2026  
 **Zielplattform:** Immutable zkEVM (L2) + Web2 Game Backend
 
@@ -16,6 +16,16 @@
 → **[17-mvp-gameplay.md](./17-mvp-gameplay.md)** – Gameplay + Skills  
 → **[19-phaser-rule-engine.md](./19-phaser-rule-engine.md)** – Combat RuleEngine  
 → **[12-pattern-zusammenfassung.md](./12-pattern-zusammenfassung.md)** – Pattern
+
+## Planning & Organisation
+
+| Datei | Inhalt |
+|-------|--------|
+| [prototype-roadmap.md](../planning/prototype-roadmap.md) | **4-Sprint Roadmap (Sprint 0–3)** |
+| [definition-of-ready-done.md](../planning/definition-of-ready-done.md) | **DoR / DoD Checklisten** |
+| [risk-register.md](../planning/risk-register.md) | **Risiko-Register (13 Risiken)** |
+
+GitHub Issues + Milestones (P0–P3) sind im Repo unter [Issues](https://github.com/duduspieleklee-create/kleeblatt-adventure/issues) und [Milestones](https://github.com/duduspieleklee-create/kleeblatt-adventure/milestones) zu finden.
 
 ## Dokumentenübersicht
 
