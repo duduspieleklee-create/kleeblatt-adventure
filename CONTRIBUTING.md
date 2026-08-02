@@ -1,210 +1,169 @@
-# Contributing to Kleeblatt Adventure Game
+# Contributing to Kleeblattadventure
 
-## Development Workflow
+**Stand:** 3. August 2026  
+**Stack:** TypeScript Monorepo (Hono + React/Vite + Phaser 3)
 
-This document outlines the development workflow for contributing to the Kleeblatt Adventure game project.
+---
 
-## Prerequisites
+## Voraussetzungen
 
-- Node.js (v18 or higher)
-- Docker
-- Git
-- GalaChain SDK
-- Python 3.9+ for backend development
+- **Node.js ≥ 20** (nicht v18)
+- **Docker** (für Postgres + Redis)
+- **Git**
+- Ein Google OAuth-Projekt (für Auth) – siehe [game-config.json](./game-config.json) → `auth`
 
-## Getting Started
-
-### 1. Clone the Repository
+## Erster Setup
 
 ```bash
-git clone https://github.com/your-username/kleeblatt-adventure.git
+# Repo klonen
+git clone https://github.com/duduspieleklee-create/kleeblatt-adventure.git
 cd kleeblatt-adventure
-```
 
-### 2. Set Up the Frontend
-
-```bash
-cd game
+# Abhängigkeiten installieren (Workspace)
 npm install
-npm run dev
+
+# Env-Datei erstellen
+cp .env.example .env
+# → Variablen ausfüllen (siehe .env.example Kommentare)
+
+# Datenbanken starten (Postgres + Redis)
+npm run db:up
+
+# API starten (Terminal 1)
+npm run dev:api    # → http://localhost:4000/health
+
+# Web starten (Terminal 2)
+npm run dev:web    # → http://localhost:5173
 ```
 
-### 3. Set Up the Backend
+## Monorepo-Struktur
+
+```
+apps/
+  api/          # Game API (Hono, TypeScript, Port 4000)
+  web/          # React-Shell + Phaser (Vite, Port 5173)
+packages/
+  shared/       # Gemeinsame Types (Item-States, RuleEngine-Interfaces)
+docs/
+  architecture/ # Architektur-Dokumentation (00–25)
+game/           # Legacy (Vite/Phaser/Gala) – nicht aktiv verwenden
+game-api/       # Legacy (Python FastAPI) – nicht aktiv verwenden
+```
+
+**Wichtig:** `game/` und `game-api/` sind veraltete Experimente. Der aktive Entwicklungspfad ist `apps/` und `packages/`.
+
+## Architektur-Docs lesen
+
+Bevor du Code schreibst, lies mindestens:
+
+1. [16-developer-guide.md](./docs/architecture/16-developer-guide.md) – Stack, MVP-Build-Order
+2. [20-prototyp-checkliste.md](./docs/architecture/20-prototyp-checkliste.md) – P0–P7 Phasen
+3. [21-game-config.md](./docs/architecture/21-game-config.md) – Game-Konfiguration
+4. [17-mvp-gameplay.md](./docs/architecture/17-mvp-gameplay.md) – Klassen, Skills, Map
+5. [19-phaser-rule-engine.md](./docs/architecture/19-phaser-rule-engine.md) – Combat-Types
+
+Vollständiger Index: [docs/architecture/00-README.md](./docs/architecture/00-README.md)
+
+## Coding Standards
+
+### TypeScript
+
+- **Strict Mode** in allen `tsconfig.json` Dateien
+- Explizite Typen für alle öffentlichen Funktionen
+- Interfaces für Datenstrukturen, Type für Unions
+- `import type` für reine Typ-Importe
+- Kein `any` – wenn nötig `unknown` + Type Guard
+
+### Datei-Organisation
+
+- Eine Komponente/Klasse pro Datei
+- `kebab-case` für Dateinamen (`hero-controller.ts`, `enemy-ai.ts`)
+- `PascalCase` für Klassen/Interfaces (`EnemyStats`, `RuleEngine`)
+- `camelCase` für Funktionen/Variablen
+
+### React (apps/web)
+
+- Funktionale Komponenten, keine Class-Components
+- Custom Hooks für wiederverwendbare Logik (`useGameBridge`, `useInventory`)
+- CSS Modules oder Tailwind (Team-Wahl, aber einheitlich)
+
+### API (apps/api)
+
+- Hono-Router gruppieren nach Domain (`/auth`, `/hero`, `/inventory`, `/match`)
+- Controller/Handler dünne Schicht → Business-Logik in Services
+- Input-Validierung mit Zod oder Valibot
+- Fehler als strukturiertes JSON (`{ error: { code, message, retryable } }`)
+
+### Phaser (in apps/web)
+
+- Eine Scene pro Spiel-Zustand (`BootScene`, `MatchScene`)
+- `gameBridge` für Kommunikation mit React (siehe [14-phaser-react-bridge.md](./docs/architecture/14-phaser-react-bridge.md))
+- Keine direkten API-Calls aus Phaser – über React/Proxy
+- Stats aus `game-config.json`, nicht hardcodiert
+
+## Git-Workflow
+
+### Branch-Strategie
 
 ```bash
-cd ../game-api
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python main.py
+# Feature-Branch von main
+git checkout -b feat/hero-creation
+
+# Prefixe: feat:, fix:, chore:, docs:, refactor:, test:
 ```
 
-### 4. Set Up the GalaChain Contract
+### Commit-Messages
+
+Conventional Commits:
+
+```
+feat: add hero creation API endpoint
+fix: resolve enemy leash not resetting HP
+chore: bump dependencies
+docs: update API contract for inventory
+refactor: extract loot-roll logic to service
+test: add unit tests for rule engine
+```
+
+### Pull Request
+
+1. Branch pushen
+2. PR mit Beschreibung: Was, Warum, Wie testen
+3. PR-Template ausfüllen (falls vorhanden)
+4. Mindestens ein Review vor Merge
+5. Squash-Merge in `main`
+
+## Testing
+
+| Ebene | Tool | Was |
+|-------|------|-----|
+| Unit | Vitest oder Jest | RuleEngine (ohne Phaser), Services, Helper |
+| Integration | Vitest + Supertest | API-Endpunkte mit Test-DB |
+| E2E | Manual (später Playwright) | Demo-Skript aus [20-prototyp-checkliste.md](./docs/architecture/20-prototyp-checkliste.md) |
 
 ```bash
-cd ../game-api/chaincode/kleeblattcoin
-npm install
-npm run build
+# Tests ausführen
+npm test              # alle
+npm test -w @kleeblatt/api    # nur API
+npm test -w @kleeblatt/web    # nur Web
 ```
 
-## Code Structure
+## PR-Checkliste
 
-### Frontend (game/)
-- `src/main.js`: Main game entry point
-- `src/core/index.js`: Core game mechanics
-- `src/WelcomeScene.js`: Welcome scene implementation
-- `src/game-core.js`: Core game logic
-- `src/wallet.js`: Wallet integration
-- `src/api.js`: API communication layer
+- [ ] Code folgt Coding Standards
+- [ ] Tests geschrieben/aktualisiert
+- [ ] `npm run build` erfolgreich
+- [ ] Keine Secrets in Code/Commits
+- [ ] Docs aktualisiert falls nötig
+- [ ] PR-Beschreibung erklärt Was + Warum
 
-### Backend (game-api/)
-- `main.py`: FastAPI application entry point
-- `models.py`: Database models
-- `schemas.py`: Pydantic schemas
-- `database.py`: Database configuration
-- `auth.py`: Authentication module
-- `routers/game.py`: Game-related endpoints
-- `daily_awards.py`: Daily award logic
-- `chaincode/kleeblattcoin/`: GalaChain contract implementation
+## Env-Variablen
 
-## Development Guidelines
+Alle Variablen sind in [`.env.example`](./.env.example) dokumentiert.  
+**Nie** echte Secrets committen. `.env` ist in `.gitignore`.
 
-### Coding Standards
+## Fragen?
 
-1. **Frontend (JavaScript/TypeScript)**
-   - Use ES6+ features consistently
-   - Follow Phaser 3 best practices
-   - Maintain clean, readable code
-   - Write JSDoc comments for functions
-
-2. **Backend (Python)**
-   - Follow PEP 8 style guide
-   - Use type hints where appropriate
-   - Write docstrings for functions and classes
-   - Follow FastAPI conventions
-
-3. **Smart Contracts (TypeScript)**
-   - Follow GalaChain SDK patterns
-   - Implement proper error handling
-   - Write comprehensive tests
-   - Document all public functions
-
-### Git Workflow
-
-1. Create a feature branch from `main`:
-   ```bash
-   git checkout -b feature/my-feature
-   ```
-
-2. Make changes and commit with descriptive messages:
-   ```bash
-   git add .
-   git commit -m "Add feature: description of the feature"
-   ```
-
-3. Push to the remote branch:
-   ```bash
-   git push origin feature/my-feature
-   ```
-
-4. Create a pull request to merge into `main`
-
-### Testing
-
-1. **Unit Tests**: Write unit tests for all business logic
-2. **Integration Tests**: Test API endpoints and database interactions
-3. **Contract Tests**: Verify smart contract functionality
-4. **End-to-End Tests**: Test complete user flows
-
-Run tests before submitting a pull request:
-```bash
-# Frontend tests
-cd game
-npm test
-
-# Backend tests
-cd ../game-api
-python -m pytest
-
-# Contract tests
-cd chaincode/kleeblattcoin
-npm test
-```
-
-## GalaChain Contract Development
-
-### Creating New Contract Functions
-
-1. Define the function in the contract class
-2. Add proper access controls
-3. Implement input validation
-4. Write comprehensive tests
-5. Update documentation
-
-### Testing Contracts
-
-1. Use the GalaChain testing framework
-2. Test all possible input combinations
-3. Verify error handling
-4. Test gas consumption
-5. Perform security analysis
-
-## Security Guidelines
-
-1. **Input Validation**: Always validate inputs in contracts
-2. **Access Controls**: Implement proper role-based access
-3. **Error Handling**: Handle errors gracefully
-4. **Secrets Management**: Never commit secrets to the repository
-5. **Code Reviews**: Have all code reviewed before merging
-
-## Pull Request Requirements
-
-1. All tests must pass
-2. Code must follow established style guides
-3. Changes must be documented appropriately
-4. Security considerations must be addressed
-5. Performance implications must be evaluated
-
-## Deployment Process
-
-1. Create a pull request to the `main` branch
-2. Wait for CI/CD pipeline to complete
-3. Ensure all security scans pass
-4. Get approval from maintainers
-5. Merge the pull request
-6. Monitor the deployment process
-
-## Best Practices
-
-### Performance
-- Optimize database queries
-- Cache frequently accessed data
-- Minimize contract storage operations
-- Use efficient algorithms
-
-### Maintainability
-- Write clear, self-documenting code
-- Keep functions small and focused
-- Use meaningful variable names
-- Update documentation as needed
-
-### Security
-- Follow the principle of least privilege
-- Implement proper error handling
-- Protect against common attack vectors
-- Regular security audits
-
-## Communication
-
-- Use GitHub issues for bug reports and feature requests
-- Join our Discord channel for real-time discussions
-- Participate in code reviews
-- Contribute to design discussions
-
-## Recognition
-
-Contributors will be recognized in the project's README and release notes. We appreciate all contributions, big or small!
-
-## Questions?
-
-If you have any questions about contributing, feel free to reach out to the maintainers or open an issue.
+- GitHub Issues für Bugs und Feature-Requests
+- Architektur-Docs unter `docs/architecture/` für Design-Entscheidungen
+- [12-pattern-zusammenfassung.md](./docs/architecture/12-pattern-zusammenfassung.md) für das große Bild
