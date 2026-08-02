@@ -1,118 +1,110 @@
-# Contributing to Kleeblattadventure
+# Contributing to Kleeblatt Adventure
 
-**Stand:** 3. August 2026  
-**Stack:** TypeScript Monorepo (Hono + React/Vite + Phaser 3)
+**Updated:** 3 August 2026  
+**Stack:** TypeScript monorepo (Hono + React/Vite + Phaser 3)
 
 ---
 
-## Voraussetzungen
+## Prerequisites
 
-- **Node.js ≥ 20** (nicht v18)
-- **Docker** (für Postgres + Redis)
+- **Node.js ≥ 20** (not v18)
+- **Docker** (Postgres + Redis)
 - **Git**
-- Ein Google OAuth-Projekt (für Auth) – siehe [game-config.json](./game-config.json) → `auth`
+- A Google OAuth project (for auth) – see [game-config.json](./game-config.json) → `auth`
 
-## Erster Setup
+## First-time setup
 
 ```bash
-# Repo klonen
 git clone https://github.com/duduspieleklee-create/kleeblatt-adventure.git
 cd kleeblatt-adventure
 
-# Abhängigkeiten installieren (Workspace)
 npm install
 
-# Env-Datei erstellen
 cp .env.example .env
-# → Variablen ausfüllen (siehe .env.example Kommentare)
+# → fill variables (see .env.example comments)
 
-# Datenbanken starten (Postgres + Redis)
 npm run db:up
+npm run db:seed
 
-# API starten (Terminal 1)
+# Terminal 1
 npm run dev:api    # → http://localhost:4000/health
 
-# Web starten (Terminal 2)
+# Terminal 2
 npm run dev:web    # → http://localhost:5173
 ```
 
-## Monorepo-Struktur
+## Monorepo structure
 
 ```
 apps/
-  api/          # Game API (Hono, TypeScript, Port 4000)
-  web/          # React-Shell + Phaser (Vite, Port 5173)
+  api/          # Game API (Hono, TypeScript, port 4000)
+  web/          # React shell + Phaser (Vite, port 5173)
 packages/
-  shared/       # Gemeinsame Types (Item-States, RuleEngine-Interfaces)
+  shared/       # Shared types (item states, rule-engine interfaces)
 docs/
-  architecture/ # Architektur-Dokumentation (00–25)
-game/           # Legacy (Vite/Phaser/Gala) – nicht aktiv verwenden
-game-api/       # Legacy (Python FastAPI) – nicht aktiv verwenden
+  architecture/ # Architecture documentation (00–25)
+scripts/        # Seed, deploy helpers
 ```
 
-**Wichtig:** `game/` und `game-api/` sind veraltete Experimente. Der aktive Entwicklungspfad ist `apps/` und `packages/`.
+Active development path: `apps/` and `packages/` only.
 
-## Architektur-Docs lesen
+## Architecture docs (read before coding)
 
-Bevor du Code schreibst, lies mindestens:
+1. [16-developer-guide.md](./docs/architecture/16-developer-guide.md) – stack, MVP build order
+2. [20-prototyp-checkliste.md](./docs/architecture/20-prototyp-checkliste.md) – P0–P7 phases
+3. [21-game-config.md](./docs/architecture/21-game-config.md) – game configuration
+4. [17-mvp-gameplay.md](./docs/architecture/17-mvp-gameplay.md) – classes, skills, map
+5. [19-phaser-rule-engine.md](./docs/architecture/19-phaser-rule-engine.md) – combat types
 
-1. [16-developer-guide.md](./docs/architecture/16-developer-guide.md) – Stack, MVP-Build-Order
-2. [20-prototyp-checkliste.md](./docs/architecture/20-prototyp-checkliste.md) – P0–P7 Phasen
-3. [21-game-config.md](./docs/architecture/21-game-config.md) – Game-Konfiguration
-4. [17-mvp-gameplay.md](./docs/architecture/17-mvp-gameplay.md) – Klassen, Skills, Map
-5. [19-phaser-rule-engine.md](./docs/architecture/19-phaser-rule-engine.md) – Combat-Types
+Full index: [docs/architecture/00-README.md](./docs/architecture/00-README.md)
 
-Vollständiger Index: [docs/architecture/00-README.md](./docs/architecture/00-README.md)
-
-## Coding Standards
+## Coding standards
 
 ### TypeScript
 
-- **Strict Mode** in allen `tsconfig.json` Dateien
-- Explizite Typen für alle öffentlichen Funktionen
-- Interfaces für Datenstrukturen, Type für Unions
-- `import type` für reine Typ-Importe
-- Kein `any` – wenn nötig `unknown` + Type Guard
+- **Strict mode** in all `tsconfig.json` files
+- Explicit types on public functions
+- Interfaces for data structures, type for unions
+- `import type` for type-only imports
+- No `any` – use `unknown` + type guards when needed
 
-### Datei-Organisation
+### File organisation
 
-- Eine Komponente/Klasse pro Datei
-- `kebab-case` für Dateinamen (`hero-controller.ts`, `enemy-ai.ts`)
-- `PascalCase` für Klassen/Interfaces (`EnemyStats`, `RuleEngine`)
-- `camelCase` für Funktionen/Variablen
+- One component/class per file
+- `kebab-case` file names (`hero-controller.ts`, `enemy-ai.ts`)
+- `PascalCase` for classes/interfaces (`EnemyStats`, `RuleEngine`)
+- `camelCase` for functions/variables
 
-### React (apps/web)
+### React (`apps/web`)
 
-- Funktionale Komponenten, keine Class-Components
-- Custom Hooks für wiederverwendbare Logik (`useGameBridge`, `useInventory`)
-- CSS Modules oder Tailwind (Team-Wahl, aber einheitlich)
+- Functional components only
+- Custom hooks for reusable logic (`useGameBridge`, `useInventory`)
+- CSS Modules or Tailwind – pick one style and stay consistent
 
-### API (apps/api)
+### API (`apps/api`)
 
-- Hono-Router gruppieren nach Domain (`/auth`, `/hero`, `/inventory`, `/match`)
-- Controller/Handler dünne Schicht → Business-Logik in Services
-- Input-Validierung mit Zod oder Valibot
-- Fehler als strukturiertes JSON (`{ error: { code, message, retryable } }`)
+- Hono routers grouped by domain (`/auth`, `/hero`, `/inventory`, `/match`)
+- Thin handlers → business logic in services
+- Input validation with Zod or Valibot
+- Errors as structured JSON (`{ error: { code, message, retryable } }`)
 
-### Phaser (in apps/web)
+### Phaser (in `apps/web`)
 
-- Eine Scene pro Spiel-Zustand (`BootScene`, `MatchScene`)
-- `gameBridge` für Kommunikation mit React (siehe [14-phaser-react-bridge.md](./docs/architecture/14-phaser-react-bridge.md))
-- Keine direkten API-Calls aus Phaser – über React/Proxy
-- Stats aus `game-config.json`, nicht hardcodiert
+- One scene per game state (`BootScene`, `MatchScene`)
+- `gameBridge` for React communication (see [14-phaser-react-bridge.md](./docs/architecture/14-phaser-react-bridge.md))
+- No direct API calls from Phaser – go through React/proxy
+- Stats from `game-config.json`, never hard-coded
 
-## Git-Workflow
+## Git workflow
 
-### Branch-Strategie
+### Branch strategy
 
 ```bash
-# Feature-Branch von main
 git checkout -b feat/hero-creation
-
-# Prefixe: feat:, fix:, chore:, docs:, refactor:, test:
+# Prefixes: feat/, fix/, chore/, docs/, refactor/, test/
 ```
 
-### Commit-Messages
+### Commit messages
 
 Conventional Commits:
 
@@ -125,45 +117,49 @@ refactor: extract loot-roll logic to service
 test: add unit tests for rule engine
 ```
 
-### Pull Request
+### Pull request
 
-1. Branch pushen
-2. PR mit Beschreibung: Was, Warum, Wie testen
-3. PR-Template ausfüllen (falls vorhanden)
-4. Mindestens ein Review vor Merge
-5. Squash-Merge in `main`
+1. Push branch
+2. Open PR with what / why / how to test
+3. Fill PR template
+4. At least one review before merge
+5. Squash-merge into `main`
 
-## Testing
+## Testing & quality
 
-| Ebene | Tool | Was |
-|-------|------|-----|
-| Unit | Vitest oder Jest | RuleEngine (ohne Phaser), Services, Helper |
-| Integration | Vitest + Supertest | API-Endpunkte mit Test-DB |
-| E2E | Manual (später Playwright) | Demo-Skript aus [20-prototyp-checkliste.md](./docs/architecture/20-prototyp-checkliste.md) |
+| Layer | Tool | Scope |
+|-------|------|--------|
+| Unit | Vitest | RuleEngine (no Phaser), services, helpers |
+| Integration | Vitest + API client | Endpoints with test DB |
+| E2E | Manual (later Playwright) | Demo script from [20-prototyp-checkliste.md](./docs/architecture/20-prototyp-checkliste.md) |
+| Lint | ESLint | All TS/JS |
+| Format | Prettier | All supported files |
 
 ```bash
-# Tests ausführen
-npm test              # alle
-npm test -w @kleeblatt/api    # nur API
-npm test -w @kleeblatt/web    # nur Web
+npm test                 # all tests
+npm run lint             # ESLint
+npm run format:check     # Prettier check
+npm run typecheck        # TypeScript build
+npm run build            # full monorepo build
 ```
 
-## PR-Checkliste
+## PR checklist
 
-- [ ] Code folgt Coding Standards
-- [ ] Tests geschrieben/aktualisiert
-- [ ] `npm run build` erfolgreich
-- [ ] Keine Secrets in Code/Commits
-- [ ] Docs aktualisiert falls nötig
-- [ ] PR-Beschreibung erklärt Was + Warum
+- [ ] Code follows coding standards
+- [ ] Tests written/updated
+- [ ] `npm run build` succeeds
+- [ ] `npm run lint` clean
+- [ ] No secrets in code/commits
+- [ ] Docs updated if needed
+- [ ] PR description explains what + why
 
-## Env-Variablen
+## Environment variables
 
-Alle Variablen sind in [`.env.example`](./.env.example) dokumentiert.  
-**Nie** echte Secrets committen. `.env` ist in `.gitignore`.
+All variables are documented in [`.env.example`](./.env.example).  
+**Never** commit real secrets. `.env` is in `.gitignore`.
 
-## Fragen?
+## Questions?
 
-- GitHub Issues für Bugs und Feature-Requests
-- Architektur-Docs unter `docs/architecture/` für Design-Entscheidungen
-- [12-pattern-zusammenfassung.md](./docs/architecture/12-pattern-zusammenfassung.md) für das große Bild
+- GitHub Issues for bugs and feature requests
+- Architecture docs under `docs/architecture/` for design decisions
+- [12-pattern-zusammenfassung.md](./docs/architecture/12-pattern-zusammenfassung.md) for the big picture

@@ -1,0 +1,55 @@
+name: Cleanup legacy trees
+
+# One-shot: removes committed legacy game/, game-api/, keys/ (incl. node_modules).
+# Safe to re-run; no-ops when folders are already gone.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - chore/cleanup-legacy-and-tooling
+
+permissions:
+  contents: write
+
+jobs:
+  remove-legacy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Remove legacy directories
+        run: |
+          set -e
+          REMOVED=0
+          for path in game game-api keys docs/galachain-integration.md \
+            .github/workflows/galachain-fast-deploy.yml \
+            .github/workflows/galachain-testnet-deploy.yml; do
+            if [ -e "$path" ]; then
+              echo "Removing $path"
+              rm -rf "$path"
+              REMOVED=1
+            fi
+          done
+          if [ "$REMOVED" -eq 0 ]; then
+            echo "Nothing to remove – already clean."
+            echo "cleaned=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "cleaned=true" >> "$GITHUB_OUTPUT"
+          fi
+        id: cleanup
+
+      - name: Commit and push
+        if: steps.cleanup.outputs.cleaned != 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No staged changes."
+            exit 0
+          fi
+          git commit -m "chore: remove legacy game/, game-api/, keys/ and Gala workflows"
+          git push
