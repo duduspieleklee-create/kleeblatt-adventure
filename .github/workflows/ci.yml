@@ -20,10 +20,10 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Format check
-        run: npm run format:check
+      - name: Format check (source)
+        run: npx prettier --check "apps/**/*.{ts,tsx,js,css,html}" "packages/**/*.{ts,tsx,js}" "scripts/**/*.{js,mjs}" "*.{js,mjs,cjs,json,md,yml}" ".github/workflows/*.yml"
 
       - name: Lint
         run: npm run lint
@@ -76,7 +76,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run tests
         run: npm test

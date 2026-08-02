@@ -14,7 +14,7 @@ app.use(
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-  })
+  }),
 );
 
 app.get("/health", (c) =>
@@ -22,7 +22,7 @@ app.get("/health", (c) =>
     status: "ok",
     service: "kleeblatt-api",
     time: new Date().toISOString(),
-  })
+  }),
 );
 
 app.get("/api/health", (c) =>
@@ -30,8 +30,8 @@ app.get("/api/health", (c) =>
     status: "ok",
     service: "kleeblatt-api",
     time: new Date().toISOString(),
-  })
+  }),
 );
 
-console.log(`API listening on http://localhost:${port}`);
+console.info(`API listening on http://localhost:${port}`);
 serve({ fetch: app.fetch, port });
