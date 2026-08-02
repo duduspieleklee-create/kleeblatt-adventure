@@ -1,288 +1,188 @@
-# 14 – Phaser 3 + React Bridge
+# 14 – Phaser-React Bridge (gameBridge)
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Stand:** 3. August 2026  
 **Status:** Design Decision
 
 ---
 
-## 1. Ziel
+## 1. Zweck
 
-Festlegen, wie **Phaser 3** (2D-Gameplay) und **React** (Meta-UI: Login, Shop, Inventar, Claim) kommunizieren – ohne dass eine Seite die andere „besitzt“.
+Saubere Trennung zwischen Phaser (Gameplay, Rendering, Input) und React (Meta-UI, HUD, Menüs).  
+Die `gameBridge` ist die einzige Kommunikationsschicht zwischen beiden.
 
-**Engine-Kontext:** Phaser 3 (aktuell 3.8x), TypeScript, Vite.  
-**Shell:** React über der Engine.
+```text
+React (HUD, Menüs, Inventar)
+    ↕ gameBridge (Event Emitter)
+Phaser (Match, Map, Combat, Movement)
+```
+
+**Regel:** Phaser ruft niemals direkt API-Calls auf. React steuert niemals direkt Phaser-Sprites.
 
 ---
 
-## 2. Grundprinzip
+## 2. Implementierung
 
+Minimaler Typed Event Emitter (z. B. `mitt` oder eigener):
+
+```typescript
+// packages/shared/src/gameBridge.ts
+
+import mitt from "mitt";
+
+export type GameBridgeEvents = {
+  // Phaser → React
+  "player:hp":           { current: number; max: number };
+  "player:resource":    { current: number; max: number; type: "mana" | "stamina" };
+  "player:level":       { level: number; xp: number; xpToNext: number };
+  "player:death":       {  };
+  "player:respawn":     { hp: number };
+  "enemy:died":          { enemyId: string; typeId: string; xp: number; x: number; y: number };
+  "enemy:damaged":      { enemyId: string; hp: number; maxHp: number };
+  "loot:received":       { itemId: string; templateId: string; name: string; rarity: string };
+  "match:started":      { matchId: string };
+  "match:ended":        { matchId: string; enemiesKilled: number; chestsOpened: number };
+  "skill:cooldown":     { skillId: string; readyAt: number };
+  "skill:used":         { skillId: string };
+  "chest:opened":       { chestId: string };
+
+  // React → Phaser
+  "match:start":        { heroClass: string; level: number; equippedStats: Record<string, number> };
+  "match:exit":         {  };
+  "loadout:update":     { equippedStats: Record<string, number> };
+  "pause":              {  };
+  "resume":             {  };
+};
+
+export const gameBridge = mitt<GameBridgeEvents>();
 ```
-React Shell (Login, Shop, Inventar, Claim, HUD-Overlays)
-        ↕  Bridge (Events + ggf. leichter UI-Store)
-Phaser Game (Scenes: Boot, Match, Result, …)
-        ↕
-Game Backend / SDK
-```
-
-| Richtung | Typische Fälle |
-|----------|----------------|
-| **React → Phaser** | Match starten, Pause, Settings, Feedback nach Mint |
-| **Phaser → React** | Match zu Ende, Loot, Inventar öffnen, HP für HUD |
-| **Beide → Backend** | Auth, Inventar, Mint, Stake, Claim |
-
-**Nicht:** React rendert Sprites. **Nicht:** Phaser baut den Shop.
-
-**Source of Truth für Items:** Game Backend – nicht die Bridge.
 
 ---
 
-## 3. Empfohlenes Muster: Event Bus + Game Handle
+## 3. Events: Phaser → React
 
-### 3.1 React: Phaser mounten
+| Event | Payload | Wann | React macht |
+|-------|---------|------|-------------|
+| `player:hp` | `{ current, max }` | Spieler nimmt Schaden / heilt | HP-Bar aktualisieren |
+| `player:resource` | `{ current, max, type }` | Mana/Stamina ändert sich | Ressourcen-Bar aktualisieren |
+| `player:level` | `{ level, xp, xpToNext }` | Nach XP-Gain / Level-Up | Level + XP-Bar aktualisieren |
+| `player:death` | `{}` | HP ≤ 0 | Death-Overlay, Respawn-Timer anzeigen |
+| `player:respawn` | `{ hp }` | Nach Respawn-Delay | Overlay ausblenden |
+| `enemy:died` | `{ enemyId, typeId, xp, x, y }` | Enemy stirbt | XP-Animation, Loot-Hinweis |
+| `enemy:damaged` | `{ enemyId, hp, maxHp }` | Enemy nimmt Schaden | Enemy-HP-Bar (über Sprite oder World-Space) |
+| `loot:received` | `{ itemId, templateId, name, rarity }` | Kiste geöffnet, Item granted | Toast/Popup "Item erhalten" |
+| `match:started` | `{ matchId }` | Match-Scene geladen | HUD einblenden |
+| `match:ended` | `{ matchId, enemiesKilled, chestsOpened }` | Match beendet | Ergebnis-Screen, API-Call `POST /match/result` |
+| `skill:cooldown` | `{ skillId, readyAt }` | Skill verwendet | Cooldown-Overlay auf Skill-Slot |
+| `skill:used` | `{ skillId }` | Skill ausgelöst | VFX-Trigger, Sound |
+| `chest:opened` | `{ chestId }` | Kiste geöffnet | Kiste aus Liste entfernen |
+
+---
+
+## 4. Events: React → Phaser
+
+| Event | Payload | Wann | Phaser macht |
+|-------|---------|------|-------------|
+| `match:start` | `{ heroClass, level, equippedStats }` | Spieler klickt "Abenteuer starten" | MatchScene starten, Spieler-Sprite mit Stats |
+| `match:exit` | `{}` | Spieler klickt "Verlassen" | Scene stoppen, zurück zu Hub/Inventar |
+| `loadout:update` | `{ equippedStats }` | Spieler rüstet Item aus/ab | Stats im laufenden Match aktualisieren |
+| `pause` | `{}` | Spieler pausiert (ESC) | Spiel pausieren, Overlay |
+| `resume` | `{}` | Spieler resumed | Spiel fortsetzen |
+
+---
+
+## 5. Verwendung
+
+### React-Seite
 
 ```tsx
-// GameCanvas.tsx
-import { useEffect, useRef } from "react";
-import Phaser from "phaser";
-import { createGameConfig } from "./phaser/createGameConfig";
-import { gameBridge } from "./bridge/gameBridge";
+import { gameBridge } from "@kleeblatt/shared";
 
-export function GameCanvas() {
-  const parentRef = useRef<HTMLDivElement>(null);
-  const created = useRef(false);
+function HUD() {
+  const [hp, setHp] = useState({ current: 120, max: 120 });
 
   useEffect(() => {
-    if (!parentRef.current || created.current) return;
-    created.current = true;
-
-    const game = new Phaser.Game(
-      createGameConfig(parentRef.current, gameBridge)
-    );
-    gameBridge.attachGame(game);
-
-    return () => {
-      gameBridge.detachGame();
-      game.destroy(true);
-      created.current = false;
-    };
+    const onHp = (data: { current: number; max: number }) => setHp(data);
+    gameBridge.on("player:hp", onHp);
+    return () => gameBridge.off("player:hp", onHp);
   }, []);
 
-  return <div ref={parentRef} id="phaser-root" className="w-full h-full" />;
+  return <HpBar current={hp.current} max={hp.max} />;
+}
+
+function startMatch(heroClass: string, level: number, stats: Record<string, number>) {
+  gameBridge.emit("match:start", { heroClass, level, equippedStats: stats });
 }
 ```
 
-`created`-Ref: schützt vor Doppel-Mount (React Strict Mode).
+### Phaser-Seite
 
-### 3.2 Bridge
+```typescript
+import { gameBridge } from "@kleeblatt/shared";
 
-```ts
-// bridge/gameBridge.ts
-type Handler = (payload?: unknown) => void;
-
-class GameBridge {
-  private game: Phaser.Game | null = null;
-  private listeners = new Map<string, Set<Handler>>();
-
-  attachGame(game: Phaser.Game) {
-    this.game = game;
-  }
-
-  detachGame() {
-    this.game = null;
-  }
-
-  on(event: string, handler: Handler) {
-    if (!this.listeners.has(event)) this.listeners.set(event, new Set());
-    this.listeners.get(event)!.add(handler);
-    return () => this.listeners.get(event)!.delete(handler);
-  }
-
-  emit(event: string, payload?: unknown) {
-    this.listeners.get(event)?.forEach((h) => h(payload));
-  }
-
-  /** React → Phaser */
-  sendToGame(event: string, payload?: unknown) {
-    if (!this.game) return;
-    this.game.events.emit(event, payload);
-  }
-}
-
-export const gameBridge = new GameBridge();
-```
-
-### 3.3 Phaser Config + Registry
-
-```ts
-// phaser/createGameConfig.ts
-export function createGameConfig(
-  parent: HTMLElement,
-  bridge: { /* GameBridge */ }
-): Phaser.Types.Core.GameConfig {
-  return {
-    type: Phaser.AUTO,
-    parent,
-    width: 1280,
-    height: 720,
-    scene: [/* BootScene, MatchScene, ... */],
-    callbacks: {
-      preBoot: (game) => {
-        game.registry.set("bridge", bridge);
-      },
-    },
-  };
-}
-```
-
-In Scenes: `const bridge = this.game.registry.get("bridge")`.
-
-### 3.4 Scene: empfangen und senden
-
-```ts
-export class MatchScene extends Phaser.Scene {
-  constructor() {
-    super("MatchScene");
-  }
-
+class MatchScene extends Phaser.Scene {
   create() {
-    this.game.events.on("match:pause", this.onPause, this);
-    this.game.events.on("match:resume", this.onResume, this);
+    gameBridge.emit("match:started", { matchId: this.matchId });
 
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.game.events.off("match:pause", this.onPause, this);
-      this.game.events.off("match:resume", this.onResume, this);
+    gameBridge.on("match:start", ({ heroClass, level, equippedStats }) => {
+      this.spawnPlayer(heroClass, level, equippedStats);
+    });
+
+    gameBridge.on("match:exit", () => {
+      this.scene.stop();
     });
   }
 
-  private onPause = () => this.scene.pause();
-  private onResume = () => this.scene.resume();
+  onPlayerDamage(hp: number, maxHp: number) {
+    gameBridge.emit("player:hp", { current: hp, max: maxHp });
+  }
 
-  endMatch(result: { won: boolean; lootItemIds: string[] }) {
-    const bridge = this.game.registry.get("bridge");
-    bridge.emit("match:ended", result);
+  onEnemyDeath(enemy: Enemy) {
+    gameBridge.emit("enemy:died", {
+      enemyId: enemy.id,
+      typeId: enemy.typeId,
+      xp: enemy.stats.xp,
+      x: enemy.x,
+      y: enemy.y,
+    });
   }
 }
 ```
 
-### 3.5 React Hook
+---
 
-```ts
-// hooks/useGameEvent.ts
-import { useEffect } from "react";
-import { gameBridge } from "../bridge/gameBridge";
+## 6. Anti-Patterns
 
-export function useGameEvent(event: string, handler: (payload: any) => void) {
-  useEffect(() => gameBridge.on(event, handler), [event, handler]);
-}
+| Nicht machen | Stattdessen |
+|--------------|-------------|
+| API-Calls aus Phaser | React macht API-Calls, sendet Ergebnis via gameBridge |
+| Direkte React-State-Mutation aus Phaser | gameBridge.emit, React hört und updated |
+| Phaser importiert React-Komponenten | Nie. Nur Events |
+| React manipuliert Phaser-Sprites direkt | gameBridge.emit, Phaser hört und updated |
+| Komplexe Payloads (>1KB) | Nur IDs und Werte, React lädt Details per API |
+
+---
+
+## 7. Testing
+
+Die Events sind rein typisiert – man kann ohne Phaser testen:
+
+```typescript
+import { gameBridge } from "@kleeblatt/shared";
+
+test("player:hp updates HUD", () => {
+  const received: number[] = [];
+  gameBridge.on("player:hp", ({ current }) => received.push(current));
+
+  gameBridge.emit("player:hp", { current: 50, max: 120 });
+  gameBridge.emit("player:hp", { current: 30, max: 120 });
+
+  expect(received).toEqual([50, 30]);
+});
 ```
 
-```tsx
-function MatchOverlay() {
-  useGameEvent("match:ended", (result) => {
-    openLootModal(result.lootItemIds);
-  });
-
-  return (
-    <button onClick={() => gameBridge.sendToGame("match:pause")}>
-      Pause
-    </button>
-  );
-}
-```
-
 ---
 
-## 4. Event-Vertrag v1
+## 8. Ein-Satz-Zusammenfassung
 
-Wenige, stabile Namen. Keine Per-Frame-Spam-Events außer bewusst für HUD.
-
-| Event | Richtung | Payload (Beispiel) |
-|-------|----------|---------------------|
-| `match:start` | React → Phaser | `{ matchId, loadout }` |
-| `match:pause` | React → Phaser | — |
-| `match:resume` | React → Phaser | — |
-| `match:ended` | Phaser → React | `{ won, lootItemIds }` |
-| `player:hp` | Phaser → React | `{ current, max }` |
-| `ui:open-inventory` | Phaser → React | — |
-| `inventory:updated` | React → Phaser | `{ itemIds }` (nur wenn nötig) |
-| `item:secured` | React → Phaser | `{ itemId }` (Feedback) |
-
-Erweiterungen nur mit Doc-Update.
-
----
-
-## 5. Was **nicht** über die Bridge läuft
-
-| Thema | Stattdessen |
-|-------|-------------|
-| Mint / Claim / Shop-Kauf | React → Backend / SDK |
-| Auth-Session | React / HTTP |
-| Vollständiges Inventar (Source of Truth) | Server; React cached; Phaser nur Loadout |
-| Jeder Physik-Tick | Phaser-intern |
-
-Bridge = **UI- und Flow-Signale**, nicht Netzwerkprotokoll.
-
----
-
-## 6. Varianten (Kurzvergleich)
-
-| Ansatz | Vorteil | Nachteil |
-|--------|---------|----------|
-| **Event Bus (gewählt)** | Entkoppelt, einfach | Disziplin bei Namen |
-| Globaler React-Store für alles | Devtools | Phaser koppelt an UI-State; riskant bei 60 fps |
-| `postMessage` / iframe | Harte Isolation | Meist unnötiger Overhead |
-| UI nur in Phaser | Eine Runtime | Shop/Onboarding in Phaser ungeeignet |
-
-Optional: **React-Store nur für Meta-UI** (Modal offen, Shop-Tab). Phaser schreibt dort nicht jeden Frame.
-
----
-
-## 7. Lebenszyklus & Fallstricke
-
-| Thema | Regel |
-|-------|--------|
-| Strict Mode | Game nur einmal erzeugen (`created` Ref) |
-| Unmount | `game.destroy(true)` + `detachGame` |
-| Scene-Shutdown | Listener an `game.events` entfernen |
-| Resize | Phaser Scale Mode + CSS am Container abstimmen |
-| Modal offen | `game.input.enabled = false` und/oder `match:pause` |
-
----
-
-## 8. Scene-Schnitt (Vorschlag)
-
-| Scene | Aufgabe | React-Bezug |
-|-------|---------|-------------|
-| `BootScene` | Assets, Config | Loading-UI optional in React |
-| `MatchScene` | Kern-Gameplay | Pause/HUD/Ende über Bridge |
-| `ResultScene` | Optional kurz in Phaser | Oder Loot komplett in React nach `match:ended` |
-
-**Empfehlung:** Loot-Reveal, „Item sichern“, Shop in **React** – Phaser endet mit `match:ended`.
-
----
-
-## 9. Festlegungen Kleeblattadventure
-
-| Thema | Entscheidung |
-|-------|----------------|
-| Engine | Phaser 3 (3.8x), TypeScript, Vite |
-| Meta-UI | React Shell |
-| Kommunikation | `gameBridge` (`emit` / `on` / `sendToGame`) |
-| Phaser intern | `game.events` + Registry `bridge` |
-| Items / Ownership | Backend + SDK, nicht Bridge |
-| Event-Vertrag | Abschnitt 4 dieses Docs |
-
----
-
-## 10. Ein-Satz-Zusammenfassung
-
-**React und Phaser teilen einen kleinen Event-Bus: React steuert Flow und Meta-UI, Phaser liefert Spiel-Ergebnisse – Geld und Ownership laufen über das Backend.**
-
----
-
-## Verwandte Docs
-
-- [13-sdk-api-skizze-v1.md](./13-sdk-api-skizze-v1.md) – Secure / Claim APIs
-- [10-player-journeys.md](./10-player-journeys.md) – UX nach Match/Loot
-- [11-onboarding-journey.md](./11-onboarding-journey.md) – Login vor dem Canvas
+**gameBridge ist ein typisierter Event-Emitter – Phaser sendet Gameplay-Events, React sendet Steuerungs-Events, beide kommunizieren nur darüber, niemals direkt.**
