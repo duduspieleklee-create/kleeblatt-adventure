@@ -1,0 +1,484 @@
+{
+  "version": "1.0.0",
+  "description": "Kleeblattadventure – Game-Konfiguration für Prototyp P0–P7",
+
+  "auth": {
+    "provider": "google",
+    "providerNote": "Google OAuth 2.0 als einziger Login für den Prototyp. E-Mail-Magic-Link und Wallet-Connect kommen später (M1+).",
+    "session": {
+      "type": "jwt",
+      "cookieName": "kleeblatt_session",
+      "ttlMinutes": 10080,
+      "refreshThresholdMinutes": 1440,
+      "sameSite": "lax",
+      "secure": false,
+      "httpOnly": true
+    },
+    "env": {
+      "GOOGLE_CLIENT_ID": "required – aus Google Cloud Console",
+      "GOOGLE_CLIENT_SECRET": "required – aus Google Cloud Console",
+      "GOOGLE_CALLBACK_URL": "http://localhost:4000/auth/google/callback",
+      "SESSION_SECRET": "required – zufälliger String ≥ 32 Zeichen",
+      "API_URL": "http://localhost:4000",
+      "WEB_URL": "http://localhost:5173",
+      "CORS_ORIGIN": "http://localhost:5173"
+    },
+    "routes": {
+      "login": "GET /auth/google – leitet zu Google OAuth weiter",
+      "callback": "GET /auth/google/callback – OAuth-Code-Austausch, JWT-Cookie setzen, Redirect zu WEB_URL",
+      "me": "GET /me – gibt userId, hero (falls vorhanden) zurück",
+      "logout": "POST /auth/logout – Session löschen"
+    }
+  },
+
+  "statStacking": {
+    "formula": "final = base + gear + levelBonus",
+    "levelBonusHp": "hero.baseStats.maxHp + (level - 1) * hero.levelBonuses.hpPerLevel",
+    "levelBonusAtk": "hero.baseStats.atk + (level - 1) * hero.levelBonuses.atkPerLevel",
+    "gearBonus": "summe aller ausgerüsteten items.stats",
+    "rules": "Alle Stats sind additiv. Keine Multiplikatoren im Prototyp."
+  },
+
+  "hero": {
+    "classes": {
+      "melee": {
+        "id": "melee",
+        "label": "Nahkämpfer",
+        "description": "Frontline, Dash, Schildwall",
+        "baseStats": {
+          "maxHp": 120,
+          "speed": 100,
+          "atk": 15,
+          "resource": "stamina",
+          "maxResource": 100,
+          "resourceRegenPerSec": 8
+        },
+        "skills": ["dash", "shield_wall"],
+        "basicAttack": {
+          "id": "melee_basic",
+          "name": "Schlag",
+          "type": "melee_cone",
+          "damage": 15,
+          "range": 40,
+          "arcDeg": 60,
+          "cooldownMs": 400,
+          "resourceCost": 0
+        }
+      },
+      "ranged": {
+        "id": "ranged",
+        "label": "Fernkämpfer",
+        "description": "Distanz, Kiting, Slow",
+        "baseStats": {
+          "maxHp": 90,
+          "speed": 110,
+          "atk": 12,
+          "resource": "stamina",
+          "maxResource": 100,
+          "resourceRegenPerSec": 8
+        },
+        "skills": ["rapid_fire", "slow_shot"],
+        "basicAttack": {
+          "id": "ranged_basic",
+          "name": "Schuss",
+          "type": "projectile",
+          "damage": 12,
+          "projectileSpeed": 350,
+          "range": 300,
+          "cooldownMs": 350,
+          "resourceCost": 0
+        }
+      },
+      "mage": {
+        "id": "mage",
+        "label": "Magier",
+        "description": "Distanzzauber, Burst, Blink",
+        "baseStats": {
+          "maxHp": 80,
+          "speed": 100,
+          "atk": 14,
+          "resource": "mana",
+          "maxResource": 100,
+          "resourceRegenPerSec": 5
+        },
+        "skills": ["fireball", "blink"],
+        "basicAttack": {
+          "id": "mage_basic",
+          "name": "Zauberspruch",
+          "type": "projectile",
+          "damage": 14,
+          "projectileSpeed": 300,
+          "range": 280,
+          "cooldownMs": 500,
+          "castTimeMs": 300,
+          "interruptible": true,
+          "resourceCost": 2
+        }
+      }
+    },
+    "skillUnlockLevels": {
+      "q": 1,
+      "e": 3
+    },
+    "levelBonuses": {
+      "hpPerLevel": 12,
+      "atkPerLevel": 2
+    }
+  },
+
+  "skills": {
+    "dash": {
+      "id": "dash",
+      "name": "Sturmangriff",
+      "class": "melee",
+      "slot": "q",
+      "unlockLevel": 1,
+      "cdMs": 7000,
+      "staminaCost": 20,
+      "damage": 15,
+      "type": "dash",
+      "dashDistance": 120,
+      "dashDurationMs": 200
+    },
+    "shield_wall": {
+      "id": "shield_wall",
+      "name": "Schildwall",
+      "class": "melee",
+      "slot": "e",
+      "unlockLevel": 3,
+      "cdMs": 12000,
+      "staminaCost": 25,
+      "durationMs": 2500,
+      "damageTakenFactor": 0.35,
+      "type": "buff"
+    },
+    "rapid_fire": {
+      "id": "rapid_fire",
+      "name": "Schnellfeuer",
+      "class": "ranged",
+      "slot": "q",
+      "unlockLevel": 1,
+      "cdMs": 7000,
+      "staminaCost": 15,
+      "damage": 8,
+      "shots": 3,
+      "shotIntervalMs": 150,
+      "projectileSpeed": 400,
+      "range": 300,
+      "type": "multi_projectile"
+    },
+    "slow_shot": {
+      "id": "slow_shot",
+      "name": "Netzfalle",
+      "class": "ranged",
+      "slot": "e",
+      "unlockLevel": 3,
+      "cdMs": 10000,
+      "staminaCost": 18,
+      "damage": 6,
+      "slowFactor": 0.4,
+      "durationMs": 2500,
+      "projectileSpeed": 250,
+      "range": 280,
+      "type": "projectile"
+    },
+    "fireball": {
+      "id": "fireball",
+      "name": "Feuerball",
+      "class": "mage",
+      "slot": "q",
+      "unlockLevel": 1,
+      "cdMs": 8000,
+      "manaCost": 30,
+      "damage": 22,
+      "aoeRadius": 48,
+      "projectileSpeed": 280,
+      "range": 300,
+      "type": "aoe_projectile"
+    },
+    "blink": {
+      "id": "blink",
+      "name": "Blink",
+      "class": "mage",
+      "slot": "e",
+      "unlockLevel": 3,
+      "cdMs": 14000,
+      "manaCost": 20,
+      "blinkDistance": 80,
+      "type": "blink"
+    }
+  },
+
+  "enemies": {
+    "archetypes": {
+      "bruiser": {
+        "id": "bruiser",
+        "label": "Bruiser",
+        "description": "Langsam, viel HP, nur Nahkampf",
+        "enabledInPrototype": true,
+        "stats": {
+          "maxHp": 80,
+          "speed": 60,
+          "detectRange": 180,
+          "attackRange": 36,
+          "attackCooldownMs": 1200,
+          "damage": 12,
+          "xp": 15,
+          "leashRange": 400
+        },
+        "fsm": ["idle", "chase", "attack", "leash", "dead"],
+        "behavior": "melee_charge"
+      },
+      "runner": {
+        "id": "runner",
+        "label": "Runner",
+        "description": "Schnell, wenig HP, stresst Caster",
+        "enabledInPrototype": false,
+        "stats": {
+          "maxHp": 35,
+          "speed": 110,
+          "detectRange": 220,
+          "attackRange": 28,
+          "attackCooldownMs": 800,
+          "damage": 8,
+          "xp": 12,
+          "leashRange": 350
+        },
+        "fsm": ["idle", "chase", "attack", "leash", "dead"],
+        "behavior": "melee_charge"
+      },
+      "spitter": {
+        "id": "spitter",
+        "label": "Spitter",
+        "description": "Fernkampf, hält Prefer-Range",
+        "enabledInPrototype": false,
+        "stats": {
+          "maxHp": 45,
+          "speed": 50,
+          "detectRange": 240,
+          "attackRange": 160,
+          "preferRangeMin": 100,
+          "preferRangeMax": 180,
+          "attackCooldownMs": 1500,
+          "damage": 10,
+          "xp": 18,
+          "leashRange": 420
+        },
+        "fsm": ["idle", "chase", "attack", "leash", "dead"],
+        "behavior": "ranged_kite",
+        "projectileSpeed": 200
+      }
+    },
+    "spawnConfig": {
+      "prototype": {
+        "type": "bruiser",
+        "count": 3,
+        "respawnMs": 8000,
+        "spawnPoints": [
+          { "x": 400, "y": 300 },
+          { "x": 700, "y": 500 },
+          { "x": 250, "y": 600 }
+        ]
+      }
+    }
+  },
+
+  "xpCurve": {
+    "mode": "prototype_fast",
+    "type": "threshold_table",
+    "xpSource": "enemy.stats.xp (Source of Truth je Archetyp)",
+    "levels": [
+      { "level": 1, "xpToNext": 60, "totalXp": 0, "unlocks": ["q_skill"] },
+      { "level": 2, "xpToNext": 90, "totalXp": 60, "unlocks": [] },
+      { "level": 3, "xpToNext": 150, "totalXp": 150, "unlocks": ["e_skill"] },
+      { "level": 4, "xpToNext": 250, "totalXp": 300, "unlocks": [] },
+      { "level": 5, "xpToNext": 400, "totalXp": 550, "unlocks": [] },
+      { "level": 6, "xpToNext": 600, "totalXp": 950, "unlocks": [] },
+      { "level": 7, "xpToNext": 850, "totalXp": 1550, "unlocks": [] },
+      { "level": 8, "xpToNext": 1150, "totalXp": 2400, "unlocks": [] },
+      { "level": 9, "xpToNext": 1500, "totalXp": 3550, "unlocks": [] },
+      { "level": 10, "xpToNext": null, "totalXp": 5050, "unlocks": [], "note": "Max Level im Prototyp" }
+    ],
+    "rules": {
+      "xpOnEnemyDeath": true,
+      "xpOnChest": false,
+      "xpKeptOnDeath": true,
+      "levelUpHealToFull": true
+    }
+  },
+
+  "starterGear": {
+    "melee": [
+      {
+        "templateId": "starter_melee_chest",
+        "name": "Starter-Rüstung",
+        "slot": "chest",
+        "rarity": "common",
+        "state": "web2",
+        "allowedClasses": ["melee"],
+        "stats": { "maxHp": 20 },
+        "description": "Solide, wenn auch nicht besonders hübsch."
+      },
+      {
+        "templateId": "starter_melee_weapon",
+        "name": "Starter-Schwert",
+        "slot": "weapon",
+        "rarity": "common",
+        "state": "web2",
+        "allowedClasses": ["melee"],
+        "stats": { "atk": 5 },
+        "description": "Ein einfaches Schwert. Besser als nichts."
+      }
+    ],
+    "ranged": [
+      {
+        "templateId": "starter_ranged_chest",
+        "name": "Leichte Rüstung",
+        "slot": "chest",
+        "rarity": "common",
+        "state": "web2",
+        "allowedClasses": ["ranged"],
+        "stats": { "maxHp": 10, "speed": 10 },
+        "description": "Leicht und beweglich."
+      },
+      {
+        "templateId": "starter_ranged_weapon",
+        "name": "Starter-Bogen",
+        "slot": "weapon",
+        "rarity": "common",
+        "state": "web2",
+        "allowedClasses": ["ranged"],
+        "stats": { "atk": 3 },
+        "description": "Ein simpler Bogen für den Anfang."
+      }
+    ],
+    "mage": [
+      {
+        "templateId": "starter_mage_chest",
+        "name": "Leichte Robe",
+        "slot": "chest",
+        "rarity": "common",
+        "state": "web2",
+        "allowedClasses": ["mage"],
+        "stats": { "maxHp": 5, "maxMana": 10 },
+        "description": "Stoffgewand, kaum Schutz, aber komfortabel."
+      },
+      {
+        "templateId": "starter_mage_weapon",
+        "name": "Zauberfokus",
+        "slot": "weapon",
+        "rarity": "common",
+        "state": "web2",
+        "allowedClasses": ["mage"],
+        "stats": { "atk": 4 },
+        "description": "Konzentriert magische Energie. Wackelig, aber funktional."
+      }
+    ]
+  },
+
+  "lootTables": {
+    "prototype_chest": {
+      "chestId": "prototype_chest",
+      "rolls": 1,
+      "respawnRule": "once_per_player",
+      "entries": [
+        {
+          "templateId": "loot_common_chest_1",
+          "name": "Verstärkte Lederrüstung",
+          "slot": "chest",
+          "rarity": "common",
+          "weight": 50,
+          "allowedClasses": ["melee", "ranged", "mage"],
+          "stats": { "maxHp": 15 }
+        },
+        {
+          "templateId": "loot_uncommon_chest_1",
+          "name": "Gepanzerter Wams",
+          "slot": "chest",
+          "rarity": "uncommon",
+          "weight": 25,
+          "allowedClasses": ["melee", "ranged"],
+          "stats": { "maxHp": 25, "atk": 2 }
+        },
+        {
+          "templateId": "loot_common_weapon_1",
+          "name": "Rostige Axt",
+          "slot": "weapon",
+          "rarity": "common",
+          "weight": 15,
+          "allowedClasses": ["melee"],
+          "stats": { "atk": 6 }
+        },
+        {
+          "templateId": "loot_rare_chest_1",
+          "name": "Dornenpanzer",
+          "slot": "chest",
+          "rarity": "rare",
+          "weight": 8,
+          "allowedClasses": ["melee", "ranged", "mage"],
+          "stats": { "maxHp": 30, "atk": 5 },
+          "mintCandidate": true
+        },
+        {
+          "templateId": "loot_epic_weapon_1",
+          "name": "Klinge der alten Kriege",
+          "slot": "weapon",
+          "rarity": "epic",
+          "weight": 2,
+          "allowedClasses": ["melee", "ranged"],
+          "stats": { "atk": 12, "maxHp": 10 },
+          "mintCandidate": true
+        }
+      ],
+      "totalWeight": 100
+    }
+  },
+
+  "respawn": {
+    "onDeathDelayMs": 3000,
+    "respawnAt": "map_spawn",
+    "hpOnRespawn": "full",
+    "xpKeptOnDeath": true,
+    "resourceResetOnRespawn": true
+  },
+
+  "match": {
+    "type": "single_player_sandbox",
+    "winCondition": "none",
+    "mapId": "prototype_map_01",
+    "mapSize": { "width": 1600, "height": 1200, "tileSize": 32 },
+    "playerSpawn": { "x": 100, "y": 100 },
+    "chestCount": 2,
+    "chestSpawnPoints": [
+      { "x": 500, "y": 400 },
+      { "x": 900, "y": 700 }
+    ],
+    "chestInteraction": {
+      "type": "proximity_key",
+      "proximityRange": 48,
+      "key": "E"
+    }
+  },
+
+  "itemStateEnum": [
+    "web2",
+    "pending_secure",
+    "secured",
+    "active_in_game",
+    "self_custody"
+  ],
+
+  "rarityEnum": [
+    "common",
+    "uncommon",
+    "rare",
+    "epic"
+  ],
+
+  "rarityMintRules": {
+    "common": false,
+    "uncommon": true,
+    "rare": true,
+    "epic": true
+  }
+}
