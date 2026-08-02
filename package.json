@@ -1,29 +1,26 @@
 {
-  "name": "kleinanzeigen-adventure",
-  "version": "1.0.0",
-  "description": "A 2D browser adventure game for Gala Chain built with Playworks AI",
-  "type": "module",
+  "name": "kleeblatt-adventure",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kleeblattadventure – 2D browser adventure + Immutable zkEVM (prototype monorepo)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "npm --prefix game run dev",
-    "build": "npm --prefix game run build",
-    "preview": "npm --prefix game run preview",
-    "deploy": "cd game && npm run build && bash ../scripts/deploy.sh",
-    "test": "cd game && npx vitest",
-    "test:coverage": "cd game && vitest --coverage",
-    "deploy:gala": "cd game && npm run build && cd contracts && cast deploy --network gala"
-  },
-  "dependencies": {
-    "phaser": "^3.70.0",
-    "@coinbase/wallet-sdk": "^3.9.0",
-    "@gala-chain/sdk": "^0.9.0",
-    "ethers": "^5.7.2"
-  },
-  "devDependencies": {
-    "vite": "^5.2.0",
-    "vitest": "^1.4.0",
-    "playwright": "^1.42.0"
+    "dev": "npm run dev -w @kleeblatt/web",
+    "dev:api": "npm run dev -w @kleeblatt/api",
+    "dev:web": "npm run dev -w @kleeblatt/web",
+    "dev:all": "npm run dev:api & npm run dev:web",
+    "build": "npm run build -w @kleeblatt/shared && npm run build -w @kleeblatt/api && npm run build -w @kleeblatt/web",
+    "build:web": "npm run build -w @kleeblatt/web",
+    "build:api": "npm run build -w @kleeblatt/api",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f",
+    "legacy:game": "npm --prefix game run dev"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   }
 }

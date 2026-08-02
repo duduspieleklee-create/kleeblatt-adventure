@@ -1,26 +1,36 @@
-# Private keys - NEVER commit these
-keys/gc-admin-key
-keys/gc-dev-key
-game-api/chaincode/kleeblattcoin/keys/gc-admin-key
-game-api/chaincode/kleeblattcoin/keys/gc-dev-key
+# Private keys - NEVER commit
+keys/
+*.key
 gc-admin-key
 gc-dev-key
-*.key
+game-api/chaincode/**/keys/
 
-# Node modules
+# Dependencies
 node_modules/
 
-# Build output
+# Build
 dist/
 lib/
+build/
+*.tsbuildinfo
 
-# Environment files
+# Env
 .env
 .env.local
+.env.*.local
+
+# Logs / OS
+logs/
+*.log
+.DS_Store
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
 
 # Docker
 *.tar
 
-# Temporary scripts
-enable-virtualization.bat
-fix-hypervisor.bat
+# Test / coverage
+coverage/
