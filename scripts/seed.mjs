@@ -28,9 +28,7 @@ try {
 }
 
 const classes = config?.hero?.classes ? Object.keys(config.hero.classes) : [];
-const enemies = config?.enemies?.archetypes
-  ? Object.keys(config.enemies.archetypes)
-  : [];
+const enemies = config?.enemies?.archetypes ? Object.keys(config.enemies.archetypes) : [];
 const lootTables = config?.lootTables ? Object.keys(config.lootTables) : [];
 
 console.info("[seed] game-config.json OK");

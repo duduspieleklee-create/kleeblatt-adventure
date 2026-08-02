@@ -127,13 +127,13 @@ test: add unit tests for rule engine
 
 ## Testing & quality
 
-| Layer | Tool | Scope |
-|-------|------|--------|
-| Unit | Vitest | RuleEngine (no Phaser), services, helpers |
-| Integration | Vitest + API client | Endpoints with test DB |
-| E2E | Manual (later Playwright) | Demo script from [20-prototyp-checkliste.md](./docs/architecture/20-prototyp-checkliste.md) |
-| Lint | ESLint | All TS/JS |
-| Format | Prettier | All supported files |
+| Layer       | Tool                      | Scope                                                                                       |
+| ----------- | ------------------------- | ------------------------------------------------------------------------------------------- |
+| Unit        | Vitest                    | RuleEngine (no Phaser), services, helpers                                                   |
+| Integration | Vitest + API client       | Endpoints with test DB                                                                      |
+| E2E         | Manual (later Playwright) | Demo script from [20-prototyp-checkliste.md](./docs/architecture/20-prototyp-checkliste.md) |
+| Lint        | ESLint                    | All TS/JS                                                                                   |
+| Format      | Prettier                  | All supported files                                                                         |
 
 ```bash
 npm test                 # all tests
