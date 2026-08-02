@@ -1,6 +1,6 @@
 # Kleeblattadventure – Immutable zkEVM Architektur-Dokumentation
 
-**Version:** 1.6  
+**Version:** 1.7  
 **Stand:** 2. August 2026  
 **Zielplattform:** Immutable zkEVM (L2) + Web2 Game Backend
 
@@ -19,7 +19,8 @@
 | [08-entscheidungsmatrix.md](./08-entscheidungsmatrix.md) | Bewertungsmatrix & Empfehlung |
 | [09-waehrungs-und-shop-architektur.md](./09-waehrungs-und-shop-architektur.md) | In-Game-Währung, Token, Mint-Credits, Shop, Sinks/Sources |
 | [10-player-journeys.md](./10-player-journeys.md) | User Flows & Player Journeys |
-| [11-onboarding-journey.md](./11-onboarding-journey.md) | **Onboarding: Reg, Embedded Wallet, Neuling vs. Experte** |
+| [11-onboarding-journey.md](./11-onboarding-journey.md) | Onboarding: Reg, Embedded Wallet, Neuling vs. Experte, Metriken |
+| [12-pattern-zusammenfassung.md](./12-pattern-zusammenfassung.md) | **Allgemeines Integrationsmuster vs. Kleeblatt-spezifisch** |
 
 ## Kurzfassung des Modells
 
@@ -35,6 +36,7 @@
 
 ## Einstieg
 
+- Pattern (1 Seite): [12-pattern-zusammenfassung.md](./12-pattern-zusammenfassung.md)
 - Konzept & Warum: [00-einfuehrung-vorteile-usecases.md](./00-einfuehrung-vorteile-usecases.md)
 - Onboarding: [11-onboarding-journey.md](./11-onboarding-journey.md)
 - Spieler-Flows: [10-player-journeys.md](./10-player-journeys.md)
