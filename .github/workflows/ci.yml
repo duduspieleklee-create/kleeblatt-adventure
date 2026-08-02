@@ -17,13 +17,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Format check (source)
-        run: npx prettier --check "apps/**/*.{ts,tsx,js,css,html}" "packages/**/*.{ts,tsx,js}" "scripts/**/*.{js,mjs}" "*.{js,mjs,cjs,json,md,yml}" ".github/workflows/*.yml"
+        run: npx prettier --check "apps/**/*.{ts,tsx,js,css,html}" "packages/**/*.{ts,tsx,js}" "scripts/**/*.{js,mjs}" "package.json" "eslint.config.js" "vitest.config.ts" "README.md" "CONTRIBUTING.md" ".github/workflows/*.yml"
 
       - name: Lint
         run: npm run lint
@@ -73,10 +72,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run tests
         run: npm test
