@@ -29,6 +29,7 @@
     "db:down": "docker compose down",
     "db:logs": "docker compose logs -f",
     "db:seed": "node scripts/seed.mjs",
+    "clean": "rm -rf apps/*/dist packages/*/dist coverage",
     "prepare": "echo ready"
   },
   "engines": {
