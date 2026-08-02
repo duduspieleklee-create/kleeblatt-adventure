@@ -8,6 +8,7 @@
 
 → **[20-prototyp-checkliste.md](./20-prototyp-checkliste.md)** – **Erster Vertical Slice (abhaken)**  
 → **[21-game-config.md](./21-game-config.md)** – **Game-Konfiguration (`game-config.json`)**  
+→ **[22-asset-liste.md](./22-asset-liste.md)** – **Asset-Liste (Sprites, Audio, UI)**  
 → **[16-developer-guide.md](./16-developer-guide.md)** – Stack, MVP Build-Order  
 → **[17-mvp-gameplay.md](./17-mvp-gameplay.md)** – Gameplay + Skills  
 → **[19-phaser-rule-engine.md](./19-phaser-rule-engine.md)** – Combat RuleEngine  
@@ -24,6 +25,7 @@
 | [19-phaser-rule-engine.md](./19-phaser-rule-engine.md) | Rule Engine + TS-Interfaces |
 | [20-prototyp-checkliste.md](./20-prototyp-checkliste.md) | **Prototyp-Checkliste** |
 | [21-game-config.md](./21-game-config.md) | **Game-Konfiguration** |
+| [22-asset-liste.md](./22-asset-liste.md) | **Asset-Liste** |
 
 ## Kurzfassung
 
