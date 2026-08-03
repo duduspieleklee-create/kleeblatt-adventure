@@ -23,7 +23,7 @@ export function issueUrl(issue: number): string {
   return `${ISSUE_BASE}${issue}`;
 }
 
-/** Aktuelle nächste Schritte (Stand: 03.08.2026, nach P4 Phaser-Container) */
+/** Aktuelle nächste Schritte (Stand: 03.08.2026, nach P4 gameBridge) */
 export const NEXT_STEPS: NextStep[] = [
   {
     title: "Phaser MatchScene: Map + Spieler + WASD",
@@ -49,6 +49,14 @@ export const NEXT_STEPS: NextStep[] = [
 
 /** Änderungshistorie (neueste zuerst) – Stand: 03.08.2026 */
 export const PATCH_LOG: PatchLogEntry[] = [
+  {
+    date: "03.08.2026",
+    title: "PR #70 – P4 gameBridge (React ↔ Phaser)",
+    changes: [
+      "Typisierter Event-Emitter (dependency-frei): 13 P→R + 5 R→P Events nach Doku 14 v1.1, generisch typsicher.",
+      "gameBridge-Singleton + Exporte in shared, 6 Tests (beide Richtungen, off(), Standalone, Typ-Export).",
+    ],
+  },
   {
     date: "03.08.2026",
     title: "PR #68 – P4 React-Page mit Phaser-Container",
