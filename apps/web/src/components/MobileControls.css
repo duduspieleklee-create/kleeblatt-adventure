@@ -1,0 +1,156 @@
+/* Mobile Controls Styles */
+.mobile-controls-overlay {
+  position: fixed !important;
+  bottom: 20px !important;
+  left: 20px !important;
+  right: 20px !important;
+  height: 200px !important;
+  pointer-events: none !important;
+  z-index: 1000 !important;
+  /* Prevent scrolling issues */
+  touch-action: none !important;
+}
+
+/* Prevent scrolling when interacting with mobile controls */
+.mobile-controls-overlay * {
+  touch-action: none !important;
+}
+
+/* Analog stick container */
+.stick-container {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 150px !important;
+  height: 150px !important;
+  /* Ensure it captures touch events */
+  pointer-events: auto !important;
+}
+
+/* Stick base styling */
+.stick-base {
+  position: absolute !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(4px) !important;
+  transform: translate(-50%, -50%) !important;
+  left: 50% !important;
+  top: 50% !important;
+  pointer-events: none !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15) !important;
+}
+
+/* Stick styling */
+.stick {
+  position: absolute !important;
+  width: 60px !important;
+  height: 60px !important;
+  border-radius: 50% !important;
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border: 2px solid rgba(255, 255, 255, 0.9) !important;
+  transform: translate(-50%, -50%) !important;
+  transition: transform 0.05s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  pointer-events: none !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) !important;
+}
+
+/* Action buttons styling */
+.action-button {
+  width: 60px !important;
+  height: 60px !important;
+  border-radius: 50% !important;
+  border: 2px solid rgba(255, 255, 255, 0.8) !important;
+  color: white !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
+  backdrop-filter: blur(4px) !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+  transition: all 0.1s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.action-button:hover {
+  transform: scale(1.05) !important;
+}
+
+.action-button:active {
+  transform: scale(0.95) !important;
+}
+
+/* Specific action button colors */
+.attack {
+  background-color: rgba(255, 50, 50, 0.7) !important;
+}
+
+.jump {
+  background-color: rgba(50, 255, 50, 0.7) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .mobile-controls-overlay {
+    bottom: 15px !important;
+    left: 15px !important;
+    right: 15px !important;
+  }
+  
+  .stick-container {
+    width: 120px !important;
+    height: 120px !important;
+  }
+  
+  .stick {
+    width: 50px !important;
+    height: 50px !important;
+  }
+  
+  .action-button {
+    width: 50px !important;
+    height: 50px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-controls-overlay {
+    bottom: 10px !important;
+    left: 10px !important;
+    right: 10px !important;
+  }
+  
+  .stick-container {
+    width: 100px !important;
+    height: 100px !important;
+  }
+  
+  .stick {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  
+  .action-button {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 10px !important;
+  }
+}
+
+/* Ensure proper touch handling */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-controls-overlay {
+    pointer-events: auto !important;
+  }
+}
