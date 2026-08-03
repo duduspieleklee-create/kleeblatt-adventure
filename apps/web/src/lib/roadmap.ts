@@ -23,11 +23,11 @@ export function issueUrl(issue: number): string {
   return `${ISSUE_BASE}${issue}`;
 }
 
-/** Aktuelle nächste Schritte (Stand: 03.08.2026, nach P3 Mock-Wallet) */
+/** Aktuelle nächste Schritte (Stand: 03.08.2026, nach P4 Phaser-Container) */
 export const NEXT_STEPS: NextStep[] = [
   {
     title: "Phaser MatchScene: Map + Spieler + WASD",
-    detail: "React-Phaser-Container, gameBridge, erste spielbare Scene.",
+    detail: "React-Phaser-Container + gameBridge, erste spielbare Scene.",
     issue: 43,
   },
   {
@@ -41,7 +41,7 @@ export const NEXT_STEPS: NextStep[] = [
     issue: 48,
   },
   {
-    title: "XP + Loot + Inventar-Erweiterung (P3)",
+    title: "XP + Loot + Inventar-Erweiterung",
     detail: "XP-Gain + Level-Up, Lootkisten, Items anlegbar auf Held-Stats.",
     issue: 50,
   },
@@ -49,6 +49,14 @@ export const NEXT_STEPS: NextStep[] = [
 
 /** Änderungshistorie (neueste zuerst) – Stand: 03.08.2026 */
 export const PATCH_LOG: PatchLogEntry[] = [
+  {
+    date: "03.08.2026",
+    title: "PR #68 – P4 React-Page mit Phaser-Container",
+    changes: [
+      "createGame-Factory + Platzhalter-Scene, MatchPage mit Mount/Unmount, HomePage-Integration, CSS .game-container.",
+      "Viewport 960x540 (game-config.json folgt), Vite-Chunk >500 kB dokumentiert.",
+    ],
+  },
   {
     date: "03.08.2026",
     title: "PR #66 – P3 Mock-Wallet",
