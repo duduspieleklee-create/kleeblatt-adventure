@@ -23,14 +23,8 @@ export function issueUrl(issue: number): string {
   return `${ISSUE_BASE}${issue}`;
 }
 
-/** Aktuelle nächste Schritte (Stand: 03.08.2026) */
+/** Aktuelle nächste Schritte (Stand: 03.08.2026, nach Login-Verifikation) */
 export const NEXT_STEPS: NextStep[] = [
-  {
-    title: "Google-Login verifizieren",
-    detail:
-      "GOOGLE_CLIENT_SECRET korrigieren, neu deployen, Login testen (Ursache: invalid_client).",
-    issue: 61,
-  },
   {
     title: "Phaser MatchScene: Map + Spieler + WASD",
     detail: "React-Phaser-Container, gameBridge, erste spielbare Scene.",
@@ -60,6 +54,13 @@ export const NEXT_STEPS: NextStep[] = [
 
 /** Änderungshistorie (neueste zuerst) – Stand: 03.08.2026 */
 export const PATCH_LOG: PatchLogEntry[] = [
+  {
+    date: "03.08.2026",
+    title: "Google-Login verifiziert (Produktion)",
+    changes: [
+      "GOOGLE_CLIENT_SECRET korrigiert – Login läuft durch, Auth-Fix aus PR #60 bestätigt (Issue #61 geschlossen).",
+    ],
+  },
   {
     date: "03.08.2026",
     title: "PR #63 – API-Routing (/api)",
