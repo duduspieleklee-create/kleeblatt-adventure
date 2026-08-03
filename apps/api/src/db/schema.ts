@@ -2,6 +2,9 @@
 
 import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
+export const walletStatusEnum = ["pending", "ready"] as const;
+export type WalletStatus = (typeof walletStatusEnum)[number];
+
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
   email: text("email").notNull(),
@@ -51,7 +54,20 @@ export const itemTemplates = pgTable("item_templates", {
   mintCandidate: boolean("mint_candidate").notNull().default(false),
 });
 
+/** Mock-Wallet: 1:1 pro User (docs/architecture/23-db-schema.md, P3) */
+export const wallets = pgTable("wallets", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id),
+  address: text("address").notNull(),
+  /** interne ID beim MPC-Provider (nur Mock: leer) */
+  providerRef: text("provider_ref"),
+  status: text("status", { enum: walletStatusEnum }).notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type HeroRow = typeof heroes.$inferSelect;
 export type ItemRow = typeof items.$inferSelect;
 export type ItemTemplateRow = typeof itemTemplates.$inferSelect;
+export type WalletRow = typeof wallets.$inferSelect;

@@ -23,6 +23,7 @@ export type {
 export type { HealthResponse, ApiErrorBody } from "./types/api.js";
 
 export type { SessionUser, MeResponse } from "./types/user.js";
+export type { WalletStatus, WalletResponse } from "./types/wallet.js";
 
 export { API_DEFAULT_PORT, WEB_DEFAULT_PORT, PROTOTYPE_MAP_ID } from "./constants/index.js";
 
