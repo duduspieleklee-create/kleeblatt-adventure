@@ -23,7 +23,7 @@ export function issueUrl(issue: number): string {
   return `${ISSUE_BASE}${issue}`;
 }
 
-/** Aktuelle nächste Schritte (Stand: 03.08.2026, nach P4 gameBridge) */
+/** Aktuelle nächste Schritte (Stand: 03.08.2026, nach P4 BootScene) */
 export const NEXT_STEPS: NextStep[] = [
   {
     title: "Phaser MatchScene: Map + Spieler + WASD",
@@ -49,6 +49,14 @@ export const NEXT_STEPS: NextStep[] = [
 
 /** Änderungshistorie (neueste zuerst) – Stand: 03.08.2026 */
 export const PATCH_LOG: PatchLogEntry[] = [
+  {
+    date: "03.08.2026",
+    title: "PR #72 – P4 BootScene (Assets + match:started)",
+    changes: [
+      "BootScene preload generiert Platzhalter-Texturen per Code (player, enemy_bruiser, tiles, chest, projectile).",
+      "createGame nutzt BootScene; nach Asset-Load emittiert match:started via gameBridge (Vertrag 14 v1.1).",
+    ],
+  },
   {
     date: "03.08.2026",
     title: "PR #70 – P4 gameBridge (React ↔ Phaser)",
