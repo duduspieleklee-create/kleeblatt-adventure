@@ -42,13 +42,13 @@ kleeblatt-adventure/
 
 ## Conventions
 
-| Area             | Rule                                                       |
-| ---------------- | ---------------------------------------------------------- |
-| Domain routes    | `apps/api/src/routes/<domain>.ts`                          |
-| Business logic   | `apps/api/src/services/` – not in route handlers           |
-| Shared contracts | `@kleeblatt/shared` only – no duplicated types             |
-| Phaser           | `apps/web/src/game/` – talk to React via gameBridge        |
-| Config values    | `game-config.json` – never hard-code combat stats          |
+| Area             | Rule                                                |
+| ---------------- | --------------------------------------------------- |
+| Domain routes    | `apps/api/src/routes/<domain>.ts`                   |
+| Business logic   | `apps/api/src/services/` – not in route handlers    |
+| Shared contracts | `@kleeblatt/shared` only – no duplicated types      |
+| Phaser           | `apps/web/src/game/` – talk to React via gameBridge |
+| Config values    | `game-config.json` – never hard-code combat stats   |
 
 ## Adding a feature (example: inventory)
 
