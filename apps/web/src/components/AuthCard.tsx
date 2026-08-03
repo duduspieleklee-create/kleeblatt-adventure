@@ -31,9 +31,8 @@ export function AuthCard({ state, onLogout, showDevLogin }: AuthCardProps) {
             )}
           </p>
           <p className="hint">
-            Benötigt <code>GOOGLE_CLIENT_ID</code> / <code>SECRET</code> in{" "}
-            <code>.env</code>. Lokal ohne Google:{" "}
-            <code>AUTH_DEV_BYPASS=true</code>.
+            Benötigt <code>GOOGLE_CLIENT_ID</code> / <code>SECRET</code> in <code>.env</code>. Lokal
+            ohne Google: <code>AUTH_DEV_BYPASS=true</code>.
           </p>
         </>
       )}
@@ -44,9 +43,7 @@ export function AuthCard({ state, onLogout, showDevLogin }: AuthCardProps) {
           </p>
           <p className="hint">
             userId: <code>{state.me.userId}</code>
-            {state.me.hero
-              ? ` · Held: ${state.me.hero.heroName}`
-              : " · Noch kein Held (P2)"}
+            {state.me.hero ? ` · Held: ${state.me.hero.heroName}` : " · Noch kein Held (P2)"}
           </p>
           <p className="actions">
             <button type="button" className="btn secondary" onClick={onLogout}>

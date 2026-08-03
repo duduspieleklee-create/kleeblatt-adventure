@@ -1,11 +1,8 @@
 /** Item lifecycle states (Web2 → secured → self-custody) */
 
-export type ItemState =
-  | "web2"
-  | "pending_secure"
-  | "secured"
-  | "active_in_game"
-  | "self_custody";
+import type { HeroClass } from "./hero.js";
+
+export type ItemState = "web2" | "pending_secure" | "secured" | "active_in_game" | "self_custody";
 
 export type ItemSlot = "weapon" | "chest" | "head" | "legs" | "accessory";
 
@@ -17,10 +14,16 @@ export interface ItemTemplateRef {
   rarity: ItemRarity;
 }
 
+/** Ein Item im Inventar eines Users (Spieler-Sicht). */
 export interface InventoryItem {
-  id: string;
+  itemId: string;
   templateId: string;
-  state: ItemState;
+  name: string;
   slot: ItemSlot | null;
+  rarity: ItemRarity;
+  state: ItemState;
+  stats: Record<string, number>;
+  allowedClasses: HeroClass[] | null;
+  description: string | null;
   equipped: boolean;
 }
