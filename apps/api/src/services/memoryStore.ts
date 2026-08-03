@@ -7,4 +7,7 @@ export const memHeroes = new Map<string, Hero>();
 export const memItems = new Map<string, { ownerId: string; item: InventoryItem }>();
 
 /** Mock-Wallet je User (P3) – stabile Adresse pro User. */
-export const memWallets = new Map<string, { address: string; status: "pending" | "ready"; provider: string }>();
+export const memWallets = new Map<
+  string,
+  { address: string; status: "pending" | "ready"; provider: string }
+>();

@@ -10,7 +10,9 @@ import { memWallets } from "./memoryStore.js";
  * ohne externen Provider. Format: 0x + 40 Hex-Zeichen (wie eine EVM-Adresse).
  */
 export function mockAddressFor(userId: string): string {
-  const seed = userId.split("").reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 2166136261);
+  const seed = userId
+    .split("")
+    .reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 2166136261);
   let hex = seed.toString(16).padStart(8, "0");
   // mehrmals hashen, um auf 40 Zeichen zu kommen (deterministisch)
   for (let i = 0; i < 5; i++) {
@@ -30,7 +32,9 @@ export interface WalletView {
 export async function getOrCreateWallet(userId: string): Promise<WalletView> {
   if (await isDbAvailable()) {
     const db = getDb()!;
-    let row = (await db.select().from(walletsTable).where(eq(walletsTable.userId, userId)).limit(1))[0];
+    let row = (
+      await db.select().from(walletsTable).where(eq(walletsTable.userId, userId)).limit(1)
+    )[0];
     if (!row) {
       row = {
         userId,
