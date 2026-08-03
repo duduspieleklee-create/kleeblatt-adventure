@@ -232,3 +232,57 @@ button.primary:disabled {
 .item-list button:disabled {
   opacity: 0.5;
 }
+
+/* ─── Nächste Schritte & Patch-Log ─────────────────────── */
+
+.next-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.next-steps li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.next-steps .muted {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+}
+
+.issue-link {
+  color: #7fe08a;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.patch-entry {
+  margin-bottom: 1rem;
+}
+
+.patch-entry:last-child {
+  margin-bottom: 0;
+}
+
+.patch-entry h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.patch-entry ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+  color: #b8cbb8;
+}
+
+.patch-entry li {
+  margin-bottom: 0.25rem;
+}
