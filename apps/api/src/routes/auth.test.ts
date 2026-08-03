@@ -14,9 +14,20 @@ function setCookieValue(response: Response, name: string): string | undefined {
   return raw.slice(name.length + 1).split(";")[0];
 }
 
+describe("Dual-Mount: Root-Alias + /api", () => {
+  it("serviert /health am Root und unter /api", async () => {
+    expect((await app.request("/health")).status).toBe(200);
+    expect((await app.request("/api/health")).status).toBe(200);
+  });
+
+  it("serviert /auth/status auch am Root (Legacy-Alias)", async () => {
+    expect((await app.request("/auth/status")).status).toBe(200);
+  });
+});
+
 describe("auth/status", () => {
   it("meldet Konfiguration ohne Secrets", async () => {
-    const res = await app.request("/auth/status");
+    const res = await app.request("/api/auth/status");
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       configured: boolean;
@@ -33,7 +44,7 @@ describe("auth/status", () => {
 
 describe("auth/google (Start)", () => {
   it("leitet zu Google weiter und setzt State-Cookie", async () => {
-    const res = await app.request("/auth/google");
+    const res = await app.request("/api/auth/google");
     expect(res.status).toBe(302);
     const location = res.headers.get("location") ?? "";
     expect(location.startsWith("https://accounts.google.com/o/oauth2/v2/auth?")).toBe(true);
@@ -46,7 +57,7 @@ describe("auth/google (Start)", () => {
 
 describe("auth/google/callback", () => {
   it("fehlender Code → auth=error&reason=missing_code", async () => {
-    const res = await app.request("/auth/google/callback");
+    const res = await app.request("/api/auth/google/callback");
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe(
       "https://game.kleeblatt.space/?auth=error&reason=missing_code",
@@ -54,7 +65,7 @@ describe("auth/google/callback", () => {
   });
 
   it("Google-Fehler (z.B. redirect_uri_mismatch) → reason=oauth mit Detail", async () => {
-    const res = await app.request("/auth/google/callback?error=redirect_uri_mismatch");
+    const res = await app.request("/api/auth/google/callback?error=redirect_uri_mismatch");
     expect(res.status).toBe(302);
     const location = res.headers.get("location") ?? "";
     expect(location).toContain("auth=error&reason=oauth");
@@ -62,7 +73,7 @@ describe("auth/google/callback", () => {
   });
 
   it("fehlender/ungültiger State-Cookie → reason=state (CSRF-Schutz)", async () => {
-    const res = await app.request("/auth/google/callback?code=abc&state=irgendwas");
+    const res = await app.request("/api/auth/google/callback?code=abc&state=irgendwas");
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toContain("reason=state");
   });
@@ -72,11 +83,11 @@ describe("auth/google/callback", () => {
       "fetch",
       vi.fn(async () => new Response("invalid_client", { status: 400 })),
     );
-    const start = await app.request("/auth/google");
+    const start = await app.request("/api/auth/google");
     const state = setCookieValue(start, "kleeblatt_oauth_state");
     const url = new URL(start.headers.get("location") ?? "");
     const res = await app.request(
-      `/auth/google/callback?code=abc&state=${url.searchParams.get("state")}`,
+      `/api/auth/google/callback?code=abc&state=${url.searchParams.get("state")}`,
       { headers: { Cookie: `kleeblatt_oauth_state=${state}` } },
     );
     expect(res.status).toBe(302);
@@ -102,11 +113,11 @@ describe("auth/google/callback", () => {
         return new Response("not found", { status: 404 });
       }),
     );
-    const start = await app.request("/auth/google");
+    const start = await app.request("/api/auth/google");
     const state = setCookieValue(start, "kleeblatt_oauth_state");
     const url = new URL(start.headers.get("location") ?? "");
     const res = await app.request(
-      `/auth/google/callback?code=abc&state=${url.searchParams.get("state")}`,
+      `/api/auth/google/callback?code=abc&state=${url.searchParams.get("state")}`,
       { headers: { Cookie: `kleeblatt_oauth_state=${state}` } },
     );
     expect(res.status).toBe(302);

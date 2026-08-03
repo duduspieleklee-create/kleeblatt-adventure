@@ -23,11 +23,19 @@ export function createApp() {
 
   app.use("*", loadSession);
 
-  app.route("/", healthRoutes);
-  app.route("/", authRoutes);
-  app.route("/", meRoutes);
-  app.route("/", heroRoutes);
-  app.route("/", inventoryRoutes);
+  // Routen-Bündel: wird doppelt gemountet (siehe unten).
+  const routes = new Hono<{ Variables: AppVariables }>();
+  routes.route("/", healthRoutes);
+  routes.route("/", authRoutes);
+  routes.route("/", meRoutes);
+  routes.route("/", heroRoutes);
+  routes.route("/", inventoryRoutes);
+
+  // Legacy-Root-Pfade (nginx proxied /health, /auth/*, /me am Root)
+  // UND dokumentierte /api-Architektur (Web → /api/* → nginx → API,
+  // siehe DEPLOYMENT.md) – so funktionieren alle Endpoints über /api.
+  app.route("/", routes);
+  app.route("/api", routes);
 
   return app;
 }

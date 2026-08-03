@@ -3,11 +3,13 @@
 import type { CreateHeroInput, Hero, HeroResponse, InventoryItem } from "@kleeblatt/shared";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
+// Default: /api-Prefix (Doku-Architektur Web → /api/* → nginx/vite → API,
+// siehe DEPLOYMENT.md). VITE_API_URL (z.B. http://localhost:4000) überschreibt.
+const API_PREFIX = API_URL ? API_URL.replace(/\/$/, "") : "/api";
 
 export function apiUrl(path: string): string {
   if (path.startsWith("http")) return path;
-  const base = API_URL.replace(/\/$/, "");
-  return base ? `${base}${path}` : path;
+  return `${API_PREFIX}${path}`;
 }
 
 async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
