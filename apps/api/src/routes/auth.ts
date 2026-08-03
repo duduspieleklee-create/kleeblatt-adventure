@@ -92,7 +92,7 @@ authRoutes.get("/auth/google/callback", async (c) => {
       picture?: string;
     };
 
-    const user = upsertGoogleUser({
+    const user = await upsertGoogleUser({
       googleId: profile.id,
       email: profile.email,
       displayName: profile.name ?? null,
@@ -125,7 +125,7 @@ authRoutes.get("/auth/dev-login", async (c) => {
       403,
     );
   }
-  const user = upsertGoogleUser({
+  const user = await upsertGoogleUser({
     googleId: "dev-local",
     email: "dev@localhost",
     displayName: "Dev Player",
