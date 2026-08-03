@@ -5,6 +5,8 @@ import { loadSession, type AppVariables } from "./middleware/session.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { meRoutes } from "./routes/me.js";
+import { heroRoutes } from "./routes/hero.js";
+import { inventoryRoutes } from "./routes/inventory.js";
 
 export function createApp() {
   const app = new Hono<{ Variables: AppVariables }>();
@@ -24,6 +26,8 @@ export function createApp() {
   app.route("/", healthRoutes);
   app.route("/", authRoutes);
   app.route("/", meRoutes);
+  app.route("/", heroRoutes);
+  app.route("/", inventoryRoutes);
 
   return app;
 }
