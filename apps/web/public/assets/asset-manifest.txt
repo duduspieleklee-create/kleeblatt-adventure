@@ -1,5 +1,6 @@
 assets/tilesets/spr_tileset_sunnysideworld_16px.png
 assets/tilesets/spr_tileset_sunnysideworld_forest_32px.png
+assets/tilesets/SUNNYSIDE_WORLD_BUILDINGS_V0.01.png
 assets/characters/base_attack_strip10.png
 assets/characters/bowlhair_attack_strip10.png
 assets/characters/curlyhair_attack_strip10.png

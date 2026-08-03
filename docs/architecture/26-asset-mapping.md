@@ -14,8 +14,6 @@ Alle menschlichen Animationen liegen unter `assets/characters/`. Die Dateinamen 
 | **Sammler** | `longhair_dig_strip13.png` | `assets/characters/longhair_dig_...` |
 | **Basis (Alle)** | `longhair_walk_strip8.png` | `assets/characters/longhair_walk_...` |
 
-> **Verfügbare Frisuren:** `base`, `bowlhair`, `curlyhair`, `longhair`, `mophair`.
-
 ## 2. Gegner & NPCs
 | Kreatur | Animation | Dateiname |
 | :--- | :--- | :--- |
@@ -38,26 +36,29 @@ Pfad: `assets/elements/animals/`
 | **Ente** | `spr_deco_duck_01_strip4.png` | Freund / Zierde |
 | **Vogel** | `spr_deco_bird_01_strip4.png` | Begleiter |
 
-## 4. Umwelt & Tilesets
-| Typ | Pfad / Dateiname | Beschreibung |
-| :--- | :--- | :--- |
-| **Basis-Tileset** | `assets/tilesets/spr_tileset_sunnysideworld_16px.png` | Grundlegendes Gelände (16px) |
-| **Wald-Tileset** | `assets/tilesets/spr_tileset_sunnysideworld_forest_32px.png` | Bäume und Vegetation (32px) |
-| **Nutzpflanzen** | `assets/elements/crops/` | Kürbis, Weizen, Karotten, etc. |
-| **VFX (Rauch)** | `assets/vfx/chimneysmoke_01_strip30.png` | Kaminrauch-Animation |
-| **VFX (Staub)** | `assets/vfx/dust_run_strip8.png` | Bewegungseffekt beim Laufen |
+## 4. Umwelt & Gebäude (Neu!)
+Ich habe im Archiv ein Gebäude-Set gefunden, das wir für die funktionalen Orte nutzen können.
 
-## 5. UI & Werkzeuge
-Pfad: `assets/ui/`
+| Typ | Pfad / Dateiname | Verwendung im Spiel |
+| :--- | :--- | :--- |
+| **Basis-Gebäude** | `assets/tilesets/SUNNYSIDE_WORLD_BUILDINGS_V0.01.png` | Grundstrukturen für Häuser |
+| **Schmiede / Laden** | `assets/tilesets/spr_tileset_sunnysideworld_16px.png` | Enthält Amboss, Tresen und Schilder |
+| **Wald-Tileset** | `assets/tilesets/spr_tileset_sunnysideworld_forest_32px.png` | Bäume und Vegetation |
+| **Nutzpflanzen** | `assets/elements/crops/` | Kürbis, Weizen, Karotten, etc. |
+
+## 5. UI, Werkzeuge & Items
+Die UI-Icons enthalten bereits fast alles, was wir für die Ausrüstung brauchen.
 
 | Element | Dateiname | Verwendung |
 | :--- | :--- | :--- |
 | **Schwert** | `sword.png` | Waffe (Krieger) |
 | **Axt** | `axe.png` | Werkzeug / Waffe |
+| **Hammer** | `hammer.png` | Werkzeug (Schmiede) |
 | **Spitzhacke** | `pickaxe.png` | Werkzeug (Bergbau) |
 | **Angel** | `rod.png` | Werkzeug (Fischen) |
-| **HP-Balken** | `redbar_00.png` bis `06` | Lebensanzeige |
+| **Trank / Wasser** | `water.png` | Kann als Basis für Heiltränke dienen |
+| **Loot-Kiste** | `itemdisc_01.png` / `_02.png` | Kann als "Loot-Glow" oder Token dienen |
+| **Quest-Marker** | `expression_alerted.png` | Das "!" über NPCs |
+| **Statusbalken** | `redbar_00.png` bis `06` | Lebensanzeige |
 | **Mana-Balken** | `bluebar_00.png` bis `05` | Magieanzeige |
 | **Ausdauer** | `greenbar_00.png` bis `06` | Energieanzeige |
-| **Cursor** | `cursor_01.png` bis `05` | Interaktion |
-| **Emotes** | `expression_love.png`, etc. | NPC-Reaktionen |

@@ -2,7 +2,8 @@
   "root": [],
   "tilesets": [
     "spr_tileset_sunnysideworld_16px.png",
-    "spr_tileset_sunnysideworld_forest_32px.png"
+    "spr_tileset_sunnysideworld_forest_32px.png",
+    "SUNNYSIDE_WORLD_BUILDINGS_V0.01.png"
   ],
   "characters": [
     "base_attack_strip10.png",
