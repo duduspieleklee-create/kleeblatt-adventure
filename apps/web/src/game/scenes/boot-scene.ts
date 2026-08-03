@@ -53,19 +53,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Scene vollständig geladen → Match bereit
-    gameBridge.emit("match:started", { matchId: "proto-" + Date.now() });
-
-    // Hinweis-Text (optional, zeigt dass Boot gelaufen ist)
-    this.add
-      .text(this.scale.width / 2, this.scale.height / 2, "Assets geladen – Match startet", {
-        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-        fontSize: "20px",
-        color: "#e8f0e8",
-      })
-      .setOrigin(0.5);
-
-    // Nach kurzer Anzeige zur MatchScene wechseln (spätere Karte)
-    // this.scene.start("match");
+    this.scene.start("match");
   }
 }
