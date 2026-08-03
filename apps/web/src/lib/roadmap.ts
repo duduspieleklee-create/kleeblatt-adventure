@@ -23,7 +23,7 @@ export function issueUrl(issue: number): string {
   return `${ISSUE_BASE}${issue}`;
 }
 
-/** Aktuelle nächste Schritte (Stand: 03.08.2026, nach Login-Verifikation) */
+/** Aktuelle nächste Schritte (Stand: 03.08.2026, nach P3 Mock-Wallet) */
 export const NEXT_STEPS: NextStep[] = [
   {
     title: "Phaser MatchScene: Map + Spieler + WASD",
@@ -41,11 +41,6 @@ export const NEXT_STEPS: NextStep[] = [
     issue: 48,
   },
   {
-    title: "Mock-Wallet",
-    detail: "Pro User eine stabile Mock-Adresse (Grundlage fürs On-Chain-Thema).",
-    issue: 42,
-  },
-  {
     title: "XP + Loot + Inventar-Erweiterung (P3)",
     detail: "XP-Gain + Level-Up, Lootkisten, Items anlegbar auf Held-Stats.",
     issue: 50,
@@ -54,6 +49,15 @@ export const NEXT_STEPS: NextStep[] = [
 
 /** Änderungshistorie (neueste zuerst) – Stand: 03.08.2026 */
 export const PATCH_LOG: PatchLogEntry[] = [
+  {
+    date: "03.08.2026",
+    title: "PR #66 – P3 Mock-Wallet",
+    changes: [
+      "Neue wallets-Tabelle (Drizzle) + Migration 0001: user_id PK, address, provider_ref, status (pending/ready).",
+      "GET /wallet liefert stabile deterministische Mock-Adresse pro User (0x + 40 Hex), Postgres + In-Memory-Fallback.",
+      "WalletResponse-Typ in packages/shared, Unit-Test (Format, Determinismus, Eindeutigkeit).",
+    ],
+  },
   {
     date: "03.08.2026",
     title: "Google-Login verifiziert (Produktion)",
