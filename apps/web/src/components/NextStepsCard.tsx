@@ -3,8 +3,8 @@ export function NextStepsCard() {
     <section className="card muted">
       <h2>Als Nächstes</h2>
       <ol>
-        <li>Auth (P1)</li>
         <li>Held erstellen (P2)</li>
+        <li>Inventar / Mock-Wallet (P3)</li>
         <li>Phaser MatchScene (P4)</li>
       </ol>
     </section>

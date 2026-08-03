@@ -9,7 +9,9 @@ node_modules/
 
 # Build
 dist/
-lib/
+# compiled lib folders (not apps/*/src/lib)
+/lib/
+**/dist/lib/
 build/
 *.tsbuildinfo
 
