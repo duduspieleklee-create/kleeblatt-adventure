@@ -41,7 +41,7 @@ coverage/
 .eslintcache
 .prettiercache
 *.cache
+.turbo/
 
 # Misc
 *.local
-.turbo/

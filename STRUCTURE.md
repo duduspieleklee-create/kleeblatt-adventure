@@ -36,18 +36,19 @@ kleeblatt-adventure/
 │   └── planning/
 ├── game-config.json              # Gameplay values (SSOT)
 ├── docker-compose.yml            # Postgres + Redis
+├── turbo.json                    # Turborepo task graph + cache
 └── package.json                  # Workspaces root
 ```
 
 ## Conventions
 
-| Area | Rule |
-|------|------|
-| Domain routes | `apps/api/src/routes/<domain>.ts` |
-| Business logic | `apps/api/src/services/` – not in route handlers |
-| Shared contracts | `@kleeblatt/shared` only – no duplicated types |
-| Phaser | `apps/web/src/game/` – talk to React via gameBridge |
-| Config values | `game-config.json` – never hard-code combat stats |
+| Area             | Rule                                                       |
+| ---------------- | ---------------------------------------------------------- |
+| Domain routes    | `apps/api/src/routes/<domain>.ts`                          |
+| Business logic   | `apps/api/src/services/` – not in route handlers           |
+| Shared contracts | `@kleeblatt/shared` only – no duplicated types             |
+| Phaser           | `apps/web/src/game/` – talk to React via gameBridge        |
+| Config values    | `game-config.json` – never hard-code combat stats          |
 
 ## Adding a feature (example: inventory)
 
@@ -56,3 +57,14 @@ kleeblatt-adventure/
 3. Mount in `apps/api/src/app.ts`
 4. UI page/hook under `apps/web/src/`
 5. Tests next to the unit under test (`*.test.ts`)
+
+## Task runner (Turborepo)
+
+| Command                               | Behavior                                                              |
+| ------------------------------------- | --------------------------------------------------------------------- |
+| `npm run build`                       | `turbo run build` – topological (`shared` → `api`/`web`), local cache |
+| `npm run dev`                         | Parallel persistent `dev` for api + web                               |
+| `npm run lint` / `test` / `typecheck` | Per-package, with `^build` where needed                               |
+| `npm run clean`                       | Clears `dist/` and `.turbo/`                                          |
+
+Cache lives in `.turbo/` (gitignored). Second `npm run build` with no changes is a cache hit.

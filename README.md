@@ -14,19 +14,20 @@ npm run dev:api        # API → http://localhost:4000/health
 npm run dev:web        # Web → http://localhost:5173
 ```
 
-**Requirements:** Node.js ≥ 20, Docker
+**Requirements:** Node.js ≥ 20, Docker  
+**Task runner:** [Turborepo](https://turbo.build) (local build cache + parallel tasks)
 
 ## Scripts
 
-| Command                                 | Description                    |
-| --------------------------------------- | ------------------------------ |
-| `npm run dev:api` / `dev:web`           | Start API or web in watch mode |
-| `npm run build`                         | Build shared + api + web       |
-| `npm run typecheck`                     | TypeScript build check         |
-| `npm run lint` / `lint:fix`             | ESLint                         |
-| `npm run format` / `format:check`       | Prettier                       |
-| `npm test`                              | Vitest unit tests              |
-| `npm run db:up` / `db:down` / `db:seed` | Docker DB + seed               |
+| Command                                 | Description                              |
+| --------------------------------------- | ---------------------------------------- |
+| `npm run dev` / `dev:api` / `dev:web`   | Dev servers (Turbo, parallel)            |
+| `npm run build`                         | Build all packages (cached, topological) |
+| `npm run typecheck`                     | TypeScript check via Turbo               |
+| `npm run lint` / `lint:fix`             | ESLint (per package)                     |
+| `npm run format` / `format:check`       | Prettier                                 |
+| `npm test`                              | Vitest via Turbo                         |
+| `npm run db:up` / `db:down` / `db:seed` | Docker DB + seed                         |
 
 ## Monorepo layout
 
