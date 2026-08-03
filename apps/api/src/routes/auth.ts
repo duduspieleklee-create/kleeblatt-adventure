@@ -1,7 +1,7 @@
 /** Auth-Routen: Google OAuth (start/callback), Logout, Dev-Login, Status. */
 
 import { randomBytes } from "node:crypto";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { SESSION_COOKIE_NAME } from "@kleeblatt/shared";
 import { env, sessionCookie } from "../config/env.js";
@@ -31,13 +31,16 @@ function googleConfigured(): boolean {
 }
 
 /** Fehler-Redirect mit Grund, damit Produktionsfehler diagnostizierbar sind. */
-function errorRedirect(reason: string, detail?: string): Response {
+function errorRedirect(
+  c: Context<{ Variables: AppVariables }>,
+  reason: string,
+  detail?: string,
+): Response {
   const params = new URLSearchParams({ auth: "error", reason });
   if (detail) params.set("detail", detail.slice(0, 80));
-  return new Response(null, {
-    status: 302,
-    headers: { Location: `${env.webUrl}/?${params.toString()}` },
-  });
+  // c.redirect statt rohem Response: so bleiben Cookie-Header (deleteCookie)
+  // des Hono-Kontexts erhalten.
+  return c.redirect(`${env.webUrl}/?${params.toString()}`, 302);
 }
 
 /** GET /auth/status – nicht-sekrete Auth-Konfiguration (Remote-Diagnose). */
@@ -103,15 +106,15 @@ authRoutes.get("/auth/google/callback", async (c) => {
   // redirect_uri_mismatch). Detail durchreichen, damit der Grund sichtbar wird.
   if (oauthError) {
     console.warn(`[auth] Google OAuth error: ${oauthError}`);
-    return errorRedirect("oauth", oauthError);
+    return errorRedirect(c, "oauth", oauthError);
   }
   if (!code) {
-    return errorRedirect("missing_code");
+    return errorRedirect(c, "missing_code");
   }
   // CSRF-Schutz: state muss zum Cookie passen.
   if (!stateCookie || !state || stateCookie !== state) {
     console.warn("[auth] OAuth state mismatch (CSRF?) – Login abgebrochen.");
-    return errorRedirect("state");
+    return errorRedirect(c, "state");
   }
 
   try {
@@ -129,11 +132,11 @@ authRoutes.get("/auth/google/callback", async (c) => {
     if (!tokenRes.ok) {
       const body = await tokenRes.text();
       console.error(`[auth] Google token exchange failed (${tokenRes.status}): ${body}`);
-      return errorRedirect("token_exchange", body);
+      return errorRedirect(c, "token_exchange", body);
     }
     const tokenJson = (await tokenRes.json()) as { access_token?: string };
     if (!tokenJson.access_token) {
-      return errorRedirect("token_exchange", "missing access_token");
+      return errorRedirect(c, "token_exchange", "missing access_token");
     }
 
     const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -142,7 +145,7 @@ authRoutes.get("/auth/google/callback", async (c) => {
     if (!profileRes.ok) {
       const body = await profileRes.text();
       console.error(`[auth] Google profile failed (${profileRes.status}): ${body}`);
-      return errorRedirect("profile", body);
+      return errorRedirect(c, "profile", body);
     }
     const profile = (await profileRes.json()) as {
       id: string;
@@ -163,7 +166,7 @@ authRoutes.get("/auth/google/callback", async (c) => {
     return c.redirect(`${env.webUrl}/?auth=ok`);
   } catch (err) {
     console.error("[auth] OAuth callback error", err);
-    return errorRedirect("exception", err instanceof Error ? err.message : undefined);
+    return errorRedirect(c, "exception", err instanceof Error ? err.message : undefined);
   }
 });
 

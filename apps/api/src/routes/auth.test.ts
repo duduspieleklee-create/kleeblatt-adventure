@@ -112,5 +112,11 @@ describe("auth/google/callback", () => {
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("https://game.kleeblatt.space/?auth=ok");
     expect(setCookieValue(res, "kleeblatt_session")).toBeTruthy();
+    // State-Cookie muss gelöscht sein (Einmalgebrauch)
+    const stateCookie = res.headers
+      .getSetCookie()
+      .find((entry) => entry.startsWith("kleeblatt_oauth_state="));
+    expect(stateCookie).toBeTruthy();
+    expect(stateCookie?.toLowerCase()).toContain("max-age=0");
   });
 });
