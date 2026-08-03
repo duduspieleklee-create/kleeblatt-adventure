@@ -5,6 +5,7 @@ import { NextStepsCard } from "../components/NextStepsCard";
 import { AuthCard } from "../components/AuthCard";
 import { HeroSetupCard } from "../components/HeroSetupCard";
 import { HeroDashboardCard } from "../components/HeroDashboardCard";
+import { MatchPage } from "./MatchPage";
 import { useHealth } from "../hooks/useHealth";
 import { useMe } from "../hooks/useMe";
 import { useHero } from "../hooks/useHero";
@@ -45,11 +46,14 @@ export function HomePage() {
           ) : hero.state.status === "none" ? (
             <HeroSetupCard onCreated={handleCreated} />
           ) : (
-            <HeroDashboardCard
-              hero={hero.state.hero}
-              inventory={hero.state.inventory}
-              onChange={hero.refresh}
-            />
+            <>
+              <HeroDashboardCard
+                hero={hero.state.hero}
+                inventory={hero.state.inventory}
+                onChange={hero.refresh}
+              />
+              <MatchPage />
+            </>
           ))}
 
         <NextStepsCard />

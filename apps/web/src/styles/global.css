@@ -286,3 +286,20 @@ button.primary:disabled {
 .patch-entry li {
   margin-bottom: 0.25rem;
 }
+
+/* Phaser-Container (Match-Shell, P4) */
+.game-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #101810;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 0.75rem;
+  border: 1px solid #2a3a2a;
+}
+
+.game-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
