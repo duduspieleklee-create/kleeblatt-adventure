@@ -8,10 +8,13 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --config ../../vitest.config.ts"
+    "test": "vitest run --config ../../vitest.config.ts --passWithNoTests",
+    "lint": "eslint src --max-warnings 0",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
+    "@kleeblatt/shared": "*",
     "hono": "^4.6.12"
   },
   "devDependencies": {

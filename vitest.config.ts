@@ -4,15 +4,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: [
-      "apps/**/*.{test,spec}.{ts,tsx}",
-      "packages/**/*.{test,spec}.{ts,tsx}",
-      "scripts/**/*.{test,spec}.{ts,mjs}",
-    ],
+    include: ["**/*.{test,spec}.{ts,tsx,mjs}"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.turbo/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      include: ["apps/**/src/**", "packages/**/src/**"],
+      include: ["src/**"],
     },
   },
 });

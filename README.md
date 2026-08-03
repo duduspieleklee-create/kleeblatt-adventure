@@ -14,29 +14,34 @@ npm run dev:api        # API → http://localhost:4000/health
 npm run dev:web        # Web → http://localhost:5173
 ```
 
-**Requirements:** Node.js ≥ 20, Docker
+**Requirements:** Node.js ≥ 20, Docker  
+**Task runner:** [Turborepo](https://turbo.build) (local build cache + parallel tasks)
 
 ## Scripts
 
-| Command                                 | Description                    |
-| --------------------------------------- | ------------------------------ |
-| `npm run dev:api` / `dev:web`           | Start API or web in watch mode |
-| `npm run build`                         | Build shared + api + web       |
-| `npm run typecheck`                     | TypeScript build check         |
-| `npm run lint` / `lint:fix`             | ESLint                         |
-| `npm run format` / `format:check`       | Prettier                       |
-| `npm test`                              | Vitest unit tests              |
-| `npm run db:up` / `db:down` / `db:seed` | Docker DB + seed               |
+| Command                                 | Description                              |
+| --------------------------------------- | ---------------------------------------- |
+| `npm run dev` / `dev:api` / `dev:web`   | Dev servers (Turbo, parallel)            |
+| `npm run build`                         | Build all packages (cached, topological) |
+| `npm run typecheck`                     | TypeScript check via Turbo               |
+| `npm run lint` / `lint:fix`             | ESLint (per package)                     |
+| `npm run format` / `format:check`       | Prettier                                 |
+| `npm test`                              | Vitest via Turbo                         |
+| `npm run db:up` / `db:down` / `db:seed` | Docker DB + seed                         |
 
 ## Monorepo layout
 
 | Path                | Role                                                          |
 | ------------------- | ------------------------------------------------------------- |
-| `apps/api`          | Game API (Hono, TypeScript)                                   |
-| `apps/web`          | React shell + Phaser                                          |
-| `packages/shared`   | Shared types                                                  |
+| `apps/api`          | Game API (Hono) – routes / services / config                  |
+| `apps/web`          | React shell + Phaser (`src/game`)                             |
+| `packages/shared`   | Shared types & constants (`@kleeblatt/shared`)                |
+| `packages/tsconfig` | Shared TypeScript base config                                 |
+| `scripts/`          | Seed & deploy helpers                                         |
 | `docs/architecture` | Architecture docs (00–25)                                     |
 | `game-config.json`  | All gameplay values (heroes, skills, enemies, XP, loot, auth) |
+
+Full tree: [STRUCTURE.md](./STRUCTURE.md)
 
 ## Important docs
 
