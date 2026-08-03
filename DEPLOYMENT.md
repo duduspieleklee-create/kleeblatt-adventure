@@ -7,14 +7,14 @@
 
 ## Übersicht
 
-| Komponente | Technologie | Port |
-|------------|-------------|------|
-| Game API | Hono (Node.js, TypeScript) | 4000 |
-| Web Client | React + Vite (+ Phaser) | 5173 (dev) / 80 (prod) |
-| Datenbank | PostgreSQL | 5432 |
-| Cache / Queue | Redis | 6379 |
-| Blockchain | Immutable zkEVM (Testnet → Mainnet) | — |
-| MPC / Wallet | Turnkey (Prod) / Mock (Dev) | — |
+| Komponente    | Technologie                         | Port                   |
+| ------------- | ----------------------------------- | ---------------------- |
+| Game API      | Hono (Node.js, TypeScript)          | 4000                   |
+| Web Client    | React + Vite (+ Phaser)             | 5173 (dev) / 80 (prod) |
+| Datenbank     | PostgreSQL                          | 5432                   |
+| Cache / Queue | Redis                               | 6379                   |
+| Blockchain    | Immutable zkEVM (Testnet → Mainnet) | —                      |
+| MPC / Wallet  | Turnkey (Prod) / Mock (Dev)         | —                      |
 
 ---
 
@@ -42,9 +42,9 @@ Same flow as before: **push `main` → Actions → live at game.kleeblatt.space*
 
 Point the subdomain at the same host as `kleeblatt.space` (currently `57.129.124.60`):
 
-| Type | Name | Value |
-|------|------|--------|
-| A | `game` | `57.129.124.60` |
+| Type | Name   | Value           |
+| ---- | ------ | --------------- |
+| A    | `game` | `57.129.124.60` |
 
 Or CNAME `game` → `kleeblatt.space`.
 
@@ -52,12 +52,12 @@ Or CNAME `game` → `kleeblatt.space`.
 
 Repo → Settings → Environments → **production** → Environment secrets:
 
-| Secret | Example | Purpose |
-|--------|---------|---------|
-| `DEPLOY_HOST` | `57.129.124.60` | SSH host |
-| `DEPLOY_USER` | `debian` | SSH user |
-| `DEPLOY_SSH_KEY` | *(private key PEM)* | Deploy key (prefer no passphrase) |
-| `DEPLOY_PATH` | `/var/www/game.kleeblatt.space/` | Target directory on server |
+| Secret           | Example                          | Purpose                           |
+| ---------------- | -------------------------------- | --------------------------------- |
+| `DEPLOY_HOST`    | `57.129.124.60`                  | SSH host                          |
+| `DEPLOY_USER`    | `debian`                         | SSH user                          |
+| `DEPLOY_SSH_KEY` | _(private key PEM)_              | Deploy key (prefer no passphrase) |
+| `DEPLOY_PATH`    | `/var/www/game.kleeblatt.space/` | Target directory on server        |
 
 Optional repo **variable**: `VITE_API_URL` (empty = same-origin; nginx can proxy `/api`).
 
@@ -81,18 +81,19 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # Alle API-Calls laufen über /api/* (Web-Default, siehe apps/web/src/lib/api.ts).
     location /api/ {
         proxy_pass http://127.0.0.1:4000/api/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
-
-    location /health {
-        proxy_pass http://127.0.0.1:4000/health;
-    }
 }
 ```
+
+> Hinweis: Die API mountet ihre Routen doppelt – unter `/api/*` (bevorzugt)
+> und am Root (Legacy-Aliase für /health, /auth/*, /me, falls alte nginx-Locations
+> existieren). Neue nginx-Configs brauchen nur die `/api/`-Location.
 
 ```bash
 sudo ln -sf /etc/nginx/sites-available/game.kleeblatt.space /etc/nginx/sites-enabled/
@@ -119,14 +120,14 @@ npm run build
 
 ### Env (Production)
 
-| Variable | Wert |
-|----------|------|
-| `NODE_ENV` | `production` |
-| `DATABASE_URL` | Managed Postgres URL |
-| `REDIS_URL` | Managed Redis URL |
-| `SESSION_SECRET` | Strong random string |
-| `CORS_ORIGIN` | `https://game.kleeblatt.space` |
-| `SECURE_COOKIES` | `true` |
+| Variable         | Wert                           |
+| ---------------- | ------------------------------ |
+| `NODE_ENV`       | `production`                   |
+| `DATABASE_URL`   | Managed Postgres URL           |
+| `REDIS_URL`      | Managed Redis URL              |
+| `SESSION_SECRET` | Strong random string           |
+| `CORS_ORIGIN`    | `https://game.kleeblatt.space` |
+| `SECURE_COOKIES` | `true`                         |
 
 ### Sicherheit
 
