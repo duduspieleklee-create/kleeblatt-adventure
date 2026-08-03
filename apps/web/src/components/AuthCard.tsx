@@ -7,10 +7,38 @@ interface AuthCardProps {
   showDevLogin?: boolean;
 }
 
+/** Fehlergründe aus dem OAuth-Callback (?auth=error&reason=…) lesbar machen. */
+const AUTH_ERROR_REASONS: Record<string, string> = {
+  oauth:
+    "Google hat die Anmeldung abgelehnt (z. B. abgebrochen oder Redirect-URI nicht registriert).",
+  missing_code: "OAuth-Callback ohne Code empfangen.",
+  state: "Sicherheitsprüfung fehlgeschlagen – bitte erneut versuchen.",
+  token_exchange: "Google-Token-Austausch fehlgeschlagen (Client-ID/Secret prüfen).",
+  profile: "Google-Profil konnte nicht geladen werden.",
+  exception: "Unerwarteter Fehler beim Login.",
+};
+
+function authErrorHint(): { reason: string; detail: string | null } | null {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("auth") !== "error") return null;
+  return {
+    reason: params.get("reason") ?? "unknown",
+    detail: params.get("detail"),
+  };
+}
+
 export function AuthCard({ state, onLogout, showDevLogin }: AuthCardProps) {
+  const authError = authErrorHint();
+
   return (
     <section className="card">
       <h2>Konto (P1 Auth)</h2>
+      {authError && (
+        <p className="error">
+          Anmeldung fehlgeschlagen: {AUTH_ERROR_REASONS[authError.reason] ?? "Unbekannter Grund"}
+          {authError.detail ? <code> ({authError.detail})</code> : null}
+        </p>
+      )}
       {state.status === "loading" && <p>Session wird geprüft…</p>}
       {state.status === "error" && (
         <p className="hint">
