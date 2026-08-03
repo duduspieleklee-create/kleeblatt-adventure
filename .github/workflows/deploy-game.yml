@@ -45,19 +45,63 @@ jobs:
           test -f apps/web/dist/index.html
           ls -la apps/web/dist/
 
+      - name: Check deploy secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          missing=
+          [ -n "$DEPLOY_HOST" ] || missing="$missing DEPLOY_HOST"
+          [ -n "$DEPLOY_USER" ] || missing="$missing DEPLOY_USER"
+          [ -n "$DEPLOY_PATH" ] || missing="$missing DEPLOY_PATH"
+          [ -n "$DEPLOY_SSH_KEY" ] || missing="$missing DEPLOY_SSH_KEY"
+          if [ -n "$missing" ]; then
+            echo "Missing production secrets:$missing" >&2
+            echo "Set them under Settings → Environments → production" >&2
+            exit 1
+          fi
+          echo "Host=${DEPLOY_HOST} User=${DEPLOY_USER} Path=${DEPLOY_PATH}"
+
       - name: Setup SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
 
       - name: Add host to known_hosts
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+          PORT="${DEPLOY_PORT:-22}"
+          HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
+          echo "Scanning ${HOST} port ${PORT}…"
+          for i in 1 2 3; do
+            if ssh-keyscan -p "$PORT" -T 15 -H "$HOST" >> ~/.ssh/known_hosts 2>/tmp/keyscan.err; then
+              echo "known_hosts updated"
+              exit 0
+            fi
+            echo "ssh-keyscan attempt $i failed:" >&2
+            cat /tmp/keyscan.err >&2 || true
+            sleep 2
+          done
+          echo "ssh-keyscan failed. Check: firewall allows SSH from GitHub Actions, DEPLOY_HOST/PORT correct." >&2
+          exit 1
 
       - name: Rsync dist to server
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
         run: |
+          PORT="${DEPLOY_PORT:-22}"
+          HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
+          PATH_DEST="$(echo "$DEPLOY_PATH" | sed 's|/*$|/|')"
           rsync -avz --delete \
-            -e "ssh -o StrictHostKeyChecking=yes" \
+            -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes -o ServerAliveInterval=15" \
             apps/web/dist/ \
-            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}"
+            "${DEPLOY_USER}@${HOST}:${PATH_DEST}"
