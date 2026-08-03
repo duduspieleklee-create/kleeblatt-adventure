@@ -1,0 +1,63 @@
+name: Deploy game.kleeblatt.space
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "apps/api/**"
+      - "packages/shared/**"
+      - "package.json"
+      - "turbo.json"
+      - ".github/workflows/deploy-game.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-game-production
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build & deploy web
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build shared + web
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: npx turbo run build --filter=@kleeblatt/shared --filter=@kleeblatt/web
+
+      - name: Verify dist
+        run: |
+          test -f apps/web/dist/index.html
+          ls -la apps/web/dist/
+
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Rsync dist to server
+        run: |
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=yes" \
+            apps/web/dist/ \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}"

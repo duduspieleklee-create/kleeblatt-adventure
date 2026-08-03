@@ -59,6 +59,11 @@ Full tree: [STRUCTURE.md](./STRUCTURE.md)
 | Security                    | [SECURITY.md](./SECURITY.md)                                                                                            |
 | Full doc index              | [docs/architecture/00-README.md](./docs/architecture/00-README.md)                                                      |
 
+## Live
+
+Production web client: **https://game.kleeblatt.space/**  
+Deploy: push to `main` → workflow `Deploy game.kleeblatt.space` (see [DEPLOYMENT.md](./DEPLOYMENT.md)).
+
 ## License
 
 See repository metadata.
