@@ -1,5 +1,7 @@
 /** Auth / session user shapes (P1) */
 
+import type { Hero } from "./hero.js";
+
 export interface SessionUser {
   userId: string;
   email: string;
@@ -12,11 +14,6 @@ export interface MeResponse {
   email: string;
   displayName: string | null;
   picture: string | null;
-  /** null until P2 hero creation */
-  hero: {
-    heroName: string;
-    class: "mage" | "ranged" | "melee";
-    level: number;
-    xp: number;
-  } | null;
+  /** null, solange kein Held erstellt wurde (P2) */
+  hero: Hero | null;
 }

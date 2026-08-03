@@ -36,44 +36,41 @@
 
 ### P0 – Gerüst
 
-- [ ] Monorepo: `apps/web`, `apps/api`
-- [ ] TypeScript + Lint in beiden Apps
-- [ ] Docker Compose: Postgres + Redis
-- [ ] `.env.example` (DATABASE_URL, REDIS_URL, SESSION_SECRET)
-- [ ] API `GET /health` → 200
-- [ ] Web startet (Vite) und kann API erreichen (Proxy oder CORS)
+- [x] Monorepo: `apps/web`, `apps/api`
+- [x] TypeScript + Lint in beiden Apps
+- [x] Docker Compose: Postgres + Redis
+- [x] `.env.example` (DATABASE_URL, REDIS_URL, SESSION_SECRET)
+- [x] API `GET /health` → 200
+- [x] Web startet (Vite) und kann API erreichen (Proxy oder CORS)
 
 **Done:** `compose up` + api + web lokal ohne Handarbeit an der DB.
 
 ---
-
 ### P1 – Auth (minimal)
 
-- [ ] Eine Login-Methode (E-Mail-Magic **oder** Google – eine reicht)
-- [ ] Tabelle `users` (id, created_at, …)
-- [ ] Session (Cookie oder Bearer JWT)
-- [ ] `GET /me` geschützt
-- [ ] Logout
-- [ ] Unauth → 401 auf geschützten Routen
+- [x] Eine Login-Methode (E-Mail-Magic **oder** Google – eine reicht)
+- [x] Tabelle `users` (id, created_at, …)
+- [x] Session (Cookie oder Bearer JWT)
+- [x] `GET /me` geschützt
+- [x] Logout
+- [x] Unauth → 401 auf geschützten Routen
 
 **Done:** Login → `/me` liefert `userId`.
 
 ---
-
 ### P2 – Held + Starter-Gear
 
-- [ ] UI: Heldenname eingeben (Validierung: Länge/Zeichen)
-- [ ] UI: Klasse wählen `mage` | `ranged` | `melee`
-- [ ] API: Held anlegen/speichern (einmalig pro User im Prototyp)
-- [ ] Felder: `hero_name`, `class`, `level`, `xp`
-- [ ] Beim Anlegen: Starter-Items in `items` (State `web2`)
-- [ ] `GET /inventory` listet Starter-Gear
-- [ ] Verhindert zweiten Helden (oder „bereits erstellt“)
+- [x] UI: Heldenname eingeben (Validierung: Länge/Zeichen)
+- [x] UI: Klasse wählen `mage` | `ranged` | `melee`
+- [x] API: Held anlegen/speichern (einmalig pro User im Prototyp)
+- [x] Felder: `hero_name`, `class`, `level`, `xp`
+- [x] Beim Anlegen: Starter-Items in `items` (State `web2`)
+- [x] `GET /inventory` listet Starter-Gear
+- [x] Verhindert zweiten Helden (oder „bereits erstellt“)
 
 **Done:** Nach Reg Name/Klasse → Inventar zeigt Starter-Rüstung.
 
 ---
-
 ### P3 – Mock-Wallet (optional parallel)
 
 - [ ] Tabelle `wallets` (user_id, address, status)
