@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   build-and-deploy:
-    name: Build & deploy web
+    name: Build & deploy web + API
     runs-on: ubuntu-latest
     environment: production
 
@@ -35,15 +35,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build shared + web
+      - name: Build shared + api + web
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
-        run: npx turbo run build --filter=@kleeblatt/shared --filter=@kleeblatt/web
+        run: npx turbo run build --filter=@kleeblatt/shared --filter=@kleeblatt/api --filter=@kleeblatt/web
 
       - name: Verify dist
         run: |
           test -f apps/web/dist/index.html
-          ls -la apps/web/dist/
+          test -f apps/api/dist/index.js
+          ls -la apps/web/dist/ apps/api/dist/
 
       - name: Check deploy secrets
         env:
@@ -59,7 +60,6 @@ jobs:
           [ -n "$DEPLOY_SSH_KEY" ] || missing="$missing DEPLOY_SSH_KEY"
           if [ -n "$missing" ]; then
             echo "Missing production secrets:$missing" >&2
-            echo "Set them under Settings → Environments → production" >&2
             exit 1
           fi
           echo "Host=${DEPLOY_HOST} User=${DEPLOY_USER} Path=${DEPLOY_PATH}"
@@ -74,24 +74,12 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
           PORT="${DEPLOY_PORT:-22}"
           HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
-          echo "Scanning ${HOST} port ${PORT}…"
-          for i in 1 2 3; do
-            if ssh-keyscan -p "$PORT" -T 15 -H "$HOST" >> ~/.ssh/known_hosts 2>/tmp/keyscan.err; then
-              echo "known_hosts updated"
-              exit 0
-            fi
-            echo "ssh-keyscan attempt $i failed:" >&2
-            cat /tmp/keyscan.err >&2 || true
-            sleep 2
-          done
-          echo "ssh-keyscan failed. Check: firewall allows SSH from GitHub Actions, DEPLOY_HOST/PORT correct." >&2
-          exit 1
+          ssh-keyscan -p "$PORT" -T 15 -H "$HOST" >> ~/.ssh/known_hosts
 
-      - name: Rsync dist to server
+      - name: Rsync web dist
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -102,6 +90,66 @@ jobs:
           HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
           PATH_DEST="$(echo "$DEPLOY_PATH" | sed 's|/*$|/|')"
           rsync -avz --delete \
-            -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes -o ServerAliveInterval=15" \
+            -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
             apps/web/dist/ \
             "${DEPLOY_USER}@${HOST}:${PATH_DEST}"
+
+      - name: Rsync API app to server
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          API_REMOTE_PATH: ${{ secrets.DEPLOY_API_PATH }}
+        run: |
+          PORT="${DEPLOY_PORT:-22}"
+          HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
+          API_PATH="${API_REMOTE_PATH:-/opt/kleeblatt-adventure}"
+          rsync -avz --delete \
+            -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
+            --exclude node_modules --exclude .git --exclude .turbo --exclude apps/web \
+            ./ "${DEPLOY_USER}@${HOST}:${API_PATH}/"
+          rsync -avz \
+            -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
+            apps/api/dist/ "${DEPLOY_USER}@${HOST}:${API_PATH}/apps/api/dist/"
+          rsync -avz \
+            -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
+            packages/shared/dist/ "${DEPLOY_USER}@${HOST}:${API_PATH}/packages/shared/dist/"
+
+      - name: Write production .env from GitHub secrets & restart API
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          API_REMOTE_PATH: ${{ secrets.DEPLOY_API_PATH }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+        run: |
+          PORT="${DEPLOY_PORT:-22}"
+          HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
+          API_PATH="${API_REMOTE_PATH:-/opt/kleeblatt-adventure}"
+
+          if [ -z "$SESSION_SECRET" ]; then
+            echo "SESSION_SECRET is required in Environment production secrets" >&2
+            exit 1
+          fi
+
+          {
+            echo "NODE_ENV=production"
+            echo "API_URL=https://game.kleeblatt.space"
+            echo "WEB_URL=https://game.kleeblatt.space"
+            echo "CORS_ORIGIN=https://game.kleeblatt.space"
+            echo "API_PORT=4000"
+            echo "SESSION_SECRET=${SESSION_SECRET}"
+            echo "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}"
+            echo "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
+            echo "GOOGLE_CALLBACK_URL=https://game.kleeblatt.space/auth/google/callback"
+            echo "AUTH_DEV_BYPASS=false"
+          } > /tmp/kleeblatt.env
+
+          scp -P "$PORT" -o StrictHostKeyChecking=yes \
+            /tmp/kleeblatt.env \
+            "${DEPLOY_USER}@${HOST}:${API_PATH}/.env"
+          ssh -p "$PORT" -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${HOST}" \
+            "chmod 600 ${API_PATH}/.env && cd ${API_PATH} && npm install --omit=dev && sudo systemctl restart kleeblatt-api && sleep 1 && curl -sf http://127.0.0.1:4000/health"
+          rm -f /tmp/kleeblatt.env
