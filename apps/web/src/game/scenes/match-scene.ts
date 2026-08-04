@@ -4,7 +4,12 @@ import { gameBridge, type GameBridgeEvents } from "@kleeblatt/shared";
 export class MatchScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private wasd!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
+  private wasd!: {
+    W: Phaser.Input.Keyboard.Key;
+    A: Phaser.Input.Keyboard.Key;
+    S: Phaser.Input.Keyboard.Key;
+    D: Phaser.Input.Keyboard.Key;
+  };
   private map!: Phaser.Tilemaps.Tilemap;
   private wallLayer!: Phaser.Tilemaps.TilemapLayer;
 
@@ -24,6 +29,8 @@ export class MatchScene extends Phaser.Scene {
 
   private matchId: string;
   private matchStarted = false;
+  private enemiesKilled = 0;
+  private chestsOpened = 0;
   private readonly pauseHandler = () => this.scene.pause();
   private readonly resumeHandler = () => this.scene.resume();
   private readonly matchExitHandler = () => this.onMatchExit();
@@ -277,16 +284,39 @@ export class MatchScene extends Phaser.Scene {
     this.scene.stop();
     gameBridge.emit("match:ended", {
       matchId: this.matchId,
-      enemiesKilled: 0,
-      chestsOpened: 0,
+      enemiesKilled: this.enemiesKilled,
+      chestsOpened: this.chestsOpened,
     });
+  }
+
+  /** Wird bei Enemy-Tod aufgerufen (P5/P6) – Kill zählt für die XP-Verrechnung. */
+  onEnemyKilled(): void {
+    this.enemiesKilled += 1;
+  }
+
+  /** Wird beim Öffnen einer Kiste aufgerufen (P7). */
+  onChestOpened(): void {
+    this.chestsOpened += 1;
+    gameBridge.emit("chest:opened", { chestId: "chest-" + this.chestsOpened });
   }
 
   private emitInitialStats(): void {
     gameBridge.emit("player:hp", { current: this.stats.currentHp, max: this.stats.maxHp });
-    gameBridge.emit("player:resource", { current: this.stats.currentMana, max: this.stats.maxMana, type: "mana" });
-    gameBridge.emit("player:resource", { current: this.stats.currentStamina, max: this.stats.maxStamina, type: "stamina" });
-    gameBridge.emit("player:level", { level: this.stats.level, xp: this.stats.xp, xpToNext: this.stats.xpToNext });
+    gameBridge.emit("player:resource", {
+      current: this.stats.currentMana,
+      max: this.stats.maxMana,
+      type: "mana",
+    });
+    gameBridge.emit("player:resource", {
+      current: this.stats.currentStamina,
+      max: this.stats.maxStamina,
+      type: "stamina",
+    });
+    gameBridge.emit("player:level", {
+      level: this.stats.level,
+      xp: this.stats.xp,
+      xpToNext: this.stats.xpToNext,
+    });
   }
 
   update(): void {

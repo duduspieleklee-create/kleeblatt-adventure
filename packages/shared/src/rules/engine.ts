@@ -17,6 +17,7 @@ import type {
   EnemyMeleeIntent,
   EnemyProjectileHitIntent,
   SkillDef,
+  Effect,
   DamageReductionEffect,
   CooldownState,
 } from "./types.js";
@@ -26,21 +27,7 @@ import { CLASS_SKILLS, DEFAULT_SKILLS } from "./defaults.js";
 // helpers
 // ---------------------------------------------------------------------------
 
-function hasEffect(entity: { effects: RuleEvent[] }, kind: string): boolean {
-  return entity.effects.some((e: any) => e.kind === kind && e.expiresAt > 0);
-}
-
-function getDrFactor(entity: { effects: any[] }): number {
-  const now = 0; // placeholder
-  for (const e of entity.effects) {
-    if (e.kind === "damage_reduction" && e.expiresAt > now) {
-      return (e as DamageReductionEffect).factor;
-    }
-  }
-  return 1;
-}
-
-function getDrFactorAt(entity: { effects: any[] }, now: number): number {
+function getDrFactorAt(entity: { effects: Effect[] }, now: number): number {
   for (const e of entity.effects) {
     if (e.kind === "damage_reduction" && e.expiresAt > now) {
       return (e as DamageReductionEffect).factor;
@@ -53,14 +40,12 @@ function isOnCooldown(cooldowns: CooldownState[], skillId: SkillId, now: number)
   return cooldowns.some((c) => c.skillId === skillId && c.readyAt > now);
 }
 
-function setCooldown(cooldowns: CooldownState[], skillId: string, readyAt: number): CooldownState[] {
+function setCooldown(
+  cooldowns: CooldownState[],
+  skillId: string,
+  readyAt: number,
+): CooldownState[] {
   return cooldowns.map((c) => (c.skillId === skillId ? { ...c, readyAt } : c));
-}
-
-function addCooldown(cooldowns: CooldownState[], skillId: SkillId, readyAt: number): CooldownState[] {
-  const existing = cooldowns.find((c) => c.skillId === skillId);
-  if (existing) return setCooldown(cooldowns, skillId, readyAt);
-  return [...cooldowns, { skillId, readyAt }];
 }
 
 function canUseSkill(
@@ -210,11 +195,7 @@ export function createRuleEngine(config: RuleEngineConfig): RuleEngine {
     return events;
   }
 
-  function resolveSkill(
-    intent: SkillIntent,
-    world: WorldState,
-    now: number,
-  ): RuleEvent[] {
+  function resolveSkill(intent: SkillIntent, world: WorldState, now: number): RuleEvent[] {
     const events: RuleEvent[] = [];
     const source = world.entities[intent.sourceId];
     if (!source || !source.alive || source.kind !== "hero") return events;
@@ -294,7 +275,11 @@ export function createRuleEngine(config: RuleEngineConfig): RuleEngine {
     }
 
     // Projectile skills
-    if (intent.skillId === "fireball" || intent.skillId === "rapid_fire" || intent.skillId === "slow_shot") {
+    if (
+      intent.skillId === "fireball" ||
+      intent.skillId === "rapid_fire" ||
+      intent.skillId === "slow_shot"
+    ) {
       const projKind =
         intent.skillId === "fireball"
           ? "fireball"

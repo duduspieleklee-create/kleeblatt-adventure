@@ -8,6 +8,7 @@ import { meRoutes } from "./routes/me.js";
 import { heroRoutes } from "./routes/hero.js";
 import { inventoryRoutes } from "./routes/inventory.js";
 import { walletRoutes } from "./routes/wallet.js";
+import { matchRoutes } from "./routes/match.js";
 
 export function createApp() {
   const app = new Hono<{ Variables: AppVariables }>();
@@ -32,6 +33,7 @@ export function createApp() {
   routes.route("/", heroRoutes);
   routes.route("/", inventoryRoutes);
   routes.route("/", walletRoutes);
+  routes.route("/", matchRoutes);
 
   // Legacy-Root-Pfade (nginx proxied /health, /auth/*, /me am Root)
   // UND dokumentierte /api-Architektur (Web → /api/* → nginx → API,

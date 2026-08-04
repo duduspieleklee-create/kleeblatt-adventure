@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kleeblatt Asset Browser</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; overflow: hidden; }
+    #game-container { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <script type="module">
+    import Phaser from 'phaser';
+
+    const CATEGORIES = [
+      { key: 'tilesets', manifestKey: 'tilesets', path: 'assets/tilesets/', isSpritesheet: false },
+      { key: 'characters', manifestKey: 'characters', path: 'assets/characters/', isSpritesheet: true, frameW: 64, frameH: 64 },
+      { key: 'ui', manifestKey: 'ui', path: 'assets/ui/', isSpritesheet: false },
+      { key: 'animals', manifestKey: 'animals', path: 'assets/elements/animals/', isSpritesheet: false },
+      { key: 'crops', manifestKey: 'crops', path: 'assets/elements/crops/', isSpritesheet: false },
+      { key: 'vfx', manifestKey: 'vfx', path: 'assets/vfx/', isSpritesheet: true, frameW: 32, frameH: 32 },
+    ];
+
+    class AssetBrowserScene extends Phaser.Scene {
+      constructor() {
+        super({ key: 'assetBrowser' });
+        this.assets = [];
+        this.currentPage = 0;
+        this.itemsPerPage = 24;
+        this.searchText = '';
+        this.selectedCategory = 'all';
+        this.selectedAsset = null;
+      }
+
+      preload() {
+        const loadText = this.add.text(400, 300, 'Scanning assets...', {
+          fontSize: '24px', color: '#e8f0e8', fontFamily: 'system-ui, sans-serif'
+        }).setOrigin(0.5);
+
+        this.load.on('progress', (value) => {
+          loadText.setText('Loading assets... ' + Math.round(value * 100) + '%');
+        });
+
+        this.load.on('complete', () => {
+          loadText.setText('Building browser...');
+        });
+
+        fetch('/assets/asset-manifest.json')
+          .then(r => r.json())
+          .then(manifest => {
+            for (const cat of CATEGORIES) {
+              const files = manifest[cat.manifestKey] || [];
+              for (const file of files) {
+                const key = cat.key + '_' + file.replace(/\.[^.]+$/, '').replace(/-/g, '_');
+                const url = cat.path + file;
+
+                this.assets.push({
+                  key, url, category: cat.key,
+                  isSpritesheet: cat.isSpritesheet,
+                  frameWidth: cat.frameW,
+                  frameHeight: cat.frameH,
+                  name: file.replace(/\.[^.]+$/, '')
+                });
+
+                if (cat.isSpritesheet && cat.frameW && cat.frameH) {
+                  this.load.spritesheet(key, url, { frameWidth: cat.frameW, frameHeight: cat.frameH });
+                } else {
+                  this.load.image(key, url);
+                }
+              }
+            }
+            this.load.start();
+          })
+          .catch(e => console.error('Failed to load manifest:', e));
+      }
+
+      create() {
+        this.cameras.main.setBackgroundColor('#1a1a2e');
+        this.createHeader();
+        this.createCategoryFilter();
+        this.gridContainer = this.add.container(20, 120);
+        this.updateGrid();
+        this.createDetailPanel();
+        this.createPagination();
+
+        this.input.keyboard?.on('keydown-LEFT', () => this.prevPage());
+        this.input.keyboard?.on('keydown-RIGHT', () => this.nextPage());
+        this.input.keyboard?.on('keydown-ESCAPE', () => {
+          this.selectedAsset = null;
+          this.updateDetailPanel();
+        });
+      }
+
+      createHeader() {
+        this.add.text(20, 15, 'ASSET BROWSER', {
+          fontSize: '28px', fontFamily: 'system-ui, sans-serif',
+          color: '#00ff88', fontStyle: 'bold'
+        });
+        this.add.text(20, 45, this.assets.length + ' assets loaded', {
+          fontSize: '14px', color: '#8888aa', fontFamily: 'system-ui, sans-serif'
+        });
+        this.add.text(20, 65, '← → navigate pages | Click asset for preview | ESC close detail', {
+          fontSize: '11px', color: '#555577', fontFamily: 'system-ui, sans-serif'
+        });
+      }
+
+      createCategoryFilter() {
+        const cats = [
+          { key: 'all', label: 'All', color: 0x444466 },
+          { key: 'tilesets', label: 'Tiles', color: 0x2a5a2a },
+          { key: 'characters', label: 'Chars', color: 0x5a2a2a },
+          { key: 'ui', label: 'UI', color: 0x2a2a5a },
+          { key: 'animals', label: 'Animals', color: 0x5a4a2a },
+          { key: 'crops', label: 'Crops', color: 0x3a5a3a },
+          { key: 'vfx', label: 'VFX', color: 0x4a2a5a },
+        ];
+
+        let x = 20;
+        const y = 85;
+
+        for (const cat of cats) {
+          const isSelected = cat.key === this.selectedCategory;
+          const w = cat.label.length * 9 + 16;
+          const bg = this.add.rectangle(x, y, w, 24, isSelected ? cat.color : 0x2a2a3a)
+            .setInteractive({ useHandCursor: true });
+          const text = this.add.text(x + 8, y - 7, cat.label, {
+            fontSize: '12px', color: isSelected ? '#ffffff' : '#8888aa',
+            fontFamily: 'system-ui, sans-serif'
+          });
+
+          bg.on('pointerdown', () => {
+            this.selectedCategory = cat.key;
+            this.currentPage = 0;
+            this.updateGrid();
+          });
+          bg.on('pointerover', () => { if (cat.key !== this.selectedCategory) bg.setFillStyle(0x3a3a4a); });
+          bg.on('pointerout', () => { if (cat.key !== this.selectedCategory) bg.setFillStyle(0x2a2a3a); });
+
+          x += w + 12;
+        }
+      }
+
+      createDetailPanel() {
+        this.detailPanel = this.add.container(900, 120);
+        const bg = this.add.rectangle(0, 0, 260, 420, 0x0f0f1a, 0.95);
+        const border = this.add.rectangle(0, 0, 260, 420, 0x333355).setStrokeStyle(1, 0x444466);
+        const title = this.add.text(130, 20, 'PREVIEW', {
+          fontSize: '16px', color: '#00ff88', fontFamily: 'system-ui, sans-serif',
+          fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        const closeBtn = this.add.text(240, 10, 'X', {
+          fontSize: '16px', color: '#ff4444'
+        }).setInteractive({ useHandCursor: true });
+
+        closeBtn.on('pointerdown', () => {
+          this.selectedAsset = null;
+          this.updateDetailPanel();
+        });
+
+        this.detailPanel.add([border, bg, title, closeBtn]);
+        this.detailPanel.setVisible(false);
+      }
+
+      createPagination() {
+        this.add.text(400, 530, '', {
+          fontSize: '13px', color: '#8888aa', fontFamily: 'system-ui, sans-serif'
+        }).setOrigin(0.5).setName('pagination');
+      }
+
+      getFilteredAssets() {
+        return this.assets.filter(a => {
+          const matchesCat = this.selectedCategory === 'all' || a.category === this.selectedCategory;
+          const matchesSearch = !this.searchText || a.name.toLowerCase().includes(this.searchText);
+          return matchesCat && matchesSearch;
+        });
+      }
+
+      updateGrid() {
+        while (this.gridContainer.list.length > 0) {
+          const child = this.gridContainer.list[this.gridContainer.list.length - 1];
+          child.destroy();
+        }
+
+        const filtered = this.getFilteredAssets();
+        const totalPages = Math.max(1, Math.ceil(filtered.length / this.itemsPerPage));
+        if (this.currentPage >= totalPages) this.currentPage = totalPages - 1;
+
+        const start = this.currentPage * this.itemsPerPage;
+        const pageAssets = filtered.slice(start, start + this.itemsPerPage);
+
+        const cellSize = 80;
+        const gap = 8;
+        const cols = Math.floor(860 / (cellSize + gap));
+
+        pageAssets.forEach((asset, i) => {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          const x = col * (cellSize + gap);
+          const y = row * (cellSize + gap);
+
+          const cell = this.add.container(x + cellSize / 2, y + cellSize / 2);
+          const bg = this.add.rectangle(0, 0, cellSize, cellSize, 0x1a1a2e).setStrokeStyle(1, 0x333355);
+          cell.add(bg);
+
+          if (this.textures.exists(asset.key)) {
+            const tex = this.textures.get(asset.key);
+            const frameCount = tex.getFrameNames().length;
+
+            if (asset.isSpritesheet && frameCount > 1) {
+              const animKey = 'preview_' + asset.key;
+              if (!this.anims.exists(animKey)) {
+                this.anims.create({
+                  key: animKey,
+                  frames: this.anims.generateFrameNumbers(asset.key, { start: 0, end: frameCount - 1 }),
+                  frameRate: 8, repeat: -1
+                });
+              }
+              const previewSprite = this.add.sprite(0, -5, asset.key);
+              previewSprite.play(animKey);
+              const scale = Math.min(cellSize * 0.8 / (asset.frameWidth || 64), cellSize * 0.8 / (asset.frameHeight || 64));
+              previewSprite.setScale(scale);
+              cell.add(previewSprite);
+            } else {
+              const src = tex.getSourceImage0();
+              const scale = Math.min(cellSize * 0.85 / src.width, cellSize * 0.85 / src.height, 1);
+              const img = this.add.image(0, 0, asset.key).setScale(scale);
+              cell.add(img);
+            }
+          } else {
+            cell.add(this.add.text(0, 0, 'X', { fontSize: '20px', color: '#ff4444' }).setOrigin(0.5));
+          }
+
+          cell.add(this.add.rectangle(0, cellSize / 2 - 8, cellSize, 18, 0x0f0f1a, 0.9));
+
+          const displayName = asset.name.length > 10 ? asset.name.substring(0, 10) : asset.name;
+          cell.add(this.add.text(0, cellSize / 2 - 8, displayName, {
+            fontSize: '9px', color: '#aaaacc', fontFamily: 'monospace'
+          }).setOrigin(0.5));
+
+          if (asset.isSpritesheet) {
+            cell.add(this.add.text(cellSize / 2 - 5, -cellSize / 2 + 10, '>', {
+              fontSize: '8px', color: '#00ff88'
+            }));
+          }
+
+          cell.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+            this.selectedAsset = asset;
+            this.updateDetailPanel();
+          });
+
+          cell.on('pointerover', () => bg.setStrokeStyle(2, 0x00ff88));
+          cell.on('pointerout', () => bg.setStrokeStyle(1, 0x333355));
+
+          this.gridContainer.add(cell);
+        });
+
+        const pagText = this.children.getByName('pagination');
+        if (pagText) {
+          pagText.setText('Page ' + (this.currentPage + 1) + ' / ' + totalPages + ' (' + filtered.length + ' assets)');
+        }
+      }
+
+      updateDetailPanel() {
+        const keepCount = 4;
+        while (this.detailPanel.children.count() > keepCount) {
+          this.detailPanel.children.getLast().destroy();
+        }
+
+        if (!this.selectedAsset) {
+          this.detailPanel.setVisible(false);
+          return;
+        }
+
+        this.detailPanel.setVisible(true);
+        const a = this.selectedAsset;
+
+        const infoLines = [
+          'Name: ' + a.name,
+          'Category: ' + a.category,
+          'Type: ' + (a.isSpritesheet ? 'Spritesheet' : 'Image'),
+        ];
+
+        if (a.isSpritesheet && this.textures.exists(a.key)) {
+          const tex = this.textures.get(a.key);
+          infoLines.push('Frames: ' + tex.getFrameNames().length);
+          infoLines.push('Frame Size: ' + a.frameWidth + 'x' + a.frameHeight);
+        }
+
+        let infoY = 50;
+        for (const line of infoLines) {
+          this.detailPanel.add(this.add.text(15, infoY, line, {
+            fontSize: '12px', color: '#ccccdd', fontFamily: 'monospace'
+          }));
+          infoY += 20;
+        }
+
+        if (this.textures.exists(a.key)) {
+          const tex = this.textures.get(a.key);
+          const previewY = a.isSpritesheet ? 120 : 100;
+
+          if (a.isSpritesheet) {
+            const animKey = 'detail_' + a.key;
+            if (!this.anims.exists(animKey)) {
+              const frames = tex.getFrameNames().length;
+              this.anims.create({
+                key: animKey,
+                frames: this.anims.generateFrameNumbers(a.key, { start: 0, end: frames - 1 }),
+                frameRate: 6, repeat: -1
+              });
+            }
+
+            const bigSprite = this.add.sprite(130, previewY + 40, a.key);
+            bigSprite.play(animKey);
+            bigSprite.setScale(2);
+            this.detailPanel.add(bigSprite);
+
+            const frameStrip = this.add.container(15, previewY + 120);
+            const frames = tex.getFrameNames().length;
+            const stripCols = Math.min(frames, 10);
+            for (let i = 0; i < frames; i++) {
+              const col = i % stripCols;
+              const row = Math.floor(i / stripCols);
+              const thumb = this.add.image(col * 22, row * 22, a.key, i);
+              thumb.setScale(0.3);
+              thumb.setInteractive({ useHandCursor: true });
+              thumb.on('pointerdown', () => {
+                bigSprite.animations.currentAnim?.stop();
+                bigSprite.setTexture(a.key, i);
+              });
+              frameStrip.add(thumb);
+            }
+            this.detailPanel.add(frameStrip);
+          } else {
+            const img = this.add.image(130, previewY + 40, a.key);
+            const src = tex.getSourceImage0();
+            const scale = Math.min(200 / src.width, 200 / src.height, 3);
+            img.setScale(scale);
+            this.detailPanel.add(img);
+          }
+        }
+
+        this.detailPanel.add(this.add.text(15, 380, a.url, {
+          fontSize: '9px', color: '#555577', fontFamily: 'monospace'
+        }));
+      }
+
+      nextPage() {
+        const filtered = this.getFilteredAssets();
+        const totalPages = Math.ceil(filtered.length / this.itemsPerPage);
+        if (this.currentPage < totalPages - 1) {
+          this.currentPage++;
+          this.updateGrid();
+        }
+      }
+
+      prevPage() {
+        if (this.currentPage > 0) {
+          this.currentPage--;
+          this.updateGrid();
+        }
+      }
+    }
+
+    const config = {
+      type: Phaser.AUTO,
+      parent: 'game-container',
+      width: 1160,
+      height: 540,
+      backgroundColor: '#1a1a2e',
+      scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+      },
+      scene: [AssetBrowserScene],
+    };
+
+    const game = new Phaser.Game(config);
+  </script>
+</body>
+</html>
