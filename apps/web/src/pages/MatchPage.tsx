@@ -1,11 +1,14 @@
 import { useEffect, useRef } from "react";
 import { createGame } from "../game/createGame";
+import type { HeroClass } from "@kleeblatt/shared";
 
-/**
- * P4-1: React-Page mit Phaser-Container.
- * Hostet das Phaser-Game in einem Container-Div; destroyed es beim Unmount.
- */
-export function MatchPage() {
+interface MatchPageProps {
+  heroClass?: HeroClass;
+  heroLevel?: number;
+  equippedStats?: Record<string, number>;
+}
+
+export function MatchPage({ heroClass: _heroClass, heroLevel: _heroLevel, equippedStats: _equippedStats }: MatchPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

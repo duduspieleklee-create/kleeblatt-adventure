@@ -322,6 +322,29 @@ button.primary:disabled {
   image-rendering: pixelated;
 }
 
+.wallet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.wallet-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.wallet-address {
+  background: transparent;
+  border: none;
+  color: #7fe08a;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
 /* Phaser-Container (Match-Shell, P4) */
 .game-container {
   width: 100%;

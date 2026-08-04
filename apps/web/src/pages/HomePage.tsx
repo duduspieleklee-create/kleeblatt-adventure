@@ -1,14 +1,14 @@
 import { useCallback } from "react";
-import type { HeroResponse } from "@kleeblatt/shared";
-import { StatusCard } from "../components/StatusCard";
-import { NextStepsCard } from "../components/NextStepsCard";
-import { AuthCard } from "../components/AuthCard";
-import { HeroSetupCard } from "../components/HeroSetupCard";
-import { HeroDashboardCard } from "../components/HeroDashboardCard";
-import { MatchPage } from "./MatchPage";
 import { useHealth } from "../hooks/useHealth";
 import { useMe } from "../hooks/useMe";
 import { useHero } from "../hooks/useHero";
+import { WalletCard } from "../components/WalletCard";
+import { StatusCard } from "../components/StatusCard";
+import { AuthCard } from "../components/AuthCard";
+import { HeroSetupCard } from "../components/HeroSetupCard";
+import { HeroDashboardCard } from "../components/HeroDashboardCard";
+import { NextStepsCard } from "../components/NextStepsCard";
+import { MatchPage } from "./MatchPage";
 
 const showDevLogin = import.meta.env.DEV;
 
@@ -17,18 +17,15 @@ export function HomePage() {
   const { state: meState, logout } = useMe();
   const hero = useHero();
 
-  const handleCreated = useCallback(
-    (_hero: HeroResponse) => {
-      hero.refresh();
-    },
-    [hero],
-  );
+  const handleCreated = useCallback(() => {
+    void hero.refresh();
+  }, [hero]);
 
   return (
     <div className="app">
       <header>
         <h1>Kleeblatt Adventure</h1>
-        <p className="tag">Prototyp – P2 Held &amp; Starter-Gear</p>
+        <p className="tag">Prototyp – P9 Wallet</p>
       </header>
       <main>
         <StatusCard health={health} hero={hero.state.status === "ready" ? hero.state.hero : null} />
@@ -52,7 +49,12 @@ export function HomePage() {
                 inventory={hero.state.inventory}
                 onChange={hero.refresh}
               />
-              <MatchPage />
+              <WalletCard />
+              <MatchPage
+                heroClass={hero.state.hero.class}
+                heroLevel={hero.state.hero.level}
+                equippedStats={{}}
+              />
             </>
           ))}
 

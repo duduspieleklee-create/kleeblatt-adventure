@@ -2,7 +2,7 @@
 
 import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-export const walletStatusEnum = ["pending", "ready"] as const;
+export const walletStatusEnum = ["pending", "ready", "disconnected"] as const;
 export type WalletStatus = (typeof walletStatusEnum)[number];
 
 export const users = pgTable("users", {

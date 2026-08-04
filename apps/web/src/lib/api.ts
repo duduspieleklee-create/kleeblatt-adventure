@@ -114,6 +114,27 @@ async function inventoryAction(
   return { ok: true, status: res.status, data: body as { hero: Hero; items: InventoryItem[] } };
 }
 
+export async function fetchWallet(): Promise<import("@kleeblatt/shared").WalletResponse | null> {
+  const res = await apiFetch("/wallet");
+  if (res.status === 401 || res.status === 404) return null;
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function connectWallet(
+  input: import("@kleeblatt/shared").WalletConnectRequest,
+): Promise<import("@kleeblatt/shared").WalletConnectResponse | null> {
+  const res = await apiFetch("/wallet/connect", { method: "POST", body: JSON.stringify(input) });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function disconnectWallet(): Promise<import("@kleeblatt/shared").WalletResponse | null> {
+  const res = await apiFetch("/wallet/disconnect", { method: "POST" });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 /** Full URL for Google OAuth start (top-level navigation, not XHR). */
 export function googleLoginUrl(): string {
   return apiUrl("/auth/google");

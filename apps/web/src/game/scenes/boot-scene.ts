@@ -33,6 +33,10 @@ export class BootScene extends Phaser.Scene {
       this.loadingText.destroy();
     });
 
+    this.load.on("loaderror", (_file: unknown) => {
+      console.warn("[BootScene] asset load error, continuing");
+    });
+
     this.load.image("tiles_buildings", "assets/tilesets/SUNNYSIDE_WORLD_BUILDINGS_V0.01.png");
     this.load.image("tiles_forest", "assets/tilesets/spr_tileset_sunnysideworld_forest_32px.png");
     this.load.image("tiles_16", "assets/tilesets/spr_tileset_sunnysideworld_16px.png");
@@ -57,6 +61,20 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    const missing = [
+      "hero_idle","hero_walk","hero_run","hero_attack","hero_hurt","hero_death",
+      "skeleton_idle","skeleton_walk","skeleton_attack","skeleton_hurt","skeleton_death",
+    ];
+    for (const key of missing) {
+      if (!this.textures.exists(key)) {
+        const g = this.make.graphics({ x: 0, y: 0 });
+        g.fillStyle(0xffffff, 1);
+        g.fillRect(0, 0, 64, 64);
+        g.generateTexture(key, 64, 64);
+        g.destroy();
+      }
+    }
+
     this.anims.create({
       key: "hero_idle",
       frames: this.anims.generateFrameNumbers("hero_idle", { start: 0, end: 8 }),
