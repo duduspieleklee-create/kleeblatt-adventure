@@ -52,6 +52,11 @@ export class MatchScene extends Phaser.Scene {
     this.setupCamera();
     this.setupCollisions();
     this.setupGameBridge();
+
+    console.log("[MatchScene] created, auto-starting match");
+    this.matchStarted = true;
+    this.emitInitialStats();
+    gameBridge.emit("match:started", { matchId: this.matchId });
   }
 
   private createVillage(): void {

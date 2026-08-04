@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { createGame } from "../game/createGame";
-import { gameBridge } from "@kleeblatt/shared";
 import type { HeroClass } from "@kleeblatt/shared";
 
 interface MatchPageProps {
@@ -9,7 +8,7 @@ interface MatchPageProps {
   equippedStats?: Record<string, number>;
 }
 
-export function MatchPage({ heroClass, heroLevel, equippedStats }: MatchPageProps) {
+export function MatchPage({ heroClass: _heroClass, heroLevel: _heroLevel, equippedStats: _equippedStats }: MatchPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,24 +16,10 @@ export function MatchPage({ heroClass, heroLevel, equippedStats }: MatchPageProp
     if (!container) return;
 
     const game = createGame(container);
-
-    game.events.on("ready", () => {
-      game.events.once("scene:complete", (scene: { key: string }) => {
-        if (scene.key === "match") {
-          console.log("[MatchPage] MatchScene ready, emitting match:start");
-          gameBridge.emit("match:start", {
-            heroClass: heroClass ?? "melee",
-            level: heroLevel ?? 1,
-            equippedStats: equippedStats ?? {},
-          });
-        }
-      });
-    });
-
     return () => {
       game.destroy(true);
     };
-  }, [heroClass, heroLevel, equippedStats]);
+  }, []);
 
   return (
     <section className="card">
