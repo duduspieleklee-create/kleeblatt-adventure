@@ -247,7 +247,12 @@ export class BootScene extends Phaser.Scene {
       });
 
       devLog("[BootScene] all animations created, starting town scene");
-      this.scene.start("town");
+      try {
+        this.scene.start("town");
+      } catch (e) {
+        console.error(`[BootScene] Failed to start town scene: ${e}`);
+        this.add.text(20, 20, `Fehler: ${e}`, { color: '#ff4444', fontSize: '14px' });
+      }
     } catch (e) {
       console.error(`[BootScene] create() CRASHED: ${e}`);
     }
