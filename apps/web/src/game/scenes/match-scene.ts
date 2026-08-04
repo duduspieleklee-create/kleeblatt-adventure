@@ -3,7 +3,7 @@ import { gameBridge, type GameBridgeEvents } from "@kleeblatt/shared";
 
 /** Dev-only logging helper. */
 function devLog(...args: unknown[]) {
-  if (import.meta.env.DEV) console.log(...args);
+  if (import.meta.env.DEV) console.info(...args);
 }
 function devError(...args: unknown[]) {
   if (import.meta.env.DEV) console.error(...args);

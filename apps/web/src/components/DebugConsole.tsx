@@ -47,6 +47,7 @@ export function DebugConsole() {
   }, []);
 
   useEffect(() => {
+    /* eslint-disable no-console */
     const origError = console.error;
     const origWarn = console.warn;
     const origLog = console.log;
@@ -96,6 +97,7 @@ export function DebugConsole() {
         gameBridge.off(name, handlers[name]);
       });
     };
+    /* eslint-enable no-console */
   }, [verbose, addLog]);
 
   useEffect(() => {
