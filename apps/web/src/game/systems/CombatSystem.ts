@@ -56,7 +56,7 @@ export default class CombatSystem {
   }
 
   kill(target: CombatEntity): void {
-    const player = (this.scene as any).player as Player;
+    const player = (this.scene as { player?: Player }).player as Player;
 
     if (this.lootSystem) {
       this.lootSystem.dropLoot(target.id);

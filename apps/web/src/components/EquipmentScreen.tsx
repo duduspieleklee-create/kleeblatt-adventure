@@ -21,15 +21,20 @@ const SLOT_ICONS: Record<string, string> = {
   offhand: '✋',
 };
 
-function getItemName(item: unknown): string {
-  if (!item) return '';
-  return (item as any)?.name || (item as any)?.id || 'Unbekannt';
+interface EquipmentItemData {
+  id?: string;
+  name?: string;
+  rarity?: string;
 }
 
-function getRarityClass(item: unknown): string {
+function getItemName(item: EquipmentItemData | null | undefined): string {
   if (!item) return '';
-  const rarity = (item as any)?.rarity;
-  if (rarity) return `rarity-${rarity}`;
+  return item.name || item.id || 'Unbekannt';
+}
+
+function getRarityClass(item: EquipmentItemData | null | undefined): string {
+  if (!item) return '';
+  if (item.rarity) return `rarity-${item.rarity}`;
   return '';
 }
 
@@ -46,7 +51,7 @@ export function EquipmentScreen() {
       <h2>Ausrüstung</h2>
       <div className="equipment-grid">
         {SLOTS.map(({ key, label }) => {
-          const item = equipment[key];
+          const item = equipment[key] as EquipmentItemData | null | undefined;
           const equipped = !!item;
           return (
             <button

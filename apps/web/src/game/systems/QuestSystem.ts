@@ -141,7 +141,7 @@ export default class QuestSystem {
     if (!qs || qs.completed) return;
 
     qs.completed = true;
-    const player = (this.scene as any).player as Player;
+    const player = (this.scene as { player?: Player }).player as Player;
 
     if (qs.quest.rewards.xp && player) {
       player.gainXp(qs.quest.rewards.xp);

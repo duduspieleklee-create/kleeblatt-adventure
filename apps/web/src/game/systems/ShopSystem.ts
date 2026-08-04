@@ -56,7 +56,7 @@ export default class ShopSystem {
     const shopItem = this.currentShop.items.find(i => i.id === itemId);
     if (!shopItem) return false;
 
-    const player = (this.scene as any).player as Player;
+    const player = (this.scene as { player?: Player }).player as Player;
     if (!player) return false;
 
     if (!player.spendGold(shopItem.price)) return false;

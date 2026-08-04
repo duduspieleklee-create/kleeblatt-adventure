@@ -52,8 +52,8 @@ export function SkillHotbar() {
     return () => clearInterval(interval);
   }, [tick]);
 
-  useGameEvent(PhaserEvents.SKILL_READY, (data: unknown) => {
-    const skillId = (data as any)?.skillId;
+  useGameEvent(PhaserEvents.SKILL_READY, (data: { skillId?: string }) => {
+    const skillId = data.skillId;
     if (skillId) {
       setSkills(prev =>
         prev.map(s => s.id === skillId ? { ...s, cooldown: 0, ready: true } : s)

@@ -56,7 +56,7 @@ export default class SkillSystem {
     if (!this.canUse(skillId)) return false;
     if (!this.combatSystem) return false;
 
-    const player = (this.scene as any).player as Player;
+    const player = (this.scene as { player?: Player }).player as Player;
     if (!player) return false;
 
     if (skill.costMana && player.stats.mana < skill.costMana) return false;

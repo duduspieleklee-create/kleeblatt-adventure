@@ -36,8 +36,8 @@ export function useEquipment() {
 export function useActiveQuests() {
   const [quests, setQuests] = useState<unknown[]>([]);
   useGameEvent(PhaserEvents.QUEST_STARTED, (data: unknown) => setQuests(prev => [...prev, data]));
-  useGameEvent(PhaserEvents.QUEST_COMPLETED, (data: unknown) => {
-    setQuests(prev => prev.filter(q => (q as any)?.id !== (data as any)?.id));
+  useGameEvent(PhaserEvents.QUEST_COMPLETED, (data: { id?: string }) => {
+    setQuests(prev => prev.filter((q: { id?: string }) => q.id !== data.id));
   });
   return quests;
 }

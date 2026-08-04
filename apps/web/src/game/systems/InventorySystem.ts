@@ -67,7 +67,7 @@ export default class InventorySystem {
     if (!item || !item.effect) return false;
     if (!this.hasItem(itemId, 1)) return false;
 
-    const player = (this.scene as any).player as Player;
+    const player = (this.scene as { player?: Player }).player as Player;
     if (!player) return false;
 
     const [type, valueStr] = item.effect.split('_');

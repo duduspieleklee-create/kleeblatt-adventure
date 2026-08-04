@@ -47,7 +47,7 @@ export default class EquipmentSystem {
     const item = this.findEquipment(itemId);
     if (!item) return false;
 
-    const player = (this.scene as any).player as Player;
+    const player = (this.scene as { player?: Player }).player as Player;
     if (!player) return false;
 
     const slot = item.slot;
@@ -69,7 +69,7 @@ export default class EquipmentSystem {
     const item = this.slots[slot];
     if (!item) return false;
 
-    const player = (this.scene as any).player as Player;
+    const player = (this.scene as { player?: Player }).player as Player;
     if (!player) return false;
 
     this.removeStats(item, player);

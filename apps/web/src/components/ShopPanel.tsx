@@ -2,31 +2,46 @@ import { useState } from 'react';
 import { useCurrentShop, useGameCommand } from '../hooks/useGameEvents';
 import { ReactCommands } from '../game/core/GameEvents';
 
-function getShopName(shop: unknown): string {
-  return (shop as any)?.name || 'Laden';
+interface ShopItemData {
+  id: string;
+  name?: string;
+  price?: number;
+  cost?: number;
+  type?: string;
+  rarity?: string;
 }
 
-function getShopItems(shop: unknown): any[] {
-  const items = (shop as any)?.items;
-  if (Array.isArray(items)) return items;
+interface ShopData {
+  id?: string;
+  name?: string;
+  items?: ShopItemData[];
+  playerGold?: number;
+  gold?: number;
+}
+
+function getShopName(shop: ShopData): string {
+  return shop.name || 'Laden';
+}
+
+function getShopItems(shop: ShopData): ShopItemData[] {
+  if (Array.isArray(shop.items)) return shop.items;
   return [];
 }
 
-function getPlayerGold(shop: unknown): number {
-  return (shop as any)?.playerGold ?? (shop as any)?.gold ?? 0;
+function getPlayerGold(shop: ShopData): number {
+  return shop.playerGold ?? shop.gold ?? 0;
 }
 
-function getItemName(item: unknown): string {
-  return (item as any)?.name || 'Unbekannt';
+function getItemName(item: ShopItemData): string {
+  return item.name || 'Unbekannt';
 }
 
-function getItemPrice(item: unknown): number {
-  return (item as any)?.price ?? (item as any)?.cost ?? 0;
+function getItemPrice(item: ShopItemData): number {
+  return item.price ?? item.cost ?? 0;
 }
 
-function getItemIcon(item: unknown): string {
-  const type = (item as any)?.type;
-  switch (type) {
+function getItemIcon(item: ShopItemData): string {
+  switch (item.type) {
     case 'weapon': return '⚔';
     case 'armor': return '🛡';
     case 'consumable': return '🧪';
@@ -36,14 +51,13 @@ function getItemIcon(item: unknown): string {
   }
 }
 
-function getRarityClass(item: unknown): string {
-  const rarity = (item as any)?.rarity;
-  if (rarity) return `rarity-${rarity}`;
+function getRarityClass(item: ShopItemData): string {
+  if (item.rarity) return `rarity-${item.rarity}`;
   return '';
 }
 
 export function ShopPanel() {
-  const shop = useCurrentShop();
+  const shop = useCurrentShop() as ShopData | null;
   const send = useGameCommand();
   const [boughtId, setBoughtId] = useState<string | null>(null);
 
@@ -52,8 +66,8 @@ export function ShopPanel() {
   const items = getShopItems(shop);
   const gold = getPlayerGold(shop);
 
-  const handleBuy = (item: any) => {
-    send(ReactCommands.SHOP_BUY, { shopId: (shop as any)?.id, itemId: item.id });
+  const handleBuy = (item: ShopItemData) => {
+    send(ReactCommands.SHOP_BUY, { shopId: shop.id, itemId: item.id });
     setBoughtId(item.id);
     setTimeout(() => setBoughtId(null), 600);
   };
@@ -72,7 +86,7 @@ export function ShopPanel() {
           {items.length === 0 ? (
             <p className="shop-empty">Keine Artikel verfügbar</p>
           ) : (
-            items.map((item: any) => {
+            items.map((item) => {
               const canAfford = gold >= getItemPrice(item);
               const isBought = boughtId === item.id;
               return (

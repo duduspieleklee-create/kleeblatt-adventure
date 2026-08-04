@@ -1,34 +1,49 @@
 import { useActiveQuests } from '../hooks/useGameEvents';
 
-function getQuestTitle(q: unknown): string {
-  return (q as any)?.title || (q as any)?.name || 'Unbenannte Quest';
+interface QuestObject {
+  id?: string;
+  title?: string;
+  name?: string;
+  description?: string;
+  desc?: string;
+  progress?: number;
+  current?: number;
+  total?: number;
+  required?: number;
+  progressText?: string;
+  type?: string;
+  rewards?: { xp?: number; gold?: number; items?: string | number } | string | string[];
 }
 
-function getQuestDesc(q: unknown): string {
-  return (q as any)?.description || (q as any)?.desc || '';
+function getQuestTitle(q: QuestObject): string {
+  return q.title || q.name || 'Unbenannte Quest';
 }
 
-function getQuestProgress(q: unknown): { current: number; total: number; text?: string } {
-  const current = (q as any)?.progress ?? (q as any)?.current ?? 0;
-  const total = (q as any)?.total ?? (q as any)?.required ?? 1;
-  const text = (q as any)?.progressText;
+function getQuestDesc(q: QuestObject): string {
+  return q.description || q.desc || '';
+}
+
+function getQuestProgress(q: QuestObject): { current: number; total: number; text?: string } {
+  const current = q.progress ?? q.current ?? 0;
+  const total = q.total ?? q.required ?? 1;
+  const text = q.progressText;
   return { current, total, text: text || `${current}/${total}` };
 }
 
-function getQuestRewards(q: unknown): string {
-  const rewards = (q as any)?.rewards;
+function getQuestRewards(q: QuestObject): string {
+  const rewards = q.rewards;
   if (!rewards) return '';
   if (typeof rewards === 'string') return rewards;
   if (Array.isArray(rewards)) return rewards.join(', ');
   const parts: string[] = [];
-  if ((rewards as any)?.xp) parts.push(`${(rewards as any).xp} XP`);
-  if ((rewards as any)?.gold) parts.push(`${(rewards as any).gold} Gold`);
-  if ((rewards as any)?.items) parts.push(`${(rewards as any).items} Items`);
+  if (rewards.xp) parts.push(`${rewards.xp} XP`);
+  if (rewards.gold) parts.push(`${rewards.gold} Gold`);
+  if (rewards.items) parts.push(`${rewards.items} Items`);
   return parts.join(', ');
 }
 
-function getQuestIcon(q: unknown): string {
-  const type = (q as any)?.type;
+function getQuestIcon(q: QuestObject): string {
+  const type = q.type;
   switch (type) {
     case 'collect': return '📦';
     case 'kill': return '⚔';
@@ -56,16 +71,17 @@ export function QuestPanel() {
       <h2>Quests</h2>
       <div className="quest-list">
         {quests.map((q, i) => {
-          const { current, total, text } = getQuestProgress(q);
+          const qo = q as QuestObject;
+          const { current, total, text } = getQuestProgress(qo);
           const pct = total > 0 ? Math.min(100, Math.max(0, (current / total) * 100)) : 0;
           return (
-            <div key={(q as any)?.id ?? i} className="quest-item">
+            <div key={qo.id ?? `quest-${i}`} className="quest-item">
               <div className="quest-header">
-                <span className="quest-icon">{getQuestIcon(q)}</span>
-                <span className="quest-title">{getQuestTitle(q)}</span>
+                <span className="quest-icon">{getQuestIcon(qo)}</span>
+                <span className="quest-title">{getQuestTitle(qo)}</span>
               </div>
-              {getQuestDesc(q) && (
-                <p className="quest-desc">{getQuestDesc(q)}</p>
+              {getQuestDesc(qo) && (
+                <p className="quest-desc">{getQuestDesc(qo)}</p>
               )}
               <div className="quest-progress-wrap">
                 <div className="quest-progress-bar">
@@ -73,8 +89,8 @@ export function QuestPanel() {
                 </div>
                 <span className="quest-progress-text">{text}</span>
               </div>
-              {getQuestRewards(q) && (
-                <span className="quest-rewards">Belohnung: {getQuestRewards(q)}</span>
+              {getQuestRewards(qo) && (
+                <span className="quest-rewards">Belohnung: {getQuestRewards(qo)}</span>
               )}
             </div>
           );

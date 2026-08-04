@@ -1,35 +1,53 @@
 import { useCurrentDialogue, useGameCommand } from '../hooks/useGameEvents';
 import { ReactCommands } from '../game/core/GameEvents';
 
-function getNpcName(dialogue: unknown): string {
-  return (dialogue as any)?.npcName || (dialogue as any)?.name || 'NPC';
+interface DialogueOptionData {
+  id?: string;
+  value?: string;
+  text?: string;
+  label?: string;
+  name?: string;
 }
 
-function getDialogueText(dialogue: unknown): string {
-  return (dialogue as any)?.text || (dialogue as any)?.message || '';
+interface DialogueData {
+  id?: string;
+  npcName?: string;
+  name?: string;
+  text?: string;
+  message?: string;
+  options?: DialogueOptionData[];
+  choices?: DialogueOptionData[];
 }
 
-function getDialogueOptions(dialogue: unknown): any[] {
-  const opts = (dialogue as any)?.options || (dialogue as any)?.choices;
+function getNpcName(dialogue: DialogueData): string {
+  return dialogue.npcName || dialogue.name || 'NPC';
+}
+
+function getDialogueText(dialogue: DialogueData): string {
+  return dialogue.text || dialogue.message || '';
+}
+
+function getDialogueOptions(dialogue: DialogueData): DialogueOptionData[] {
+  const opts = dialogue.options || dialogue.choices;
   if (Array.isArray(opts)) return opts;
   return [];
 }
 
-function getOptionText(opt: unknown): string {
-  return (opt as any)?.text || (opt as any)?.label || (opt as any)?.name || '';
+function getOptionText(opt: DialogueOptionData): string {
+  return opt.text || opt.label || opt.name || '';
 }
 
 export function DialoguePanel() {
-  const dialogue = useCurrentDialogue();
+  const dialogue = useCurrentDialogue() as DialogueData | null;
   const send = useGameCommand();
 
   if (!dialogue) return null;
 
   const options = getDialogueOptions(dialogue);
 
-  const handleOption = (opt: any) => {
+  const handleOption = (opt: DialogueOptionData) => {
     send(ReactCommands.DIALOG_OPTION, {
-      dialogueId: (dialogue as any)?.id,
+      dialogueId: dialogue.id,
       optionId: opt.id ?? opt.value,
       text: getOptionText(opt),
     });
@@ -50,7 +68,7 @@ export function DialoguePanel() {
       </div>
       {options.length > 0 && (
         <div className="dialogue-options">
-          {options.map((opt: any) => (
+          {options.map((opt) => (
             <button
               key={opt.id ?? opt.value}
               type="button"
