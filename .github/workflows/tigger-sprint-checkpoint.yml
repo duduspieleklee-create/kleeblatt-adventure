@@ -28,12 +28,6 @@ jobs:
           curl -s -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/duduspieleklee-create/kleeblatt-adventure/milestones \
-            | python3 -c "
-import sys, json
-data = json.loads(sys.stdin.read())
-for ms in data:
-    if ms['state'] == 'open':
-        print(f\"MVP: {ms['title']} - {ms['open_issues']} open, {ms['closed_issues']} closed\")
-" 2>/dev/null || echo "Could not fetch milestones"
+            | jq -r '.[] | select(.state=="open") | "MVP: \(.title) - \(.open_issues) open, \(.closed_issues) closed"' 2>/dev/null || echo "Could not fetch milestones"
 
           echo "Daily checkpoint complete."
