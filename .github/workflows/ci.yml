@@ -20,7 +20,8 @@ jobs:
       - run: npm ci
 
       - name: Typecheck
-        run: npm run typecheck            
+        run: npm run typecheck
+
       - name: Lint (auto-fix then check)
         run: |
           # Run inside the web workspace so local workspace eslint and config are used
@@ -32,7 +33,6 @@ jobs:
 
           # Enforce zero warnings/errors after auto-fix
           npx eslint "src/**/*.{js,jsx,ts,tsx}" --max-warnings 0
-         npm run lint
 
       - name: Build shared + web
         run: npm run build:web
