@@ -1,9 +1,6 @@
 ---
-name: phaser-dev
-description: "Phaser 4 game development specialist for Kleeblatt Adventure. Use when implementing, debugging, or improving Phaser game code — scenes, physics, input, animations, tilemaps, UI, enemies, player mechanics, game objects, or any Phaser 4 feature."
+description: Phaser 4 game development specialist for Kleeblatt Adventure
 mode: subagent
-model: ovhcloud/Qwen3-Coder-30B-A3B-Instruct
-steps: 30
 color: "#4cc95a"
 ---
 
