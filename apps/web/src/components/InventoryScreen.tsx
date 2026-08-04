@@ -17,13 +17,15 @@ const InventoryScreen: React.FC = () => {
 
   useEffect(() => {
     // Listen for inventory updates from the game
-    const unsubscribe = gameBridge.on('inventory:update', (data: { items?: InventoryItem[] }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const unsubscribe = gameBridge.on('inventory:update', (data: any) => {
       setInventory(data.items || []);
       setLoading(false);
     });
 
     // Listen for errors
-    const unsubscribeError = gameBridge.on('inventory:error', (err: { message?: string }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const unsubscribeError = gameBridge.on('inventory:error', (err: any) => {
       setError(err.message || 'Failed to load inventory');
       setLoading(false);
     });

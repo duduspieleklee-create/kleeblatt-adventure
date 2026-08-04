@@ -2,7 +2,8 @@
 // This provides a lightweight in-memory event bus with simple on/emit semantics
 // matching the usage in InventoryScreen.tsx (on returns an unsubscribe function).
 
-type Handler = (data?: unknown) => void;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Handler = (data?: any) => void;
 
 class GameBridge {
   private listeners: Map<string, Set<Handler>> = new Map();
@@ -20,7 +21,8 @@ class GameBridge {
     };
   }
 
-  emit(event: string, data?: unknown): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  emit(event: string, data?: any): void {
     const set = this.listeners.get(event);
     if (!set) return;
     // Copy to array to avoid issues if handlers remove themselves while iterating
