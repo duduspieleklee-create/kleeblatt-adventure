@@ -1,109 +1,159 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { gameBridge } from '../lib/gameBridge';
+import { PhaserEvents, ReactCommands } from '../game/core/GameEvents';
+import itemsData from '../game/data/items.json' with { type: 'json' };
 
-interface InventoryItem {
+interface ItemDef {
   id: string;
-  name: string;
-  type: 'weapon' | 'armor' | 'consumable' | 'material' | 'quest';
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-  quantity: number;
-  equipped: boolean;
+  label: string;
+  type: string;
+  stackable: boolean;
+  maxStack: number;
+  effect?: string;
 }
 
+type ItemsData = ItemDef[];
+
+const ITEM_ICONS: Record<string, string> = {
+  holz: '🪵',
+  stein: '🪨',
+  heiltrank: '❤️',
+  manatrank: '💙',
+  stamina_trank: '💚',
+  eisen_erz: '⛏️',
+  gold_erz: '✨',
+  leder: '🧶',
+  knochen: '🦴',
+  trauertaler: '🪙',
+};
+
 const InventoryScreen: React.FC = () => {
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [slots, setSlots] = useState<Record<string, number>>({});
+  const [gold, setGold] = useState(0);
+
+  const itemDefs = useMemo<Record<string, ItemDef>>(
+    () => Object.fromEntries((itemsData as ItemsData).map(i => [i.id, i])),
+    [],
+  );
 
   useEffect(() => {
-    // Listen for inventory updates from the game
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const unsubscribe = gameBridge.on('inventory:update', (data: any) => {
-      setInventory(data.items || []);
-      setLoading(false);
-    });
-
-    // Listen for errors
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const unsubscribeError = gameBridge.on('inventory:error', (err: any) => {
-      setError(err.message || 'Failed to load inventory');
-      setLoading(false);
-    });
-
-    // Request initial inventory data
-    gameBridge.emit('inventory:request');
-
-    return () => {
-      unsubscribe();
-      unsubscribeError();
+    const onInventory = (data: { [key: string]: number }) => {
+      setSlots(data);
     };
+    const onStats = (data: { gold?: number }) => {
+      const g = data?.gold;
+      if (g !== undefined) setGold(g);
+    };
+    const onLoot = (data: { item: string; amount: number; gold?: number }) => {
+      const g = data?.gold;
+      if (g) setGold(prev => prev + g);
+    };
+
+    gameBridge.on(PhaserEvents.INVENTORY_UPDATED, onInventory);
+    gameBridge.on(PhaserEvents.PLAYER_STATS_UPDATED, onStats);
+    gameBridge.on(PhaserEvents.LOOT_DROPPED, onLoot);
   }, []);
 
-  const handleItemUse = (itemId: string) => {
-    gameBridge.emit('inventory:use', { itemId });
+  const handleUse = (itemId: string) => {
+    gameBridge.emit(ReactCommands.USE_ITEM, { itemId });
   };
 
-  const handleItemEquip = (itemId: string) => {
-    gameBridge.emit('inventory:equip', { itemId });
+  const handleEquip = (itemId: string) => {
+    gameBridge.emit(ReactCommands.EQUIP_ITEM, { itemId });
   };
 
-  const handleItemUnequip = (itemId: string) => {
-    gameBridge.emit('inventory:unequip', { itemId });
-  };
-
-  if (loading) {
-    return (
-      <div className="inventory-screen">
-        <h2>Inventory</h2>
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="inventory-screen">
-        <h2>Inventory</h2>
-        <p>Error: {error}</p>
-      </div>
-    );
-  }
+  const entries = Object.entries(slots).filter(([, qty]) => qty > 0);
 
   return (
-    <div className="inventory-screen">
-      <h2>Inventory</h2>
-      <div className="inventory-grid">
-        {inventory.length === 0 ? (
-          <p>No items in inventory</p>
-        ) : (
-          inventory.map((item) => (
-            <div key={item.id} className={`inventory-item ${item.rarity}`}>
-              <div className="item-header">
-                <h3>{item.name}</h3>
-                <span className="item-quantity">x{item.quantity}</span>
-              </div>
-              <div className="item-actions">
-                {item.type !== 'consumable' && (
-                  <button 
-                    onClick={() => item.equipped ? handleItemUnequip(item.id) : handleItemEquip(item.id)}
-                    className="equip-button"
-                  >
-                    {item.equipped ? 'Unequip' : 'Equip'}
-                  </button>
-                )}
-                {item.type === 'consumable' && (
-                  <button 
-                    onClick={() => handleItemUse(item.id)}
-                    className="use-button"
-                  >
-                    Use
-                  </button>
-                )}
-              </div>
-            </div>
-          ))
-        )}
+    <div className="inventory-screen" style={{
+      background: 'rgba(10, 18, 10, 0.95)',
+      border: '2px solid #3a5a2a',
+      borderRadius: 8,
+      padding: 16,
+      color: '#e8f0e8',
+      fontFamily: 'system-ui, sans-serif',
+      maxHeight: '70vh',
+      overflow: 'auto',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'spaceBetween', alignItems: 'center', marginBottom: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 18, color: '#8fa88f' }}>Inventar</h2>
+        <span style={{ fontSize: 14, color: '#fbbf24' }}>💰 {gold} Gold</span>
       </div>
+
+      {entries.length === 0 ? (
+        <p style={{ color: '#666', textAlign: 'center', padding: 20 }}>Inventar leer</p>
+      ) : (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+          gap: 8,
+        }}>
+          {entries.map(([itemId, qty]) => {
+            const def = itemDefs[itemId];
+            if (!def) return null;
+            const icon = ITEM_ICONS[itemId] || '📦';
+            return (
+              <div key={itemId} style={{
+                background: 'rgba(30, 50, 30, 0.8)',
+                border: '1px solid #3a5a2a',
+                borderRadius: 6,
+                padding: 10,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 20 }}>{icon}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{def.label}</span>
+                  {qty > 1 && (
+                    <span style={{
+                      marginLeft: 'auto',
+                      fontSize: 11,
+                      color: '#8fa88f',
+                      background: 'rgba(0,0,0,0.3)',
+                      padding: '1px 6px',
+                      borderRadius: 4,
+                    }}>
+                      x{qty}
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: 10, color: '#666', textTransform: 'capitalize' }}>{def.type}</span>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {def.type === 'consumable' && (
+                    <button onClick={() => handleUse(itemId)} style={{
+                      flex: 1,
+                      padding: '4px 0',
+                      fontSize: 11,
+                      background: '#3a5a2a',
+                      color: '#e8f0e8',
+                      border: 'none',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                    }}>
+                      Benutzen
+                    </button>
+                  )}
+                  {(def.type === 'equipment' || def.type === 'material') && (
+                    <button onClick={() => handleEquip(itemId)} style={{
+                      flex: 1,
+                      padding: '4px 0',
+                      fontSize: 11,
+                      background: '#2a3a4a',
+                      color: '#e8f0e8',
+                      border: 'none',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                    }}>
+                      Ausrüsten
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

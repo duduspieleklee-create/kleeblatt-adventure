@@ -104,14 +104,18 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet("skeleton_hurt", "assets/characters/skeleton_hurt_strip7.png", CHAR_FRAME);
     this.load.spritesheet("skeleton_death", "assets/characters/skeleton_death_strip10.png", CHAR_FRAME);
 
-    // Elements (single images)
-    this.load.image("crop_wheat", "assets/elements/crops/wheat_00.png");
-    this.load.image("crop_carrot", "assets/elements/crops/carrot_00.png");
-    this.load.image("crop_pumpkin", "assets/elements/crops/pumpkin_00.png");
-    this.load.image("animal_cow", "assets/elements/animals/spr_deco_cow_strip4.png");
-    this.load.image("animal_chicken", "assets/elements/animals/spr_deco_chicken_01_strip4.png");
-    this.load.image("vfx_dust", "assets/vfx/dust_general_strip9.png");
-    this.load.image("vfx_smoke", "assets/vfx/chimneysmoke_01_strip30.png");
+    // Elements (single images — use final growth stage, not seeds)
+    this.load.image("crop_wheat", "assets/elements/crops/wheat_05.png");
+    this.load.image("crop_carrot", "assets/elements/crops/carrot_05.png");
+    this.load.image("crop_pumpkin", "assets/elements/crops/pumpkin_05.png");
+
+    // Animals — spritesheets with 4 frames of 32×32 each
+    this.load.spritesheet("animal_cow", "assets/elements/animals/spr_deco_cow_strip4.png", { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet("animal_chicken", "assets/elements/animals/spr_deco_chicken_01_strip4.png", { frameWidth: 32, frameHeight: 32 });
+
+    // VFX — spritesheets (dust: 9 frames of 21×9, smoke: 30 frames of 15×37)
+    this.load.spritesheet("vfx_dust", "assets/vfx/dust_general_strip9.png", { frameWidth: 21, frameHeight: 9 });
+    this.load.spritesheet("vfx_smoke", "assets/vfx/chimneysmoke_01_strip30.png", { frameWidth: 15, frameHeight: 37 });
   }
 
   create(): void {

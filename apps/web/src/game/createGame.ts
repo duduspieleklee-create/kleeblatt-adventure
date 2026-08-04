@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { BootScene } from "./scenes/boot-scene";
 import { MatchScene } from "./scenes/match-scene";
+import { TownScene } from "./scenes/TownScene";
 
 /** Viewport der Match-Shell (16:9). Map-Größe kommt aus game-config.json (match.mapSize). */
 export const GAME_VIEWPORT = { width: 960, height: 540 } as const;
@@ -27,6 +28,6 @@ export function createGame(container: HTMLElement): Phaser.Game {
         debug: false,
       },
     },
-    scene: [BootScene, MatchScene],
+    scene: [BootScene, MatchScene, TownScene],
   });
 }

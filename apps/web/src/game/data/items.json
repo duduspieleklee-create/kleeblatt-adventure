@@ -1,0 +1,85 @@
+[
+  {
+    "id": "holz",
+    "label": "Holz",
+    "type": "material",
+    "stackable": true,
+    "maxStack": 99,
+    "weight": 1
+  },
+  {
+    "id": "stein",
+    "label": "Stein",
+    "type": "material",
+    "stackable": true,
+    "maxStack": 99,
+    "weight": 2
+  },
+  {
+    "id": "heiltrank",
+    "label": "Heiltrank",
+    "type": "consumable",
+    "stackable": true,
+    "maxStack": 99,
+    "effect": "heal_50",
+    "weight": 0.5
+  },
+  {
+    "id": "manatrank",
+    "label": "Manatrank",
+    "type": "consumable",
+    "stackable": true,
+    "maxStack": 99,
+    "effect": "mana_30",
+    "weight": 0.5
+  },
+  {
+    "id": "stamina_trank",
+    "label": "Stamina-Trank",
+    "type": "consumable",
+    "stackable": true,
+    "maxStack": 99,
+    "effect": "stamina_40",
+    "weight": 0.5
+  },
+  {
+    "id": "eisen_erz",
+    "label": "Eisen-Erz",
+    "type": "material",
+    "stackable": true,
+    "maxStack": 99,
+    "weight": 3
+  },
+  {
+    "id": "gold_erz",
+    "label": "Gold-Erz",
+    "type": "material",
+    "stackable": true,
+    "maxStack": 99,
+    "weight": 3
+  },
+  {
+    "id": "leder",
+    "label": "Leder",
+    "type": "material",
+    "stackable": true,
+    "maxStack": 99,
+    "weight": 1
+  },
+  {
+    "id": "knochen",
+    "label": "Knochen",
+    "type": "material",
+    "stackable": true,
+    "maxStack": 99,
+    "weight": 1
+  },
+  {
+    "id": "trauertaler",
+    "label": "Trauertaler",
+    "type": "quest",
+    "stackable": false,
+    "maxStack": 1,
+    "weight": 0.1
+  }
+]
