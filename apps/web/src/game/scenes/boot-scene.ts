@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { gameBridge } from "@kleeblatt/shared";
 
 /**
  * BootScene – lädt Platzhalter-Assets für den Prototyp (P4).
