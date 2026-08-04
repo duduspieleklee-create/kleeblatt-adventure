@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { createGame } from "../game/createGame";
+import { gameBridge } from "@kleeblatt/shared";
 import type { HeroClass } from "@kleeblatt/shared";
 
 interface MatchPageProps {
@@ -8,7 +9,7 @@ interface MatchPageProps {
   equippedStats?: Record<string, number>;
 }
 
-export function MatchPage({ heroClass: _heroClass, heroLevel: _heroLevel, equippedStats: _equippedStats }: MatchPageProps) {
+export function MatchPage({ heroClass, heroLevel, equippedStats }: MatchPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -16,17 +17,23 @@ export function MatchPage({ heroClass: _heroClass, heroLevel: _heroLevel, equipp
     if (!container) return;
 
     const game = createGame(container);
+
+    game.events.on("ready", () => {
+      gameBridge.emit("match:start", {
+        heroClass: heroClass ?? "melee",
+        level: heroLevel ?? 1,
+        equippedStats: equippedStats ?? {},
+      });
+    });
+
     return () => {
       game.destroy(true);
     };
-  }, []);
+  }, [heroClass, heroLevel, equippedStats]);
 
   return (
     <section className="card">
       <h2>Abenteuer</h2>
-      <p className="muted">
-        Match-Shell (Phaser-Container) – Scenes folgen in den nächsten Karten.
-      </p>
       <div className="game-container" ref={containerRef} />
     </section>
   );

@@ -9,6 +9,8 @@ export class BootScene extends Phaser.Scene {
     super("boot");
   }
 
+  private loadErrors: string[] = [];
+
   preload(): void {
     this.progressBox = this.add.graphics();
     this.progressBox.fillStyle(0x1a221c, 0.8);
@@ -33,8 +35,11 @@ export class BootScene extends Phaser.Scene {
       this.loadingText.destroy();
     });
 
-    this.load.on("loaderror", (_file: unknown) => {
-      console.warn("[BootScene] asset load error, continuing");
+    this.load.on("loaderror", (file: { key?: string; url?: string }) => {
+      const key = file.key || file.url || "unknown";
+      const msg = `[BootScene] FAILED: ${key}`;
+      console.error(msg);
+      this.loadErrors.push(key);
     });
 
     this.load.image("tiles_buildings", "assets/tilesets/SUNNYSIDE_WORLD_BUILDINGS_V0.01.png");
@@ -61,6 +66,12 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    if (this.loadErrors.length) {
+      console.error(
+        `[BootScene] ${this.loadErrors.length} assets failed: ${this.loadErrors.join(", ")}`,
+      );
+    }
+
     const missing = [
       "hero_idle","hero_walk","hero_run","hero_attack","hero_hurt","hero_death",
       "skeleton_idle","skeleton_walk","skeleton_attack","skeleton_hurt","skeleton_death",
@@ -71,6 +82,37 @@ export class BootScene extends Phaser.Scene {
         g.fillStyle(0xffffff, 1);
         g.fillRect(0, 0, 64, 64);
         g.generateTexture(key, 64, 64);
+        g.destroy();
+      }
+    }
+
+    const tileFallbacks: Array<{ key: string; w: number; h: number; color: number }> = [
+      { key: "tiles_buildings", w: 32, h: 32, color: 0x5a3a1a },
+      { key: "tiles_forest", w: 32, h: 32, color: 0x2a5a2a },
+      { key: "tiles_16", w: 16, h: 16, color: 0x444444 },
+    ];
+    for (const t of tileFallbacks) {
+      if (!this.textures.exists(t.key)) {
+        const g = this.make.graphics({ x: 0, y: 0 });
+        g.fillStyle(t.color, 1);
+        g.fillRect(0, 0, t.w, t.h);
+        g.generateTexture(t.key, t.w, t.h);
+        g.destroy();
+        console.warn(`[BootScene] fallback generated for ${t.key}`);
+      }
+    }
+
+    const uiFallbacks = [
+      "crop_wheat", "crop_carrot", "crop_pumpkin",
+      "animal_cow", "animal_chicken",
+      "vfx_dust", "vfx_smoke",
+    ];
+    for (const key of uiFallbacks) {
+      if (!this.textures.exists(key)) {
+        const g = this.make.graphics({ x: 0, y: 0 });
+        g.fillStyle(0x888888, 1);
+        g.fillRect(0, 0, 32, 32);
+        g.generateTexture(key, 32, 32);
         g.destroy();
       }
     }
