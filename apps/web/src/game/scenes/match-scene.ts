@@ -31,6 +31,9 @@ export class MatchScene extends Phaser.Scene {
   private readonly loadoutUpdateHandler = this.onLoadoutUpdate.bind(this);
   private vfxZones: Array<{ x: number; y: number; radius: number; key: string }> = [];
   private enemy!: Phaser.Physics.Arcade.Sprite;
+  private villageZone = { x: 320, y: 240, width: 320, height: 240 };
+  private landmarks: Array<{ label: string; x: number; y: number }> = [];
+  private npcs: Array<{ label: string; x: number; y: number }> = [];
 
   constructor() {
     super("match");
@@ -39,6 +42,7 @@ export class MatchScene extends Phaser.Scene {
 
   create(): void {
     this.createMap();
+    this.createVillage();
     this.createPlayer();
     this.createSkeleton();
     this.createCrops();
@@ -48,6 +52,54 @@ export class MatchScene extends Phaser.Scene {
     this.setupCamera();
     this.setupCollisions();
     this.setupGameBridge();
+  }
+
+  private createVillage(): void {
+    const zone = this.villageZone;
+
+    this.add.rectangle(zone.x + zone.width / 2, zone.y + zone.height / 2, zone.width, zone.height, 0x2a4a2e, 0.25)
+      .setDepth(0).setScrollFactor(0);
+
+    this.add.text(zone.x + zone.width / 2, zone.y - 15, "Willkommen-Dorf", {
+      fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+      fontSize: "18px",
+      color: "#88ff88",
+    }).setOrigin(0.5).setDepth(2);
+
+    this.add.text(zone.x + zone.width / 2, zone.y + zone.height + 15, "Sicherer Bereich", {
+      fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+      fontSize: "12px",
+      color: "#8fa88f",
+    }).setOrigin(0.5).setDepth(2);
+
+    this.landmarks = [
+      { label: "Rathaus", x: 400, y: 200 },
+      { label: "Taverne", x: 560, y: 200 },
+      { label: "Lagerfeuer", x: 480, y: 360 },
+    ];
+
+    this.npcs = [
+      { label: "Auftraggeber", x: 420, y: 260 },
+      { label: "Händler", x: 540, y: 260 },
+    ];
+
+    for (const lm of this.landmarks) {
+      this.add.rectangle(lm.x, lm.y, 40, 40, 0x5a3a1a, 0.8).setDepth(1);
+      this.add.text(lm.x, lm.y - 25, lm.label, {
+        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+        fontSize: "11px",
+        color: "#e8f0e8",
+      }).setOrigin(0.5).setDepth(2);
+    }
+
+    for (const npc of this.npcs) {
+      this.add.circle(npc.x, npc.y, 12, 0x88cc44, 0.9).setDepth(1);
+      this.add.text(npc.x, npc.y - 20, npc.label, {
+        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+        fontSize: "10px",
+        color: "#ffcc44",
+      }).setOrigin(0.5).setDepth(2);
+    }
   }
 
   private createSkeleton(): void {

@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "description": "Kleeblattadventure – Game-Konfiguration für Prototyp P0–P7",
-
   "auth": {
     "provider": "google",
     "providerNote": "Google OAuth 2.0 als einziger Login für den Prototyp. E-Mail-Magic-Link und Wallet-Connect kommen später (M1+).",
@@ -30,7 +29,6 @@
       "logout": "POST /auth/logout – Session löschen"
     }
   },
-
   "statStacking": {
     "formula": "final = base + gear + levelBonus",
     "levelBonusHp": "hero.baseStats.maxHp + (level - 1) * hero.levelBonuses.hpPerLevel",
@@ -38,7 +36,6 @@
     "gearBonus": "summe aller ausgerüsteten items.stats",
     "rules": "Alle Stats sind additiv. Keine Multiplikatoren im Prototyp."
   },
-
   "hero": {
     "classes": {
       "melee": {
@@ -53,7 +50,10 @@
           "maxResource": 100,
           "resourceRegenPerSec": 8
         },
-        "skills": ["dash", "shield_wall"],
+        "skills": [
+          "dash",
+          "shield_wall"
+        ],
         "basicAttack": {
           "id": "melee_basic",
           "name": "Schlag",
@@ -77,7 +77,10 @@
           "maxResource": 100,
           "resourceRegenPerSec": 8
         },
-        "skills": ["rapid_fire", "slow_shot"],
+        "skills": [
+          "rapid_fire",
+          "slow_shot"
+        ],
         "basicAttack": {
           "id": "ranged_basic",
           "name": "Schuss",
@@ -101,7 +104,10 @@
           "maxResource": 100,
           "resourceRegenPerSec": 5
         },
-        "skills": ["fireball", "blink"],
+        "skills": [
+          "fireball",
+          "blink"
+        ],
         "basicAttack": {
           "id": "mage_basic",
           "name": "Zauberspruch",
@@ -125,7 +131,6 @@
       "atkPerLevel": 2
     }
   },
-
   "skills": {
     "dash": {
       "id": "dash",
@@ -208,7 +213,6 @@
       "type": "blink"
     }
   },
-
   "enemies": {
     "archetypes": {
       "bruiser": {
@@ -226,7 +230,13 @@
           "xp": 15,
           "leashRange": 400
         },
-        "fsm": ["idle", "chase", "attack", "leash", "dead"],
+        "fsm": [
+          "idle",
+          "chase",
+          "attack",
+          "leash",
+          "dead"
+        ],
         "behavior": "melee_charge"
       },
       "runner": {
@@ -244,7 +254,13 @@
           "xp": 12,
           "leashRange": 350
         },
-        "fsm": ["idle", "chase", "attack", "leash", "dead"],
+        "fsm": [
+          "idle",
+          "chase",
+          "attack",
+          "leash",
+          "dead"
+        ],
         "behavior": "melee_charge"
       },
       "spitter": {
@@ -264,7 +280,13 @@
           "xp": 18,
           "leashRange": 420
         },
-        "fsm": ["idle", "chase", "attack", "leash", "dead"],
+        "fsm": [
+          "idle",
+          "chase",
+          "attack",
+          "leash",
+          "dead"
+        ],
         "behavior": "ranged_kite",
         "projectileSpeed": 200
       }
@@ -275,29 +297,92 @@
         "count": 3,
         "respawnMs": 8000,
         "spawnPoints": [
-          { "x": 400, "y": 300 },
-          { "x": 700, "y": 500 },
-          { "x": 250, "y": 600 }
+          {
+            "x": 400,
+            "y": 300
+          },
+          {
+            "x": 700,
+            "y": 500
+          },
+          {
+            "x": 250,
+            "y": 600
+          }
         ]
       }
     }
   },
-
   "xpCurve": {
     "mode": "prototype_fast",
     "type": "threshold_table",
     "xpSource": "enemy.stats.xp (Source of Truth je Archetyp)",
     "levels": [
-      { "level": 1, "xpToNext": 60, "totalXp": 0, "unlocks": ["q_skill"] },
-      { "level": 2, "xpToNext": 90, "totalXp": 60, "unlocks": [] },
-      { "level": 3, "xpToNext": 150, "totalXp": 150, "unlocks": ["e_skill"] },
-      { "level": 4, "xpToNext": 250, "totalXp": 300, "unlocks": [] },
-      { "level": 5, "xpToNext": 400, "totalXp": 550, "unlocks": [] },
-      { "level": 6, "xpToNext": 600, "totalXp": 950, "unlocks": [] },
-      { "level": 7, "xpToNext": 850, "totalXp": 1550, "unlocks": [] },
-      { "level": 8, "xpToNext": 1150, "totalXp": 2400, "unlocks": [] },
-      { "level": 9, "xpToNext": 1500, "totalXp": 3550, "unlocks": [] },
-      { "level": 10, "xpToNext": null, "totalXp": 5050, "unlocks": [], "note": "Max Level im Prototyp" }
+      {
+        "level": 1,
+        "xpToNext": 60,
+        "totalXp": 0,
+        "unlocks": [
+          "q_skill"
+        ]
+      },
+      {
+        "level": 2,
+        "xpToNext": 90,
+        "totalXp": 60,
+        "unlocks": []
+      },
+      {
+        "level": 3,
+        "xpToNext": 150,
+        "totalXp": 150,
+        "unlocks": [
+          "e_skill"
+        ]
+      },
+      {
+        "level": 4,
+        "xpToNext": 250,
+        "totalXp": 300,
+        "unlocks": []
+      },
+      {
+        "level": 5,
+        "xpToNext": 400,
+        "totalXp": 550,
+        "unlocks": []
+      },
+      {
+        "level": 6,
+        "xpToNext": 600,
+        "totalXp": 950,
+        "unlocks": []
+      },
+      {
+        "level": 7,
+        "xpToNext": 850,
+        "totalXp": 1550,
+        "unlocks": []
+      },
+      {
+        "level": 8,
+        "xpToNext": 1150,
+        "totalXp": 2400,
+        "unlocks": []
+      },
+      {
+        "level": 9,
+        "xpToNext": 1500,
+        "totalXp": 3550,
+        "unlocks": []
+      },
+      {
+        "level": 10,
+        "xpToNext": null,
+        "totalXp": 5050,
+        "unlocks": [],
+        "note": "Max Level im Prototyp"
+      }
     ],
     "rules": {
       "xpOnEnemyDeath": true,
@@ -306,7 +391,6 @@
       "levelUpHealToFull": true
     }
   },
-
   "starterGear": {
     "melee": [
       {
@@ -315,8 +399,12 @@
         "slot": "chest",
         "rarity": "common",
         "state": "web2",
-        "allowedClasses": ["melee"],
-        "stats": { "maxHp": 20 },
+        "allowedClasses": [
+          "melee"
+        ],
+        "stats": {
+          "maxHp": 20
+        },
         "description": "Solide, wenn auch nicht besonders hübsch."
       },
       {
@@ -325,8 +413,12 @@
         "slot": "weapon",
         "rarity": "common",
         "state": "web2",
-        "allowedClasses": ["melee"],
-        "stats": { "atk": 5 },
+        "allowedClasses": [
+          "melee"
+        ],
+        "stats": {
+          "atk": 5
+        },
         "description": "Ein einfaches Schwert. Besser als nichts."
       }
     ],
@@ -337,8 +429,13 @@
         "slot": "chest",
         "rarity": "common",
         "state": "web2",
-        "allowedClasses": ["ranged"],
-        "stats": { "maxHp": 10, "speed": 10 },
+        "allowedClasses": [
+          "ranged"
+        ],
+        "stats": {
+          "maxHp": 10,
+          "speed": 10
+        },
         "description": "Leicht und beweglich."
       },
       {
@@ -347,8 +444,12 @@
         "slot": "weapon",
         "rarity": "common",
         "state": "web2",
-        "allowedClasses": ["ranged"],
-        "stats": { "atk": 3 },
+        "allowedClasses": [
+          "ranged"
+        ],
+        "stats": {
+          "atk": 3
+        },
         "description": "Ein simpler Bogen für den Anfang."
       }
     ],
@@ -359,8 +460,13 @@
         "slot": "chest",
         "rarity": "common",
         "state": "web2",
-        "allowedClasses": ["mage"],
-        "stats": { "maxHp": 5, "maxMana": 10 },
+        "allowedClasses": [
+          "mage"
+        ],
+        "stats": {
+          "maxHp": 5,
+          "maxMana": 10
+        },
         "description": "Stoffgewand, kaum Schutz, aber komfortabel."
       },
       {
@@ -369,13 +475,16 @@
         "slot": "weapon",
         "rarity": "common",
         "state": "web2",
-        "allowedClasses": ["mage"],
-        "stats": { "atk": 4 },
+        "allowedClasses": [
+          "mage"
+        ],
+        "stats": {
+          "atk": 4
+        },
         "description": "Konzentriert magische Energie. Wackelig, aber funktional."
       }
     ]
   },
-
   "lootTables": {
     "prototype_chest": {
       "chestId": "prototype_chest",
@@ -388,8 +497,14 @@
           "slot": "chest",
           "rarity": "common",
           "weight": 50,
-          "allowedClasses": ["melee", "ranged", "mage"],
-          "stats": { "maxHp": 15 }
+          "allowedClasses": [
+            "melee",
+            "ranged",
+            "mage"
+          ],
+          "stats": {
+            "maxHp": 15
+          }
         },
         {
           "templateId": "loot_uncommon_chest_1",
@@ -397,8 +512,14 @@
           "slot": "chest",
           "rarity": "uncommon",
           "weight": 25,
-          "allowedClasses": ["melee", "ranged"],
-          "stats": { "maxHp": 25, "atk": 2 }
+          "allowedClasses": [
+            "melee",
+            "ranged"
+          ],
+          "stats": {
+            "maxHp": 25,
+            "atk": 2
+          }
         },
         {
           "templateId": "loot_common_weapon_1",
@@ -406,8 +527,12 @@
           "slot": "weapon",
           "rarity": "common",
           "weight": 15,
-          "allowedClasses": ["melee"],
-          "stats": { "atk": 6 }
+          "allowedClasses": [
+            "melee"
+          ],
+          "stats": {
+            "atk": 6
+          }
         },
         {
           "templateId": "loot_rare_chest_1",
@@ -415,8 +540,15 @@
           "slot": "chest",
           "rarity": "rare",
           "weight": 8,
-          "allowedClasses": ["melee", "ranged", "mage"],
-          "stats": { "maxHp": 30, "atk": 5 },
+          "allowedClasses": [
+            "melee",
+            "ranged",
+            "mage"
+          ],
+          "stats": {
+            "maxHp": 30,
+            "atk": 5
+          },
           "mintCandidate": true
         },
         {
@@ -425,15 +557,20 @@
           "slot": "weapon",
           "rarity": "epic",
           "weight": 2,
-          "allowedClasses": ["melee", "ranged"],
-          "stats": { "atk": 12, "maxHp": 10 },
+          "allowedClasses": [
+            "melee",
+            "ranged"
+          ],
+          "stats": {
+            "atk": 12,
+            "maxHp": 10
+          },
           "mintCandidate": true
         }
       ],
       "totalWeight": 100
     }
   },
-
   "respawn": {
     "onDeathDelayMs": 3000,
     "respawnAt": "map_spawn",
@@ -441,17 +578,29 @@
     "xpKeptOnDeath": true,
     "resourceResetOnRespawn": true
   },
-
   "match": {
     "type": "single_player_sandbox",
     "winCondition": "none",
     "mapId": "prototype_map_01",
-    "mapSize": { "width": 1600, "height": 1200, "tileSize": 32 },
-    "playerSpawn": { "x": 100, "y": 100 },
+    "mapSize": {
+      "width": 1600,
+      "height": 1200,
+      "tileSize": 32
+    },
+    "playerSpawn": {
+      "x": 100,
+      "y": 100
+    },
     "chestCount": 2,
     "chestSpawnPoints": [
-      { "x": 500, "y": 400 },
-      { "x": 900, "y": 700 }
+      {
+        "x": 500,
+        "y": 400
+      },
+      {
+        "x": 900,
+        "y": 700
+      }
     ],
     "chestInteraction": {
       "type": "proximity_key",
@@ -459,7 +608,6 @@
       "key": "E"
     }
   },
-
   "itemStateEnum": [
     "web2",
     "pending_secure",
@@ -467,18 +615,78 @@
     "active_in_game",
     "self_custody"
   ],
-
   "rarityEnum": [
     "common",
     "uncommon",
     "rare",
     "epic"
   ],
-
   "rarityMintRules": {
     "common": false,
     "uncommon": true,
     "rare": true,
     "epic": true
+  },
+  "village": {
+    "id": "welcome_village",
+    "label": "Willkommen-Dorf",
+    "safeZone": {
+      "x": 320,
+      "y": 240,
+      "width": 320,
+      "height": 240
+    },
+    "spawnPoint": {
+      "x": 480,
+      "y": 360
+    },
+    "landmarks": [
+      {
+        "id": "town_hall",
+        "label": "Rathaus",
+        "x": 400,
+        "y": 200,
+        "type": "building"
+      },
+      {
+        "id": "tavern",
+        "label": "Taverne",
+        "x": 560,
+        "y": 200,
+        "type": "building"
+      },
+      {
+        "id": "campfire",
+        "label": "Lagerfeuer",
+        "x": 480,
+        "y": 360,
+        "type": "landmark"
+      }
+    ],
+    "npcs": [
+      {
+        "id": "quest_giver",
+        "label": "Auftraggeber",
+        "x": 420,
+        "y": 260,
+        "type": "quest"
+      },
+      {
+        "id": "merchant",
+        "label": "Händler",
+        "x": 540,
+        "y": 260,
+        "type": "merchant"
+      }
+    ],
+    "waypoints": [
+      {
+        "id": "exit_north",
+        "label": "Nach Norden",
+        "x": 480,
+        "y": 160,
+        "target": "outer_world"
+      }
+    ]
   }
 }
