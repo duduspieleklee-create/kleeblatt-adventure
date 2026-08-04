@@ -1,6 +1,14 @@
 /** Drizzle-Schema: users, heroes, items, item_templates, wallets, user_onboarding */
 
-import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const walletStatusEnum = ["pending", "ready", "disconnected"] as const;
 export type WalletStatus = (typeof walletStatusEnum)[number];
@@ -66,6 +74,19 @@ export const wallets = pgTable("wallets", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Kisten-Öffnungen: einmalig pro Spieler (docs/architecture/24-api-contract.md §2.9) */
+export const chestOpens = pgTable(
+  "chest_opens",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    chestId: text("chest_id").notNull(),
+    openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("chest_opens_user_chest_unique").on(t.userId, t.chestId)],
+);
+
 /** Onboarding: Pfad-Wahl + Intro-Fortschritt (docs/architecture/11-onboarding-journey.md) */
 export const userOnboardings = pgTable("user_onboarding", {
   userId: text("user_id")
@@ -85,3 +106,4 @@ export type ItemRow = typeof items.$inferSelect;
 export type ItemTemplateRow = typeof itemTemplates.$inferSelect;
 export type WalletRow = typeof wallets.$inferSelect;
 export type UserOnboardingRow = typeof userOnboardings.$inferSelect;
+export type ChestOpenRow = typeof chestOpens.$inferSelect;

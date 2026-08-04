@@ -9,6 +9,7 @@ import { heroRoutes } from "./routes/hero.js";
 import { inventoryRoutes } from "./routes/inventory.js";
 import { walletRoutes } from "./routes/wallet.js";
 import { matchRoutes } from "./routes/match.js";
+import { chestRoutes } from "./routes/chests.js";
 import { onboardingRoutes } from "./routes/onboarding.js";
 
 export function createApp() {
@@ -35,6 +36,7 @@ export function createApp() {
   routes.route("/", inventoryRoutes);
   routes.route("/", walletRoutes);
   routes.route("/", matchRoutes);
+  routes.route("/", chestRoutes);
   routes.route("/", onboardingRoutes);
 
   // Legacy-Root-Pfade (nginx proxied /health, /auth/*, /me am Root)
