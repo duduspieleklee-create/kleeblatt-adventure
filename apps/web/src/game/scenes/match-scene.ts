@@ -41,22 +41,32 @@ export class MatchScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.createMap();
-    this.createVillage();
-    this.createPlayer();
-    this.createSkeleton();
-    this.createCrops();
-    this.createAnimals();
-    this.createVfxTriggers();
-    this.setupInput();
-    this.setupCamera();
-    this.setupCollisions();
-    this.setupGameBridge();
+    try {
+      console.log("[MatchScene] create() started");
+      this.createMap();
+      console.log("[MatchScene] map created");
+      this.createVillage();
+      console.log("[MatchScene] village created");
+      this.createPlayer();
+      console.log("[MatchScene] player created");
+      this.createSkeleton();
+      console.log("[MatchScene] skeleton created");
+      this.createCrops();
+      this.createAnimals();
+      this.createVfxTriggers();
+      this.setupInput();
+      this.setupCamera();
+      this.setupCollisions();
+      this.setupGameBridge();
 
-    console.log("[MatchScene] created, auto-starting match");
-    this.matchStarted = true;
-    this.emitInitialStats();
-    gameBridge.emit("match:started", { matchId: this.matchId });
+      console.log("[MatchScene] auto-starting match");
+      this.matchStarted = true;
+      this.emitInitialStats();
+      gameBridge.emit("match:started", { matchId: this.matchId });
+      console.log("[MatchScene] match started, player at", this.player.x, this.player.y);
+    } catch (e) {
+      console.error(`[MatchScene] create() CRASHED: ${e}`);
+    }
   }
 
   private createVillage(): void {

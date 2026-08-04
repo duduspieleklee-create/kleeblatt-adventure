@@ -15,16 +15,23 @@ export function MatchPage({ heroClass: _heroClass, heroLevel: _heroLevel, equipp
     const container = containerRef.current;
     if (!container) return;
 
+    console.log("[MatchPage] creating Phaser game");
     const game = createGame(container);
+
+    game.events.on("ready", () => {
+      console.log("[MatchPage] Phaser game ready");
+    });
+
+    game.events.on("shutdown", () => {
+      console.error("[MatchPage] Phaser game shutdown (crashed?)");
+    });
+
     return () => {
       game.destroy(true);
     };
   }, []);
 
   return (
-    <section className="card">
-      <h2>Abenteuer</h2>
-      <div className="game-container" ref={containerRef} />
-    </section>
+    <div className="game-container" ref={containerRef} />
   );
 }

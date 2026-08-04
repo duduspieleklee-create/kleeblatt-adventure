@@ -94,126 +94,134 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    if (this.loadErrors.length) {
-      console.error(
-        `[BootScene] ${this.loadErrors.length} assets failed: ${this.loadErrors.join(", ")}`,
-      );
-    }
+    try {
+      console.log("[BootScene] create() started");
 
-    const missing = [
-      "hero_idle","hero_walk","hero_run","hero_attack","hero_hurt","hero_death",
-      "skeleton_idle","skeleton_walk","skeleton_attack","skeleton_hurt","skeleton_death",
-    ];
-    for (const key of missing) {
-      if (!this.textures.exists(key)) {
-        const g = this.make.graphics({ x: 0, y: 0 });
-        g.fillStyle(0xffffff, 1);
-        g.fillRect(0, 0, 64, 64);
-        g.generateTexture(key, 64, 64);
-        g.destroy();
-        console.warn(`[BootScene] fallback generated for ${key}`);
+      if (this.loadErrors.length) {
+        console.error(
+          `[BootScene] ${this.loadErrors.length} assets failed: ${this.loadErrors.join(", ")}`,
+        );
       }
-    }
 
-    const tileFallbacks: Array<{ key: string; w: number; h: number; color: number }> = [
-      { key: "tiles_buildings", w: 32, h: 32, color: 0x5a3a1a },
-      { key: "tiles_forest", w: 32, h: 32, color: 0x2a5a2a },
-      { key: "tiles_16", w: 16, h: 16, color: 0x444444 },
-    ];
-    for (const t of tileFallbacks) {
-      if (!this.textures.exists(t.key)) {
-        const g = this.make.graphics({ x: 0, y: 0 });
-        g.fillStyle(t.color, 1);
-        g.fillRect(0, 0, t.w, t.h);
-        g.generateTexture(t.key, t.w, t.h);
-        g.destroy();
-        console.warn(`[BootScene] fallback generated for ${t.key}`);
+      const missing = [
+        "hero_idle","hero_walk","hero_run","hero_attack","hero_hurt","hero_death",
+        "skeleton_idle","skeleton_walk","skeleton_attack","skeleton_hurt","skeleton_death",
+      ];
+      for (const key of missing) {
+        if (!this.textures.exists(key)) {
+          const g = this.make.graphics({ x: 0, y: 0 });
+          g.fillStyle(0xffffff, 1);
+          g.fillRect(0, 0, 64, 64);
+          g.generateTexture(key, 64, 64);
+          g.destroy();
+          console.warn(`[BootScene] fallback generated for ${key}`);
+        }
       }
-    }
 
-    const uiFallbacks = [
-      "crop_wheat", "crop_carrot", "crop_pumpkin",
-      "animal_cow", "animal_chicken",
-      "vfx_dust", "vfx_smoke",
-    ];
-    for (const key of uiFallbacks) {
-      if (!this.textures.exists(key)) {
-        const g = this.make.graphics({ x: 0, y: 0 });
-        g.fillStyle(0x888888, 1);
-        g.fillRect(0, 0, 32, 32);
-        g.generateTexture(key, 32, 32);
-        g.destroy();
-        console.warn(`[BootScene] fallback generated for ${key}`);
+      const tileFallbacks: Array<{ key: string; w: number; h: number; color: number }> = [
+        { key: "tiles_buildings", w: 32, h: 32, color: 0x5a3a1a },
+        { key: "tiles_forest", w: 32, h: 32, color: 0x2a5a2a },
+        { key: "tiles_16", w: 16, h: 16, color: 0x444444 },
+      ];
+      for (const t of tileFallbacks) {
+        if (!this.textures.exists(t.key)) {
+          const g = this.make.graphics({ x: 0, y: 0 });
+          g.fillStyle(t.color, 1);
+          g.fillRect(0, 0, t.w, t.h);
+          g.generateTexture(t.key, t.w, t.h);
+          g.destroy();
+          console.warn(`[BootScene] fallback generated for ${t.key}`);
+        }
       }
+
+      const uiFallbacks = [
+        "crop_wheat", "crop_carrot", "crop_pumpkin",
+        "animal_cow", "animal_chicken",
+        "vfx_dust", "vfx_smoke",
+      ];
+      for (const key of uiFallbacks) {
+        if (!this.textures.exists(key)) {
+          const g = this.make.graphics({ x: 0, y: 0 });
+          g.fillStyle(0x888888, 1);
+          g.fillRect(0, 0, 32, 32);
+          g.generateTexture(key, 32, 32);
+          g.destroy();
+          console.warn(`[BootScene] fallback generated for ${key}`);
+        }
+      }
+
+      console.log("[BootScene] creating animations");
+      this.anims.create({
+        key: "hero_idle",
+        frames: this.anims.generateFrameNumbers("hero_idle", { start: 0, end: 8 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+      this.anims.create({
+        key: "hero_walk",
+        frames: this.anims.generateFrameNumbers("hero_walk", { start: 0, end: 7 }),
+        frameRate: 10,
+        repeat: -1,
+      });
+      this.anims.create({
+        key: "hero_run",
+        frames: this.anims.generateFrameNumbers("hero_run", { start: 0, end: 7 }),
+        frameRate: 12,
+        repeat: -1,
+      });
+      this.anims.create({
+        key: "hero_attack",
+        frames: this.anims.generateFrameNumbers("hero_attack", { start: 0, end: 9 }),
+        frameRate: 14,
+        repeat: 0,
+      });
+      this.anims.create({
+        key: "hero_hurt",
+        frames: this.anims.generateFrameNumbers("hero_hurt", { start: 0, end: 7 }),
+        frameRate: 10,
+        repeat: 0,
+      });
+      this.anims.create({
+        key: "hero_death",
+        frames: this.anims.generateFrameNumbers("hero_death", { start: 0, end: 12 }),
+        frameRate: 10,
+        repeat: 0,
+      });
+      this.anims.create({
+        key: "skeleton_idle",
+        frames: this.anims.generateFrameNumbers("skeleton_idle", { start: 0, end: 5 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+      this.anims.create({
+        key: "skeleton_walk",
+        frames: this.anims.generateFrameNumbers("skeleton_walk", { start: 0, end: 7 }),
+        frameRate: 10,
+        repeat: -1,
+      });
+      this.anims.create({
+        key: "skeleton_attack",
+        frames: this.anims.generateFrameNumbers("skeleton_attack", { start: 0, end: 6 }),
+        frameRate: 12,
+        repeat: 0,
+      });
+      this.anims.create({
+        key: "skeleton_hurt",
+        frames: this.anims.generateFrameNumbers("skeleton_hurt", { start: 0, end: 6 }),
+        frameRate: 10,
+        repeat: 0,
+      });
+      this.anims.create({
+        key: "skeleton_death",
+        frames: this.anims.generateFrameNumbers("skeleton_death", { start: 0, end: 9 }),
+        frameRate: 10,
+        repeat: 0,
+      });
+
+      console.log("[BootScene] all animations created, starting match scene");
+      this.scene.start("match");
+    } catch (e) {
+      console.error(`[BootScene] create() CRASHED: ${e}`);
     }
-
-    this.anims.create({
-      key: "hero_idle",
-      frames: this.anims.generateFrameNumbers("hero_idle", { start: 0, end: 8 }),
-      frameRate: 8,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: "hero_walk",
-      frames: this.anims.generateFrameNumbers("hero_walk", { start: 0, end: 7 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: "hero_run",
-      frames: this.anims.generateFrameNumbers("hero_run", { start: 0, end: 7 }),
-      frameRate: 12,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: "hero_attack",
-      frames: this.anims.generateFrameNumbers("hero_attack", { start: 0, end: 9 }),
-      frameRate: 14,
-      repeat: 0,
-    });
-    this.anims.create({
-      key: "hero_hurt",
-      frames: this.anims.generateFrameNumbers("hero_hurt", { start: 0, end: 7 }),
-      frameRate: 10,
-      repeat: 0,
-    });
-    this.anims.create({
-      key: "hero_death",
-      frames: this.anims.generateFrameNumbers("hero_death", { start: 0, end: 12 }),
-      frameRate: 10,
-      repeat: 0,
-    });
-    this.anims.create({
-      key: "skeleton_idle",
-      frames: this.anims.generateFrameNumbers("skeleton_idle", { start: 0, end: 5 }),
-      frameRate: 8,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: "skeleton_walk",
-      frames: this.anims.generateFrameNumbers("skeleton_walk", { start: 0, end: 7 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: "skeleton_attack",
-      frames: this.anims.generateFrameNumbers("skeleton_attack", { start: 0, end: 6 }),
-      frameRate: 12,
-      repeat: 0,
-    });
-    this.anims.create({
-      key: "skeleton_hurt",
-      frames: this.anims.generateFrameNumbers("skeleton_hurt", { start: 0, end: 6 }),
-      frameRate: 10,
-      repeat: 0,
-    });
-    this.anims.create({
-      key: "skeleton_death",
-      frames: this.anims.generateFrameNumbers("skeleton_death", { start: 0, end: 9 }),
-      frameRate: 10,
-      repeat: 0,
-    });
-
-    this.scene.start("match");
   }
 }
