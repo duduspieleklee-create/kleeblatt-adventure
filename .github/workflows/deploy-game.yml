@@ -106,7 +106,7 @@ jobs:
           API_PATH="${API_REMOTE_PATH:-/opt/kleeblatt-adventure}"
           rsync -avz --delete \
             -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
-            --exclude node_modules --exclude .git --exclude .turbo --exclude apps/web \
+            --exclude node_modules --exclude .git --exclude .turbo --exclude apps/web --exclude .kilo \
             ./ "${DEPLOY_USER}@${HOST}:${API_PATH}/"
           rsync -avz \
             -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \

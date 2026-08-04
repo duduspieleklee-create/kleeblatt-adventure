@@ -2,7 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { getDb, isDbAvailable } from "../db/client.js";
-import { wallets as walletsTable, type WalletRow } from "../db/schema.js";
+import { wallets as walletsTable } from "../db/schema.js";
 import { memWallets } from "./memoryStore.js";
 import type { WalletConnectRequest, WalletConnectResponse } from "@kleeblatt/shared";
 
