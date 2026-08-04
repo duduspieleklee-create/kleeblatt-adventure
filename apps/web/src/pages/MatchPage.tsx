@@ -1,3 +1,4 @@
+import InventoryScreen from "../components/InventoryScreen";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { gameBridge } from "@kleeblatt/shared";
 import { createGame } from "../game/createGame";
@@ -16,6 +17,11 @@ interface MatchPageProps {
 export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }: MatchPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [matchActive, setMatchActive] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
+
+  const toggleInventory = () => {
+    setShowInventory(!showInventory);
+  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -74,20 +80,32 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
 
   return (
     <div className="game-container">
-      {!matchActive ? (
-        <div className="game-overlay">
-          <p>Wähle deinen Weg – die Map erwartet dich.</p>
-          <button type="button" className="primary" onClick={handleStart}>
-            Abenteuer starten ↗
+      {showInventory ? (
+        <div className="inventory-overlay">
+          <button type="button" onClick={toggleInventory} className="close-button">
+            Schließen
           </button>
+          <InventoryScreen />
         </div>
       ) : (
-        <div className="game-overlay-top">
-          <p>Match aktiv – WASD zum Bewegen, Maus zum Zielen.</p>
-          <button type="button" onClick={handleExit}>
-            Verlassen
-          </button>
-        </div>
+        !matchActive ? (
+          <div className="game-overlay">
+            <p>Wähle deinen Weg – die Map erwartet dich.</p>
+            <button type="button" className="primary" onClick={handleStart}>
+              Abenteuer starten ↗
+            </button>
+          </div>
+        ) : (
+          <div className="game-overlay-top">
+            <p>Match aktiv – WASD zum Bewegen, Maus zum Zielen.</p>
+            <button type="button" onClick={handleExit}>
+              Verlassen
+            </button>
+            <button type="button" onClick={toggleInventory}>
+              Inventar
+            </button>
+          </div>
+        )
       )}
       <div ref={containerRef} />
       <MobileControls />
