@@ -58,7 +58,7 @@ export default class LootSystem {
     const goldMax = table.goldRange.max;
     const goldAmount = goldMin + Math.floor(Math.random() * (goldMax - goldMin + 1));
 
-    const player = (this.scene as { player?: { addGold?: (n: number) => void } }).player;
+    const player = (this.scene as { player?: { addGold: (n: number) => void } }).player;
     if (player && goldAmount > 0) {
       player.addGold(goldAmount);
     }
