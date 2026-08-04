@@ -1,6 +1,6 @@
 /** Thin fetch helpers toward Game API (credentials for session cookie) */
 
-import type { CreateHeroInput, Hero, HeroResponse, InventoryItem } from "@kleeblatt/shared";
+import type { CreateHeroInput, Hero, HeroResponse, InventoryItem, OnboardingPath, OnboardingStatus } from "@kleeblatt/shared";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 // Default: /api-Prefix (Doku-Architektur Web → /api/* → nginx/vite → API,
@@ -169,4 +169,28 @@ export async function submitMatchResult(input: {
       message: errorMessage(body, "Match-Ergebnis konnte nicht gespeichert werden."),
     };
   return { ok: true, status: res.status, data: body as MatchResultResponse };
+}
+
+export async function fetchOnboardingStatus(): Promise<ApiResult<OnboardingStatus>> {
+  const res = await apiFetch("/onboarding/status");
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Onboarding-Status konnte nicht geladen werden.") };
+  return { ok: true, status: res.status, data: body as OnboardingStatus };
+}
+
+export async function chooseOnboardingPath(path: OnboardingPath): Promise<ApiResult<OnboardingStatus>> {
+  const res = await apiFetch("/onboarding/path", { method: "POST", body: JSON.stringify({ path }) });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Pfad-Wahl fehlgeschlagen.") };
+  return { ok: true, status: res.status, data: body as OnboardingStatus };
+}
+
+export async function completeOnboarding(): Promise<ApiResult<OnboardingStatus>> {
+  const res = await apiFetch("/onboarding/complete", { method: "POST" });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Intro konnte nicht abgeschlossen werden.") };
+  return { ok: true, status: res.status, data: body as OnboardingStatus };
 }

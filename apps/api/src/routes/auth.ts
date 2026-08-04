@@ -7,6 +7,7 @@ import { SESSION_COOKIE_NAME } from "@kleeblatt/shared";
 import { env, sessionCookie } from "../config/env.js";
 import { signSession } from "../lib/jwt.js";
 import { upsertGoogleUser } from "../services/users.js";
+import { getOrCreateWallet } from "../services/wallets.js";
 import type { AppVariables } from "../middleware/session.js";
 
 export const authRoutes = new Hono<{ Variables: AppVariables }>();
@@ -161,6 +162,7 @@ authRoutes.get("/auth/google/callback", async (c) => {
       picture: profile.picture ?? null,
     });
 
+    await getOrCreateWallet(user.userId);
     const jwt = await signSession(user);
     setCookie(c, SESSION_COOKIE_NAME, jwt, cookieOpts());
     return c.redirect(`${env.webUrl}/?auth=ok`);
@@ -193,6 +195,7 @@ authRoutes.get("/auth/dev-login", async (c) => {
     displayName: "Dev Player",
     picture: null,
   });
+  await getOrCreateWallet(user.userId);
   const jwt = await signSession(user);
   setCookie(c, SESSION_COOKIE_NAME, jwt, cookieOpts());
   return c.redirect(`${env.webUrl}/?auth=ok`);

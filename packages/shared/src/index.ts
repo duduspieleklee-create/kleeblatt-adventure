@@ -24,6 +24,7 @@ export type { HealthResponse, ApiErrorBody } from "./types/api.js";
 
 export type { SessionUser, MeResponse } from "./types/user.js";
 export type { WalletStatus, WalletResponse, WalletConnectRequest, WalletConnectResponse } from "./types/wallet.js";
+export type { OnboardingPath, OnboardingStatus } from "./types/onboarding.js";
 
 export type { GameBridgeEvents } from "./gameBridge.js";
 export { gameBridge, TypedEmitter } from "./gameBridge.js";
