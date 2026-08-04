@@ -62,9 +62,9 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
 
   const handleStart = useCallback(() => {
     gameBridge.emit("match:start", {
-      heroClass,
-      level: heroLevel,
-      equippedStats,
+      heroClass: heroClass ?? "warrior",
+      level: heroLevel ?? 1,
+      equippedStats: equippedStats ?? {},
     });
   }, [heroClass, heroLevel, equippedStats]);
 
