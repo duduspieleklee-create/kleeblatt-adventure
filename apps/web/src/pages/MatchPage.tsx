@@ -3,6 +3,7 @@ import { gameBridge } from "@kleeblatt/shared";
 import { createGame } from "../game/createGame";
 import type { HeroClass } from "@kleeblatt/shared";
 import { MobileControls } from "../components/MobileControls";
+import { GameHud } from "../components/GameHud";
 import { submitMatchResult } from "../lib/api";
 
 interface MatchPageProps {
@@ -90,6 +91,7 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
         </div>
       )}
       <div ref={containerRef} />
+      {matchActive && <GameHud />}
       <MobileControls />
     </div>
   );

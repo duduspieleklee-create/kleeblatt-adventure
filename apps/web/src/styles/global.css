@@ -347,6 +347,7 @@ button.primary:disabled {
 
 /* Phaser-Container (Match-Shell, P4) */
 .game-container {
+  position: relative;
   width: 100%;
   height: 100%;
   background: #101810;
@@ -654,7 +655,9 @@ button.primary:disabled {
   background: linear-gradient(135deg, #3faf4a, #4cc95a);
   color: #0f1410;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
   box-shadow: 0 0 20px #3faf4a44;
 }
 
@@ -1019,7 +1022,9 @@ button.primary:disabled {
   background: #141b16;
   color: #e8f0e8;
   cursor: pointer;
-  transition: border-color 0.2s, transform 0.15s;
+  transition:
+    border-color 0.2s,
+    transform 0.15s;
 }
 
 .choice-card:hover {
@@ -1118,4 +1123,189 @@ button.primary:disabled {
   margin-top: 0.5rem;
   padding: 0.75rem 1.5rem;
   font-size: 1.05rem;
+}
+
+/* ─── Game HUD (Level + XP-Bar, #51) ─────────────────────────── */
+
+.game-hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  background: rgba(20, 27, 22, 0.82);
+  border: 1px solid #2a3a2e;
+  border-radius: 10px;
+  pointer-events: none;
+  user-select: none;
+  min-width: 180px;
+  font-family:
+    system-ui,
+    Segoe UI,
+    Roboto,
+    sans-serif;
+}
+
+.game-hud-level {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #e8f0e8;
+  letter-spacing: 0.02em;
+}
+
+.game-hud-xp-bar {
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+  background: #101810;
+  border: 1px solid #2a3a2e;
+  overflow: hidden;
+}
+
+.game-hud-xp-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #2f9e44, #4cc95a);
+  transition: width 0.3s ease-out;
+}
+
+.game-hud-xp-text {
+  font-size: 0.72rem;
+  color: #9fb89f;
+  text-align: right;
+}
+
+.game-hud-levelup-badge {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 14px;
+  background: linear-gradient(90deg, #e8b800, #ffd633);
+  color: #101810;
+  font-size: 0.95rem;
+  font-weight: 800;
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(255, 214, 51, 0.8);
+  animation:
+    game-hud-pop 0.5s ease-out,
+    game-hud-glow 1.2s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+.game-hud--levelup .game-hud-level {
+  color: #ffd633;
+}
+
+@keyframes game-hud-pop {
+  0% {
+    transform: translateX(-50%) scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: translateX(-50%) scale(1.15);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes game-hud-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 12px rgba(255, 214, 51, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 26px rgba(255, 214, 51, 1);
+  }
+}
+
+.game-hud-bar {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 6px;
+}
+
+.game-hud-bar-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #cfdccf;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.game-hud-bar-track {
+  height: 10px;
+  border-radius: 5px;
+  background: #101810;
+  border: 1px solid #2a3a2e;
+  overflow: hidden;
+}
+
+.game-hud-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.25s ease-out;
+}
+
+.game-hud-bar--hp .game-hud-bar-fill {
+  background: linear-gradient(90deg, #c92a2a, #ff6b6b);
+}
+
+.game-hud-bar--mana .game-hud-bar-fill {
+  background: linear-gradient(90deg, #1971c2, #4dabf7);
+}
+
+.game-hud-bar--stamina .game-hud-bar-fill {
+  background: linear-gradient(90deg, #2f9e44, #69db7c);
+}
+
+.game-hud-bar-value {
+  font-size: 0.68rem;
+  color: #9fb89f;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-hud-skills {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.game-hud-skill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: rgba(16, 24, 16, 0.9);
+  border: 1px solid #2a3a2e;
+}
+
+.game-hud-skill-key {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #e8f0e8;
+}
+
+.game-hud-skill--cooldown {
+  opacity: 0.55;
+  filter: grayscale(0.7);
+}
+
+.game-hud-skill-cd {
+  position: absolute;
+  bottom: 3px;
+  right: 5px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #ffd43b;
 }
