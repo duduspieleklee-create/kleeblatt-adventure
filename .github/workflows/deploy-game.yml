@@ -106,7 +106,7 @@ jobs:
           PORT="${DEPLOY_PORT:-22}"
           HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
           API_PATH="${API_REMOTE_PATH:-/opt/kleeblatt-adventure}"
-          ssh -p "$PORT" -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${HOST}" "sudo mkdir -p ${API_PATH} && sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ${API_PATH} || true"
+          ssh -p "$PORT" -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${HOST}" "sudo mkdir -p ${API_PATH} && sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ${API_PATH}"
 
       - name: Rsync API app to server
         env:
@@ -165,7 +165,7 @@ jobs:
 
           scp -P "$PORT" -o StrictHostKeyChecking=yes \
             /tmp/kleeblatt.env \
-            "${DEPLOY_USER}@${HOST}:${API_PATH}/.env"
+            "${DEPLOY_USER}@${HOST}:/tmp/kleeblatt.env"
           ssh -p "$PORT" -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${HOST}" \
-            "chmod 600 ${API_PATH}/.env && cd ${API_PATH} && npm install --omit=dev && sudo systemctl restart kleeblatt-api && sleep 1 && curl -sf http://127.0.0.1:4000/health"
+            "sudo mv /tmp/kleeblatt.env ${API_PATH}/.env && sudo chmod 640 ${API_PATH}/.env && sudo chown root:debian ${API_PATH}/.env && cd ${API_PATH} && npm install --omit=dev && sudo systemctl restart kleeblatt-api && sleep 1 && curl -sf http://127.0.0.1:4000/health"
           rm -f /tmp/kleeblatt.env
