@@ -40,7 +40,7 @@
   left: 50% !important;
   top: 50% !important;
   pointer-events: none !important;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* Stick styling */
@@ -54,7 +54,7 @@
   transform: translate(-50%, -50%) !important;
   transition: transform 0.05s cubic-bezier(0.4, 0, 0.2, 1) !important;
   pointer-events: none !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
   left: 50% !important;
   top: 50% !important;
   transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) !important;
@@ -72,7 +72,7 @@
   backdrop-filter: blur(4px) !important;
   cursor: pointer !important;
   pointer-events: auto !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
   transition: all 0.1s ease !important;
   display: flex !important;
   align-items: center !important;
@@ -106,17 +106,17 @@
     left: 15px !important;
     right: 15px !important;
   }
-  
+
   .stick-container {
     width: 120px !important;
     height: 120px !important;
   }
-  
+
   .stick {
     width: 50px !important;
     height: 50px !important;
   }
-  
+
   .action-button {
     width: 50px !important;
     height: 50px !important;
@@ -130,17 +130,17 @@
     left: 10px !important;
     right: 10px !important;
   }
-  
+
   .stick-container {
     width: 100px !important;
     height: 100px !important;
   }
-  
+
   .stick {
     width: 40px !important;
     height: 40px !important;
   }
-  
+
   .action-button {
     width: 40px !important;
     height: 40px !important;
