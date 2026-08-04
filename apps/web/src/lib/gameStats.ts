@@ -1,5 +1,4 @@
 import type { Hero, HeroClass } from "@kleeblatt/shared";
-import { HERO_CLASS_OPTIONS } from "@kleeblatt/shared";
 
 const BASE_STATS: Record<HeroClass, { maxHp: number; maxResource: number }> = {
   melee: { maxHp: 120, maxResource: 100 },

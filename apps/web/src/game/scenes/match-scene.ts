@@ -30,6 +30,7 @@ export class MatchScene extends Phaser.Scene {
   private readonly matchExitHandler = () => this.onMatchExit();
   private readonly matchStartHandler = this.onMatchStart.bind(this);
   private readonly loadoutUpdateHandler = this.onLoadoutUpdate.bind(this);
+  private vfxZones: Array<{ x: number; y: number; radius: number; key: string }> = [];
 
   constructor() {
     super("match");
@@ -39,6 +40,9 @@ export class MatchScene extends Phaser.Scene {
   create(): void {
     this.createMap();
     this.createPlayer();
+    this.createCrops();
+    this.createAnimals();
+    this.createVfxTriggers();
     this.setupInput();
     this.setupCamera();
     this.setupCollisions();
@@ -124,6 +128,56 @@ export class MatchScene extends Phaser.Scene {
     gameBridge.on("match:exit", this.matchExitHandler);
   }
 
+  private createCrops(): void {
+    const crops = [
+      { x: 200, y: 200, key: "crop_wheat" },
+      { x: 240, y: 200, key: "crop_wheat" },
+      { x: 200, y: 240, key: "crop_carrot" },
+      { x: 400, y: 300, key: "crop_pumpkin" },
+    ];
+
+    for (const crop of crops) {
+      this.add.image(crop.x, crop.y, crop.key).setDepth(1);
+    }
+  }
+
+  private createAnimals(): void {
+    const animals = [
+      { x: 700, y: 300, key: "animal_cow" },
+      { x: 750, y: 320, key: "animal_chicken" },
+    ];
+
+    for (const animal of animals) {
+      this.add.image(animal.x, animal.y, animal.key).setDepth(1);
+    }
+  }
+
+  private createVfxTriggers(): void {
+    this.vfxZones = [
+      { x: 500, y: 500, radius: 80, key: "vfx_dust" },
+      { x: 900, y: 200, radius: 60, key: "vfx_smoke" },
+    ];
+  }
+
+  private maybeSpawnVfx(x: number, y: number): void {
+    if (!this.vfxZones) return;
+    for (const zone of this.vfxZones) {
+      const dx = x - zone.x;
+      const dy = y - zone.y;
+      if (dx * dx + dy * dy <= zone.radius * zone.radius) {
+        const emitter = this.add.particles(zone.x, zone.y, zone.key, {
+          speed: { min: 10, max: 30 },
+          lifespan: 600,
+          quantity: 1,
+          scale: { start: 1, end: 0 },
+          alpha: { start: 0.6, end: 0 },
+          emitting: false,
+        });
+        emitter.explode(8);
+      }
+    }
+  }
+
   private onMatchStart(payload: GameBridgeEvents["match:start"]): void {
     this.stats.level = payload.level;
     Object.assign(this.stats, payload.equippedStats);
@@ -159,6 +213,7 @@ export class MatchScene extends Phaser.Scene {
     if (!this.matchStarted) return;
 
     this.handleMovement();
+    this.maybeSpawnVfx(this.player.x, this.player.y);
   }
 
   private handleMovement(): void {

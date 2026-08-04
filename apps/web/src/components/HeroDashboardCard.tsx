@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { HERO_CLASS_OPTIONS, type Hero, type InventoryItem } from "@kleeblatt/shared";
 import { equipItem, unequipItem } from "../lib/api";
-import { getSlotIcon, getToolIcon } from "../lib/gameStats";
-import { UI_ASSETS } from "../lib/uiAssets";
+import { getToolIcon } from "../lib/gameStats";
 
 interface HeroDashboardCardProps {
   hero: Hero;
