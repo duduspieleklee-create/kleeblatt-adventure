@@ -20,10 +20,19 @@ jobs:
       - run: npm ci
 
       - name: Typecheck
-        run: npm run typecheck
+        run: npm run typecheck            
+      - name: Lint (auto-fix then check)
+        run: |
+          # Run inside the web workspace so local workspace eslint and config are used
+          cd apps/web
 
-      - name: Lint
-        run: npm run lint
+          # Attempt to auto-fix fixable issues. Allow this command to exit non-zero
+          # so we still perform the strict check afterwards.
+          npx eslint "src/**/*.{js,jsx,ts,tsx}" --fix || true
+
+          # Enforce zero warnings/errors after auto-fix
+          npx eslint "src/**/*.{js,jsx,ts,tsx}" --max-warnings 0
+         npm run lint
 
       - name: Build shared + web
         run: npm run build:web
