@@ -42,3 +42,5 @@ export type {
 
 export { createRuleEngine, applyRuleEvents } from "./engine.js";
 export { DEFAULT_SKILLS, CLASS_SKILLS, defaultEnemyXp } from "./defaults.js";
+export type { XpCurveLevel, XpState, ApplyXpResult } from "./xp.js";
+export { applyXp, DEFAULT_XP_CURVE } from "./xp.js";

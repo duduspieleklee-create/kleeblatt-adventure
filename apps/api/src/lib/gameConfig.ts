@@ -27,6 +27,22 @@ export interface GameConfig {
   hero: {
     classes: Record<string, { label: string; description: string }>;
   };
+  enemies: {
+    archetypes: Record<
+      string,
+      { id: string; label: string; stats: { xp: number; maxHp: number; damage: number } }
+    >;
+    spawnConfig: { prototype: { type: string; count: number; respawnMs: number } };
+  };
+  xpCurve: {
+    levels: Array<{ level: number; xpToNext: number | null; totalXp: number }>;
+    rules: { xpOnEnemyDeath: boolean; xpKeptOnDeath: boolean; levelUpHealToFull: boolean };
+  };
+  match: {
+    mapId: string;
+    mapSize: { width: number; height: number; tileSize: number };
+    playerSpawn: { x: number; y: number };
+  };
 }
 
 let cached: GameConfig | null = null;

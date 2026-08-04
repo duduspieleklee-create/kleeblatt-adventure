@@ -13,13 +13,7 @@ import type { HeroClass } from "../types/hero.js";
 export type EntityId = string;
 export type EnemyTypeId = "bruiser" | "runner" | "spitter";
 
-export type SkillId =
-  | "dash"
-  | "shield_wall"
-  | "rapid_fire"
-  | "slow_shot"
-  | "fireball"
-  | "blink";
+export type SkillId = "dash" | "shield_wall" | "rapid_fire" | "slow_shot" | "fireball" | "blink";
 
 // ---------------------------------------------------------------------------
 // Effects
@@ -120,11 +114,7 @@ export interface EnemyProjectileHitIntent {
   damage: number;
 }
 
-export type Intent =
-  | BasicAttackIntent
-  | SkillIntent
-  | EnemyMeleeIntent
-  | EnemyProjectileHitIntent;
+export type Intent = BasicAttackIntent | SkillIntent | EnemyMeleeIntent | EnemyProjectileHitIntent;
 
 // ---------------------------------------------------------------------------
 // Rule events
@@ -244,7 +234,4 @@ export interface RuleEngine {
   tick(world: WorldState, now: number): RuleEvent[];
 }
 
-export type ApplyRuleEvents = (
-  world: WorldState,
-  events: RuleEvent[],
-) => WorldState;
+export type ApplyRuleEvents = (world: WorldState, events: RuleEvent[]) => WorldState;
