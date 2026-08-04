@@ -6,7 +6,6 @@ export class MatchScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
   private map!: Phaser.Tilemaps.Tilemap;
-  private groundLayer!: Phaser.Tilemaps.TilemapLayer;
   private wallLayer!: Phaser.Tilemaps.TilemapLayer;
 
   private stats = {
@@ -56,35 +55,40 @@ export class MatchScene extends Phaser.Scene {
 
     this.map = this.make.tilemap({ tileWidth: tileSize, tileHeight: tileSize, width, height });
 
-    const tileset = this.map.addTilesetImage("tiles", "tile_ground", tileSize, tileSize, 0, 0);
-    if (!tileset) {
-      console.warn("Tileset not found, using placeholder");
-      return;
+    const forestTileset = this.map.addTilesetImage("forest", "tiles_forest", tileSize, tileSize, 0, 0);
+    const buildingTileset = this.map.addTilesetImage("buildings", "tiles_buildings", tileSize, tileSize, 0, 0);
+    const smallTileset = this.map.addTilesetImage("ui16", "tiles_16", 16, 16, 0, 0);
+
+    if (forestTileset) {
+      const groundLayer = this.map.createBlankLayer("ground", forestTileset, 0, 0);
+      if (groundLayer) {
+      }
     }
 
-    const groundLayer = this.map.createBlankLayer("ground", tileset, 0, 0);
-    if (groundLayer) {
-      this.groundLayer = groundLayer;
-      this.groundLayer.fill(0);
+    if (buildingTileset) {
+      const wallLayer = this.map.createBlankLayer("walls", buildingTileset, 0, 0);
+      if (wallLayer) {
+        this.wallLayer = wallLayer;
+        for (let x = 0; x < width; x++) {
+          this.wallLayer.putTileAt(1, x, 0, true);
+          this.wallLayer.putTileAt(1, x, height - 1, true);
+        }
+        for (let y = 0; y < height; y++) {
+          this.wallLayer.putTileAt(1, 0, y, true);
+          this.wallLayer.putTileAt(1, width - 1, y, true);
+        }
+        this.wallLayer.putTileAt(1, 10, 10, true);
+        this.wallLayer.putTileAt(1, 11, 10, true);
+        this.wallLayer.putTileAt(1, 20, 15, true);
+        this.wallLayer.putTileAt(1, 21, 15, true);
+        this.wallLayer.putTileAt(1, 30, 5, true);
+        this.wallLayer.setCollision(1);
+      }
     }
 
-    const wallLayer = this.map.createBlankLayer("walls", tileset, 0, 0);
-    if (wallLayer) {
-      this.wallLayer = wallLayer;
-      for (let x = 0; x < width; x++) {
-        this.wallLayer.putTileAt(1, x, 0, true);
-        this.wallLayer.putTileAt(1, x, height - 1, true);
-      }
-      for (let y = 0; y < height; y++) {
-        this.wallLayer.putTileAt(1, 0, y, true);
-        this.wallLayer.putTileAt(1, width - 1, y, true);
-      }
-      this.wallLayer.putTileAt(1, 10, 10, true);
-      this.wallLayer.putTileAt(1, 11, 10, true);
-      this.wallLayer.putTileAt(1, 20, 15, true);
-      this.wallLayer.putTileAt(1, 21, 15, true);
-      this.wallLayer.putTileAt(1, 30, 5, true);
-      this.wallLayer.setCollision(1);
+    if (smallTileset) {
+      this.add.image(120, 120, "tiles_16").setDisplaySize(32, 32).setDepth(0);
+      this.add.image(800, 100, "tiles_16").setDisplaySize(32, 32).setDepth(0);
     }
   }
 

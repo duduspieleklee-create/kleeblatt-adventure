@@ -50,6 +50,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image("animal_chicken", "assets/elements/animals/spr_deco_chicken_01_strip4.png");
     this.load.image("vfx_dust", "assets/vfx/dust_general_strip9.png");
     this.load.image("vfx_smoke", "assets/vfx/chimneysmoke_01_strip30.png");
+    this.load.image("tiles_buildings", "assets/tilesets/SUNNYSIDE_WORLD_BUILDINGS_V0.01.png");
+    this.load.image("tiles_forest", "assets/tilesets/spr_tileset_sunnysideworld_forest_32px.png");
+    this.load.image("tiles_16", "assets/tilesets/spr_tileset_sunnysideworld_16px.png");
   }
 
   create(): void {
