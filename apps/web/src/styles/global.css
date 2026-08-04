@@ -1309,3 +1309,162 @@ button.primary:disabled {
   font-weight: 700;
   color: #ffd43b;
 }
+
+/* ─── Character Creation Screen ─────────────────────────────────── */
+
+.character-creation-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.character-creation-screen .card {
+  background: #1a221c;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.character-creation-screen h2 {
+  margin-top: 0;
+  color: #e8f0e8;
+  text-align: center;
+}
+
+.character-creation-screen .tag {
+  text-align: center;
+  margin-bottom: 24px;
+  color: #8fa88f;
+}
+
+.character-creation-screen .class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.character-creation-screen .class-card {
+  background: #141b16;
+  border: 2px solid #2a3a2e;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.character-creation-screen .class-card:hover {
+  border-color: #4cc95a;
+  transform: translateY(-2px);
+}
+
+.character-creation-screen .class-card.selected {
+  border-color: #4cc95a;
+  background-color: rgba(76, 201, 90, 0.1);
+}
+
+.character-creation-screen .class-card strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #e8f0e8;
+}
+
+.character-creation-screen .class-card span {
+  font-size: 0.9em;
+  color: #8fa88f;
+}
+
+.character-creation-screen .customization-section {
+  margin: 24px 0;
+  padding: 16px;
+  background: #141b16;
+  border-radius: 8px;
+}
+
+.character-creation-screen .customization-section h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  text-align: center;
+  color: #e8f0e8;
+}
+
+.character-creation-screen .customization-option {
+  margin-bottom: 20px;
+}
+
+.character-creation-screen .customization-option label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #e8f0e8;
+}
+
+.character-creation-screen .hair-style-options,
+.character-creation-screen .skin-tone-options,
+.character-creation-screen .clothing-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.character-creation-screen .hair-style,
+.character-creation-screen .skin-tone,
+.character-creation-screen .clothing {
+  padding: 8px 12px;
+  border: 1px solid #2a3a2e;
+  border-radius: 4px;
+  background: #0f1410;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.character-creation-screen .hair-style:hover,
+.character-creation-screen .skin-tone:hover,
+.character-creation-screen .clothing:hover {
+  border-color: #4cc95a;
+  background-color: rgba(76, 201, 90, 0.1);
+}
+
+.character-creation-screen .hair-style.selected,
+.character-creation-screen .skin-tone.selected,
+.character-creation-screen .clothing.selected {
+  border-color: #4cc95a;
+  background-color: rgba(76, 201, 90, 0.2);
+  font-weight: 500;
+}
+
+.character-creation-screen .button-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.character-creation-screen .button-group button {
+  flex: 1;
+}
+
+@media (max-width: 600px) {
+  .character-creation-screen .card {
+    padding: 16px;
+  }
+
+  .character-creation-screen .class-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .character-creation-screen .button-group {
+    flex-direction: column;
+  }
+}
+}
