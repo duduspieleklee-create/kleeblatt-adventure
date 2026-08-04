@@ -1223,3 +1223,89 @@ button.primary:disabled {
     box-shadow: 0 0 26px rgba(255, 214, 51, 1);
   }
 }
+
+.game-hud-bar {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 6px;
+}
+
+.game-hud-bar-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #cfdccf;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.game-hud-bar-track {
+  height: 10px;
+  border-radius: 5px;
+  background: #101810;
+  border: 1px solid #2a3a2e;
+  overflow: hidden;
+}
+
+.game-hud-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.25s ease-out;
+}
+
+.game-hud-bar--hp .game-hud-bar-fill {
+  background: linear-gradient(90deg, #c92a2a, #ff6b6b);
+}
+
+.game-hud-bar--mana .game-hud-bar-fill {
+  background: linear-gradient(90deg, #1971c2, #4dabf7);
+}
+
+.game-hud-bar--stamina .game-hud-bar-fill {
+  background: linear-gradient(90deg, #2f9e44, #69db7c);
+}
+
+.game-hud-bar-value {
+  font-size: 0.68rem;
+  color: #9fb89f;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-hud-skills {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.game-hud-skill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: rgba(16, 24, 16, 0.9);
+  border: 1px solid #2a3a2e;
+}
+
+.game-hud-skill-key {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #e8f0e8;
+}
+
+.game-hud-skill--cooldown {
+  opacity: 0.55;
+  filter: grayscale(0.7);
+}
+
+.game-hud-skill-cd {
+  position: absolute;
+  bottom: 3px;
+  right: 5px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #ffd43b;
+}
