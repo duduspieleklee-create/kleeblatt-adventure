@@ -15,6 +15,10 @@ import QuestSystem from '../systems/QuestSystem';
 import ShopSystem from '../systems/ShopSystem';
 import DialogueSystem, { DialogueData } from '../systems/DialogueSystem';
 
+const WORLD_W = 2400;
+const WORLD_H = 2400;
+const TILE_SIZE = 32;
+
 export class TownScene extends Phaser.Scene {
   private player!: Player;
   private npcs: NPC[] = [];
@@ -50,7 +54,7 @@ export class TownScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.cameras.main.setBackgroundColor('#3a5a2a');
+    this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
 
     this.inventorySystem = new InventorySystem(this);
     this.equipmentSystem = new EquipmentSystem(this);
@@ -66,14 +70,24 @@ export class TownScene extends Phaser.Scene {
     this.shopSystem.setInventorySystem(this.inventorySystem);
     this.dialogueSystem = new DialogueSystem(this);
 
-    this.player = new Player(this, 300, 300, 'hero_idle');
-    this.player.sprite.setScale(1.5);
-    this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
-    this.cameras.main.setZoom(1.5);
+    this.createGround();
+    this.createPaths();
+    this.createDecorations();
 
-    this.spawnNPCs();
-    this.spawnEnemies();
-    this.spawnBuildings();
+    const spawnX = WORLD_W / 2;
+    const spawnY = WORLD_H / 2;
+
+    this.player = new Player(this, spawnX, spawnY, 'hero_idle');
+    this.player.sprite.setScale(1.5);
+
+    this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
+    this.cameras.main.startFollow(this.player.sprite, true, 0.08, 0.08);
+    this.cameras.main.setZoom(1.2);
+    this.cameras.main.roundPixels = true;
+
+    this.spawnNPCs(spawnX, spawnY);
+    this.spawnEnemies(spawnX, spawnY);
+    this.spawnBuildings(spawnX, spawnY);
     this.createInteractionZones();
     this.setupInput();
     this.setupInteractionOverlap();
@@ -93,18 +107,206 @@ export class TownScene extends Phaser.Scene {
     this.handleSkillInput();
   }
 
-  private spawnNPCs(): void {
+  private createGround(): void {
+    const cols = Math.ceil(WORLD_W / TILE_SIZE);
+    const rows = Math.ceil(WORLD_H / TILE_SIZE);
+    const g = this.add.graphics();
+
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const noise = Phaser.Math.Between(-12, 12);
+        const r = Math.min(255, Math.max(0, 48 + noise));
+        const gr = Math.min(255, Math.max(0, 96 + noise));
+        const b = Math.min(255, Math.max(0, 36 + noise));
+        g.fillStyle(r << 16 | gr << 8 | b, 1);
+        g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE + 1, TILE_SIZE + 1);
+      }
+    }
+
+    const darkCols = Math.ceil(WORLD_W / 16);
+    const darkRows = Math.ceil(WORLD_H / 16);
+    const g2 = this.add.graphics();
+    for (let y = 0; y < darkRows; y++) {
+      for (let x = 0; x < darkCols; x++) {
+        if (Phaser.Math.Between(0, 100) < 15) {
+          const shade = Phaser.Math.Between(10, 30);
+          g2.fillStyle(shade << 16 | shade << 8 | shade, 0.15);
+          g2.fillRect(x * 16, y * 16, 17, 17);
+        }
+      }
+    }
+  }
+
+  private createPaths(): void {
+    const cx = WORLD_W / 2;
+    const cy = WORLD_H / 2;
+    const pw = 64;
+
+    const pathG = this.add.graphics();
+    pathG.fillStyle(0x9e8e70, 1);
+    pathG.fillRect(cx - pw / 2, 0, pw, WORLD_H);
+    pathG.fillRect(0, cy - pw / 2, WORLD_W, pw);
+
+    for (let i = 0; i < WORLD_H; i += 8) {
+      const n = Phaser.Math.Between(-4, 4);
+      pathG.fillStyle(0x8a7a5e, 1);
+      pathG.fillRect(cx - pw / 2 + Phaser.Math.Between(4, pw - 8) + n, i, 3, 3);
+    }
+    for (let i = 0; i < WORLD_W; i += 8) {
+      const n = Phaser.Math.Between(-4, 4);
+      pathG.fillStyle(0x8a7a5e, 1);
+      pathG.fillRect(i, cy - pw / 2 + Phaser.Math.Between(4, pw - 8) + n, 3, 3);
+    }
+
+    const bridgeG = this.add.graphics();
+    bridgeG.fillStyle(0x6b5638, 1);
+    bridgeG.fillRect(cx - pw / 2 - 4, cy - pw / 2, pw + 8, pw + 8);
+    bridgeG.fillStyle(0x8a7a5e, 0.5);
+    bridgeG.fillRect(cx - pw / 2, cy - pw / 2 + 2, pw, pw);
+  }
+
+  private createDecorations(): void {
+    const cx = WORLD_W / 2;
+    const cy = WORLD_H / 2;
+
+    const treePositions: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < 80; i++) {
+      let tx = Phaser.Math.Between(40, WORLD_W - 40);
+      let ty = Phaser.Math.Between(40, WORLD_H - 40);
+      const dx = tx - cx;
+      const dy = ty - cy;
+      if (Math.abs(dx) < 70 || Math.abs(dy) < 70) continue;
+      if (tx > cx - 150 && tx < cx + 150 && ty > cy - 150 && ty < cy + 150) continue;
+      treePositions.push({ x: tx, y: ty });
+    }
+
+    for (const pos of treePositions) {
+      const s = 32 + Phaser.Math.Between(0, 32);
+      const tree = this.add.image(pos.x, pos.y, 'tiles_forest');
+      tree.setDisplaySize(s, s);
+      tree.setAlpha(0.7 + Math.random() * 0.3);
+    }
+
+    const flowerPositions: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < 120; i++) {
+      const fx = Phaser.Math.Between(20, WORLD_W - 20);
+      const fy = Phaser.Math.Between(20, WORLD_H - 20);
+      const dx = fx - cx;
+      const dy = fy - cy;
+      if (Math.abs(dx) < 40 || Math.abs(dy) < 40) continue;
+      flowerPositions.push({ x: fx, y: fy });
+    }
+
+    const flowerColors = [0xff6b8a, 0xffd166, 0xa78bfa, 0x60a5fa, 0xf87171];
+    for (const pos of flowerPositions) {
+      const c = flowerColors[Phaser.Math.Between(0, flowerColors.length - 1)];
+      const fg = this.add.graphics();
+      fg.fillStyle(c, 1);
+      fg.fillCircle(pos.x, pos.y, 3);
+    }
+
+    const rockPositions: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < 40; i++) {
+      const rx = Phaser.Math.Between(40, WORLD_W - 40);
+      const ry = Phaser.Math.Between(40, WORLD_H - 40);
+      const dx = rx - cx;
+      const dy = ry - cy;
+      if (Math.abs(dx) < 80 || Math.abs(dy) < 80) continue;
+      rockPositions.push({ x: rx, y: ry });
+    }
+
+    for (const pos of rockPositions) {
+      const shade = 80 + Phaser.Math.Between(0, 40);
+      const rg = this.add.graphics();
+      rg.fillStyle(shade << 16 | shade << 8 | shade, 1);
+      rg.fillCircle(pos.x, pos.y, 6 + Phaser.Math.Between(0, 6));
+    }
+
+    const wellG = this.add.graphics();
+    wellG.fillStyle(0x5a5a5a, 1);
+    wellG.fillCircle(cx, cy, 36);
+    wellG.fillStyle(0x3a3a3a, 1);
+    wellG.fillCircle(cx, cy, 28);
+    wellG.fillStyle(0x4a8ab5, 0.8);
+    wellG.fillCircle(cx, cy, 24);
+
+    const postG = this.add.graphics();
+    postG.fillStyle(0x5a3a20, 1);
+    postG.fillRect(cx - 4, cy - 50, 8, 20);
+    postG.fillRect(cx - 4, cy + 30, 8, 20);
+
+    const fenceG = this.add.graphics();
+    fenceG.fillStyle(0x6b5030, 1);
+    for (let i = 0; i < 6; i++) {
+      const fx = cx - 100 + i * 40;
+      fenceG.fillRect(fx, cy - 120, 6, 24);
+    }
+    fenceG.fillRect(cx - 100, cy - 112, 240, 4);
+    fenceG.fillRect(cx - 100, cy - 100, 240, 4);
+
+    for (let i = 0; i < 6; i++) {
+      const fx = cx - 100 + i * 40;
+      fenceG.fillRect(fx, cy + 100, 6, 24);
+    }
+    fenceG.fillRect(cx - 100, cy + 104, 240, 4);
+    fenceG.fillRect(cx - 100, cy + 116, 240, 4);
+
+    const lampPositions = [
+      { x: cx + 80, y: cy },
+      { x: cx - 80, y: cy },
+      { x: cx, y: cy + 80 },
+      { x: cx, y: cy - 80 },
+      { x: cx + 200, y: cy },
+      { x: cx - 200, y: cy },
+      { x: cx, y: cy + 200 },
+      { x: cx, y: cy - 200 },
+    ];
+
+    for (const pos of lampPositions) {
+      const lg = this.add.graphics();
+      lg.fillStyle(0x4a4a4a, 1);
+      lg.fillRect(pos.x - 3, pos.y - 20, 6, 24);
+      lg.fillStyle(0xffee88, 0.9);
+      lg.fillCircle(pos.x, pos.y - 22, 5);
+      lg.fillStyle(0xffee88, 0.15);
+      lg.fillCircle(pos.x, pos.y - 22, 20);
+    }
+
+    const benchPositions = [
+      { x: cx + 120, y: cy + 60 },
+      { x: cx - 120, y: cy - 60 },
+    ];
+
+    for (const pos of benchPositions) {
+      const bg = this.add.graphics();
+      bg.fillStyle(0x5a3a20, 1);
+      bg.fillRect(pos.x - 16, pos.y - 4, 32, 8);
+      bg.fillRect(pos.x - 16, pos.y - 12, 4, 12);
+      bg.fillRect(pos.x + 12, pos.y - 12, 4, 12);
+      bg.fillRect(pos.x - 16, pos.y - 12, 32, 4);
+    }
+  }
+
+  private spawnNPCs(cx: number, cy: number): void {
     const npcData: { id: string; x: number; y: number; label: string; dialogue: NPCDialogue[] }[] = [
       {
-        id: 'haendler', x: 300, y: 180, label: 'Händler',
+        id: 'haendler', x: cx + 140, y: cy - 40, label: 'Händler',
         dialogue: [{ text: 'Willkommen! Was kann ich für dich tun?', options: ['Handeln', 'Gehen'] }],
       },
       {
-        id: 'auftraggeber', x: 450, y: 220, label: 'Auftraggeber',
+        id: 'auftraggeber', x: cx - 140, y: cy + 40, label: 'Auftraggeber',
         dialogue: [{ text: 'Ich brauche Hilfe! Sammle mir 5 Holz.', options: ['Annehmen', 'Ablehnen'] }],
       },
       {
-        id: 'taverne', x: 520, y: 300, label: 'Taverne',
+        id: 'schmied', x: cx + 40, y: cy + 140, label: 'Schmied',
+        dialogue: [{ text: 'Gute Waffen hier! Sieh dir um.', options: ['Schauen', 'Später'] }],
+      },
+      {
+        id: 'magierin', x: cx - 40, y: cy - 140, label: 'Magierin',
+        dialogue: [{ text: 'Die Magie fließt stark heute...', options: ['Lernen', 'Danke'] }],
+      },
+      {
+        id: 'taverne', x: cx + 200, y: cy + 100, label: 'Tavernenwirt',
         dialogue: [{ text: 'Ein Bier? Setz dich hin.', options: ['Ja', 'Nein'] }],
       },
     ];
@@ -116,15 +318,27 @@ export class TownScene extends Phaser.Scene {
     }
   }
 
-  private spawnEnemies(): void {
+  private spawnEnemies(cx: number, cy: number): void {
     const enemyData: { id: string; x: number; y: number; stats: Partial<EnemyStats> }[] = [
       {
-        id: 'slime', x: 600, y: 400,
+        id: 'slime', x: cx + 300, y: cy - 200,
         stats: { hp: 30, attack: 3, defense: 1, speed: 30, xpReward: 15, goldRewardMin: 1, goldRewardMax: 5 },
       },
       {
-        id: 'wolf', x: 700, y: 350,
+        id: 'slime2', x: cx - 280, y: cy + 250,
+        stats: { hp: 30, attack: 3, defense: 1, speed: 30, xpReward: 15, goldRewardMin: 1, goldRewardMax: 5 },
+      },
+      {
+        id: 'wolf', x: cx + 350, y: cy + 300,
         stats: { hp: 50, attack: 8, defense: 3, speed: 50, xpReward: 30, goldRewardMin: 5, goldRewardMax: 15 },
+      },
+      {
+        id: 'wolf2', x: cx - 350, y: cy - 300,
+        stats: { hp: 50, attack: 8, defense: 3, speed: 50, xpReward: 30, goldRewardMin: 5, goldRewardMax: 15 },
+      },
+      {
+        id: 'skeleton', x: cx + 400, y: cy,
+        stats: { hp: 80, attack: 12, defense: 5, speed: 40, xpReward: 50, goldRewardMin: 10, goldRewardMax: 25 },
       },
     ];
     for (const data of enemyData) {
@@ -135,11 +349,12 @@ export class TownScene extends Phaser.Scene {
     }
   }
 
-  private spawnBuildings(): void {
+  private spawnBuildings(cx: number, cy: number): void {
     const buildingData = [
-      { x: 300, y: 140, key: 'tiles_buildings', label: 'Rathaus' },
-      { x: 520, y: 260, key: 'tiles_buildings', label: 'Taverne' },
-      { x: 300, y: 300, key: 'tiles_buildings', label: 'Händler' },
+      { x: cx - 130, y: cy - 130, key: 'tiles_buildings', label: 'Rathaus' },
+      { x: cx + 210, y: cy + 110, key: 'tiles_buildings', label: 'Taverne' },
+      { x: cx + 50, y: cy + 150, key: 'tiles_buildings', label: 'Schmiede' },
+      { x: cx - 50, y: cy - 150, key: 'tiles_buildings', label: 'Magieturm' },
     ];
     for (const data of buildingData) {
       const building = new Building(this, data.x, data.y, data.key, data.label);

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { gameBridge } from "@kleeblatt/shared";
 import { createGame } from "../game/createGame";
 import type { HeroClass } from "@kleeblatt/shared";
-import { MobileControls } from "../components/MobileControls";
 import { GameHud } from "../components/GameHud";
 import { submitMatchResult } from "../lib/api";
 
@@ -17,7 +16,7 @@ interface MatchPageProps {
 
 export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }: MatchPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [matchActive, setMatchActive] = useState(false);
+  const [matchActive, setMatchActive] = useState(true);
   const [showInventory, setShowInventory] = useState(false);
 
   const toggleInventory = () => {
@@ -33,6 +32,7 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
 
     game.events.on("ready", () => {
       console.info("[MatchPage] Phaser game ready");
+      setMatchActive(true);
     });
 
     game.events.on("shutdown", () => {
@@ -79,6 +79,10 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
     gameBridge.emit("match:exit", {});
   }, []);
 
+  useEffect(() => {
+    handleStart();
+  }, [handleStart]);
+
   return (
     <div className="game-container">
       {showInventory ? (
@@ -88,29 +92,19 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
           </button>
           <InventoryScreen />
         </div>
-      ) : (
-        !matchActive ? (
-          <div className="game-overlay">
-            <p>Wähle deinen Weg – die Map erwartet dich.</p>
-            <button type="button" className="primary" onClick={handleStart}>
-              Abenteuer starten ↗
-            </button>
-          </div>
-        ) : (
-          <div className="game-overlay-top">
-            <p>Match aktiv – WASD zum Bewegen, Maus zum Zielen.</p>
-            <button type="button" onClick={handleExit}>
-              Verlassen
-            </button>
-            <button type="button" onClick={toggleInventory}>
-              Inventar
-            </button>
-          </div>
-        )
+      ) : null}
+      {matchActive && (
+        <div className="game-overlay-top">
+          <button type="button" onClick={handleExit}>
+            Verlassen
+          </button>
+          <button type="button" onClick={toggleInventory}>
+            Inventar
+          </button>
+        </div>
       )}
       <div ref={containerRef} />
       {matchActive && <GameHud />}
-      <MobileControls />
     </div>
   );
 }

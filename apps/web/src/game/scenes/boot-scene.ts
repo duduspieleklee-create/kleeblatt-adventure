@@ -246,8 +246,8 @@ export class BootScene extends Phaser.Scene {
         repeat: 0,
       });
 
-      devLog("[BootScene] all animations created, starting match scene");
-      this.scene.start("match");
+      devLog("[BootScene] all animations created, starting town scene");
+      this.scene.start("town");
     } catch (e) {
       console.error(`[BootScene] create() CRASHED: ${e}`);
     }
