@@ -30,6 +30,7 @@ export class MatchScene extends Phaser.Scene {
   private readonly matchStartHandler = this.onMatchStart.bind(this);
   private readonly loadoutUpdateHandler = this.onLoadoutUpdate.bind(this);
   private vfxZones: Array<{ x: number; y: number; radius: number; key: string }> = [];
+  private enemy!: Phaser.Physics.Arcade.Sprite;
 
   constructor() {
     super("match");
@@ -39,6 +40,7 @@ export class MatchScene extends Phaser.Scene {
   create(): void {
     this.createMap();
     this.createPlayer();
+    this.createSkeleton();
     this.createCrops();
     this.createAnimals();
     this.createVfxTriggers();
@@ -46,6 +48,13 @@ export class MatchScene extends Phaser.Scene {
     this.setupCamera();
     this.setupCollisions();
     this.setupGameBridge();
+  }
+
+  private createSkeleton(): void {
+    this.enemy = this.physics.add.sprite(800, 400, "skeleton_idle");
+    this.enemy.setCollideWorldBounds(true);
+    this.enemy.setDepth(10);
+    this.enemy.play("skeleton_idle");
   }
 
   private createMap(): void {
@@ -96,10 +105,10 @@ export class MatchScene extends Phaser.Scene {
     const startX = 640;
     const startY = 480;
 
-    this.player = this.physics.add.sprite(startX, startY, "player");
+    this.player = this.physics.add.sprite(startX, startY, "hero_idle");
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(10);
-    this.player.setScale(1);
+    this.player.play("hero_idle");
   }
 
   private setupInput(): void {
@@ -218,6 +227,27 @@ export class MatchScene extends Phaser.Scene {
 
     this.handleMovement();
     this.maybeSpawnVfx(this.player.x, this.player.y);
+    this.updatePlayerAnimation();
+    this.updateEnemyAnimation();
+  }
+
+  private updatePlayerAnimation(): void {
+    const body = this.player.body;
+    const vx = body?.velocity.x ?? 0;
+    const vy = body?.velocity.y ?? 0;
+    const speed = Math.sqrt(vx * vx + vy * vy);
+    if (speed > 10) {
+      this.player.play("hero_run", true);
+    } else if (speed > 0) {
+      this.player.play("hero_walk", true);
+    } else {
+      this.player.play("hero_idle", true);
+    }
+  }
+
+  private updateEnemyAnimation(): void {
+    if (!this.enemy?.active) return;
+    this.enemy.play("skeleton_idle", true);
   }
 
   private handleMovement(): void {

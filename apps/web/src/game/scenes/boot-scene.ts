@@ -53,9 +53,87 @@ export class BootScene extends Phaser.Scene {
     this.load.image("tiles_buildings", "assets/tilesets/SUNNYSIDE_WORLD_BUILDINGS_V0.01.png");
     this.load.image("tiles_forest", "assets/tilesets/spr_tileset_sunnysideworld_forest_32px.png");
     this.load.image("tiles_16", "assets/tilesets/spr_tileset_sunnysideworld_16px.png");
+    this.load.spritesheet("hero_idle", "assets/characters/base_idle_strip9.png", { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("hero_walk", "assets/characters/base_walk_strip8.png", { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("hero_run", "assets/characters/base_run_strip8.png", { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("hero_attack", "assets/characters/base_attack_strip10.png", { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("hero_hurt", "assets/characters/base_hurt_strip8.png", { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("hero_death", "assets/characters/base_death_strip13.png", { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("skeleton_idle", "assets/characters/skeleton_idle_strip6.png", { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("skeleton_walk", "assets/characters/skeleton_walk_strip8.png", { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("skeleton_attack", "assets/characters/skeleton_attack_strip7.png", { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("skeleton_hurt", "assets/characters/skeleton_hurt_strip7.png", { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("skeleton_death", "assets/characters/skeleton_death_strip10.png", { frameWidth: 64, frameHeight: 64 });
   }
 
   create(): void {
+    this.anims.create({
+      key: "hero_idle",
+      frames: this.anims.generateFrameNumbers("hero_idle", { start: 0, end: 8 }),
+      frameRate: 8,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "hero_walk",
+      frames: this.anims.generateFrameNumbers("hero_walk", { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "hero_run",
+      frames: this.anims.generateFrameNumbers("hero_run", { start: 0, end: 7 }),
+      frameRate: 12,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "hero_attack",
+      frames: this.anims.generateFrameNumbers("hero_attack", { start: 0, end: 9 }),
+      frameRate: 14,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "hero_hurt",
+      frames: this.anims.generateFrameNumbers("hero_hurt", { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "hero_death",
+      frames: this.anims.generateFrameNumbers("hero_death", { start: 0, end: 12 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "skeleton_idle",
+      frames: this.anims.generateFrameNumbers("skeleton_idle", { start: 0, end: 5 }),
+      frameRate: 8,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "skeleton_walk",
+      frames: this.anims.generateFrameNumbers("skeleton_walk", { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "skeleton_attack",
+      frames: this.anims.generateFrameNumbers("skeleton_attack", { start: 0, end: 6 }),
+      frameRate: 12,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "skeleton_hurt",
+      frames: this.anims.generateFrameNumbers("skeleton_hurt", { start: 0, end: 6 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "skeleton_death",
+      frames: this.anims.generateFrameNumbers("skeleton_death", { start: 0, end: 9 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+
     this.scene.start("match");
   }
 }
