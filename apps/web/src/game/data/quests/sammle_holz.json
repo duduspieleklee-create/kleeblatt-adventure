@@ -1,0 +1,16 @@
+{
+  "id": "sammle_holz",
+  "title": "Sammle Holz",
+  "description": "Der Auftraggeber braucht 5 Holzstücke für ein Lagerfeuer.",
+  "giver": "auftraggeber",
+  "requirements": {
+    "collect": {
+      "item": "holz",
+      "amount": 5
+    }
+  },
+  "rewards": {
+    "xp": 100,
+    "gold": 20
+  }
+}

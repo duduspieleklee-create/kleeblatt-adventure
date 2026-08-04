@@ -10,7 +10,7 @@ import { DebugConsole } from "../components/DebugConsole";
 import { OnboardingChoice } from "../components/OnboardingChoice";
 import { NeulingIntro } from "../components/NeulingIntro";
 import { ExperteIntro } from "../components/ExperteIntro";
-import { MatchPage } from "./MatchPageSimple";
+import { MatchPage } from "./MatchPage";
 
 /** Summiere Stats aller ausgerüsteten Items. */
 function sumEquippedStats(
