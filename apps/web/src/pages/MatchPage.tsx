@@ -21,11 +21,11 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
     const container = containerRef.current;
     if (!container) return;
 
-    console.log("[MatchPage] creating Phaser game");
+    console.info("[MatchPage] creating Phaser game");
     const game = createGame(container);
 
     game.events.on("ready", () => {
-      console.log("[MatchPage] Phaser game ready");
+      console.info("[MatchPage] Phaser game ready");
     });
 
     game.events.on("shutdown", () => {

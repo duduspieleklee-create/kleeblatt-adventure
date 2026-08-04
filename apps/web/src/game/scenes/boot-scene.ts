@@ -5,7 +5,7 @@ const CHAR_FRAME = { frameWidth: 96, frameHeight: 64 } as const;
 
 /** Dev-only logging helper. */
 function devLog(...args: unknown[]) {
-  if (import.meta.env.DEV) console.log(...args);
+  if (import.meta.env.DEV) console.info(...args);
 }
 function devWarn(...args: unknown[]) {
   if (import.meta.env.DEV) console.warn(...args);
