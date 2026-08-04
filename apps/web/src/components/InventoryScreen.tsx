@@ -17,13 +17,13 @@ const InventoryScreen: React.FC = () => {
 
   useEffect(() => {
     // Listen for inventory updates from the game
-    const unsubscribe = gameBridge.on('inventory:update', (data: any) => {
+    const unsubscribe = gameBridge.on('inventory:update', (data: { items?: InventoryItem[] }) => {
       setInventory(data.items || []);
       setLoading(false);
     });
 
     // Listen for errors
-    const unsubscribeError = gameBridge.on('inventory:error', (err: any) => {
+    const unsubscribeError = gameBridge.on('inventory:error', (err: { message?: string }) => {
       setError(err.message || 'Failed to load inventory');
       setLoading(false);
     });

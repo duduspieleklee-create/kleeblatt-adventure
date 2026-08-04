@@ -2,7 +2,7 @@
 // This provides a lightweight in-memory event bus with simple on/emit semantics
 // matching the usage in InventoryScreen.tsx (on returns an unsubscribe function).
 
-type Handler = (data?: any) => void;
+type Handler = (data?: unknown) => void;
 
 class GameBridge {
   private listeners: Map<string, Set<Handler>> = new Map();
@@ -20,7 +20,7 @@ class GameBridge {
     };
   }
 
-  emit(event: string, data?: any): void {
+  emit(event: string, data?: unknown): void {
     const set = this.listeners.get(event);
     if (!set) return;
     // Copy to array to avoid issues if handlers remove themselves while iterating
