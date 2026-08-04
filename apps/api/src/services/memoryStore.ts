@@ -12,5 +12,8 @@ export const memWallets = new Map<
   { address: string; status: "pending" | "ready" | "disconnected"; provider: string }
 >();
 
+/** Geöffnete Kisten je User (Fallback ohne Postgres). Key: `${userId}:${chestId}` → ISO-Datum. */
+export const memChestOpens = new Map<string, string>();
+
 /** Onboarding-Status je User (P11) */
 export const memOnboardings = new Map<string, OnboardingStatus>();

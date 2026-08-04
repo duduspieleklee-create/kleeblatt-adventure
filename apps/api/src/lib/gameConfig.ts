@@ -20,6 +20,26 @@ export interface StarterGearItem {
   description: string;
 }
 
+/** Eintrag einer Loot-Tabelle (game-config.json → lootTables). */
+export interface LootEntry {
+  templateId: string;
+  name: string;
+  slot: string;
+  rarity: string;
+  weight: number;
+  allowedClasses?: string[];
+  stats: Record<string, number>;
+  mintCandidate?: boolean;
+}
+
+/** Weighted-Loot-Tabelle je Kiste (docs/architecture/24-api-contract.md §2.9). */
+export interface LootTable {
+  chestId: string;
+  rolls: number;
+  respawnRule: string;
+  entries: LootEntry[];
+}
+
 export interface GameConfig {
   starterGear: Record<string, StarterGearItem[]>;
   itemStateEnum: string[];
@@ -43,6 +63,7 @@ export interface GameConfig {
     mapSize: { width: number; height: number; tileSize: number };
     playerSpawn: { x: number; y: number };
   };
+  lootTables: Record<string, LootTable>;
 }
 
 let cached: GameConfig | null = null;
