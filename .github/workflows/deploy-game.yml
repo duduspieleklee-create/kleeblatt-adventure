@@ -89,10 +89,24 @@ jobs:
           PORT="${DEPLOY_PORT:-22}"
           HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
           PATH_DEST="$(echo "$DEPLOY_PATH" | sed 's|/*$|/|')"
-          rsync -avz --delete \
+          rsync -avz --delete --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
             -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
             apps/web/dist/ \
             "${DEPLOY_USER}@${HOST}:${PATH_DEST}"
+
+      - name: Ensure remote deploy path ownership
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          API_REMOTE_PATH: ${{ secrets.DEPLOY_API_PATH }}
+        run: |
+          # Ensure the remote path exists and is writable by the deploy user.
+          # Requires that the deploy user can run sudo without password for these ops.
+          PORT="${DEPLOY_PORT:-22}"
+          HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
+          API_PATH="${API_REMOTE_PATH:-/opt/kleeblatt-adventure}"
+          ssh -p "$PORT" -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${HOST}" "sudo mkdir -p ${API_PATH} && sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ${API_PATH} || true"
 
       - name: Rsync API app to server
         env:
@@ -104,14 +118,16 @@ jobs:
           PORT="${DEPLOY_PORT:-22}"
           HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
           API_PATH="${API_REMOTE_PATH:-/opt/kleeblatt-adventure}"
-          rsync -avz --delete \
+          # Only sync the files needed for the API runtime (reduce touching unrelated files that may be owned by other users)
+          rsync -avz --delete --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
             -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
             --exclude node_modules --exclude .git --exclude .turbo --exclude apps/web --exclude .kilo \
-            ./ "${DEPLOY_USER}@${HOST}:${API_PATH}/"
-          rsync -avz \
+            package.json package-lock.json apps/api/ "${DEPLOY_USER}@${HOST}:${API_PATH}/"
+          # Deploy built dist artifacts
+          rsync -avz --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
             -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
             apps/api/dist/ "${DEPLOY_USER}@${HOST}:${API_PATH}/apps/api/dist/"
-          rsync -avz \
+          rsync -avz --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
             -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
             packages/shared/dist/ "${DEPLOY_USER}@${HOST}:${API_PATH}/packages/shared/dist/"
 
