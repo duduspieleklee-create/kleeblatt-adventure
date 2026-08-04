@@ -1,10 +1,19 @@
 import Phaser from "phaser";
 import { gameBridge, type GameBridgeEvents } from "@kleeblatt/shared";
+import { createCharacterAnimations, CHARACTER_ANIMS } from "../character-anims";
 
 export class MatchScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
+  private skeleton!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private wasd!: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
+  private attackKey!: Phaser.Input.Keyboard.Key;
+  private attacking = false;
+  private wasd!: {
+    W: Phaser.Input.Keyboard.Key;
+    A: Phaser.Input.Keyboard.Key;
+    S: Phaser.Input.Keyboard.Key;
+    D: Phaser.Input.Keyboard.Key;
+  };
   private map!: Phaser.Tilemaps.Tilemap;
   private groundLayer!: Phaser.Tilemaps.TilemapLayer;
   private wallLayer!: Phaser.Tilemaps.TilemapLayer;
@@ -38,7 +47,9 @@ export class MatchScene extends Phaser.Scene {
 
   create(): void {
     this.createMap();
+    createCharacterAnimations(this);
     this.createPlayer();
+    this.createEnemies();
     this.setupInput();
     this.setupCamera();
     this.setupCollisions();
@@ -92,10 +103,24 @@ export class MatchScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(10);
     this.player.setScale(1);
+    if (this.anims.exists(CHARACTER_ANIMS.player.idle)) {
+      this.player.play(CHARACTER_ANIMS.player.idle);
+    }
+  }
+
+  /** Gegner-Sprite: Skelett mit Idle-Animation (echtes Spritesheet, #84). */
+  private createEnemies(): void {
+    this.skeleton = this.physics.add.sprite(1024, 480, "skeleton_idle");
+    this.skeleton.setDepth(10);
+    this.skeleton.setCollideWorldBounds(true);
+    if (this.anims.exists(CHARACTER_ANIMS.skeleton.idle)) {
+      this.skeleton.play(CHARACTER_ANIMS.skeleton.idle);
+    }
   }
 
   private setupInput(): void {
     this.cursors = this.input.keyboard!.createCursorKeys();
+    this.attackKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.wasd = {
       W: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
       A: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
@@ -113,6 +138,8 @@ export class MatchScene extends Phaser.Scene {
   private setupCollisions(): void {
     if (this.wallLayer) {
       this.physics.add.collider(this.player, this.wallLayer);
+      this.physics.add.collider(this.skeleton, this.wallLayer);
+      this.physics.add.collider(this.player, this.skeleton);
     }
   }
 
@@ -150,15 +177,29 @@ export class MatchScene extends Phaser.Scene {
 
   private emitInitialStats(): void {
     gameBridge.emit("player:hp", { current: this.stats.currentHp, max: this.stats.maxHp });
-    gameBridge.emit("player:resource", { current: this.stats.currentMana, max: this.stats.maxMana, type: "mana" });
-    gameBridge.emit("player:resource", { current: this.stats.currentStamina, max: this.stats.maxStamina, type: "stamina" });
-    gameBridge.emit("player:level", { level: this.stats.level, xp: this.stats.xp, xpToNext: this.stats.xpToNext });
+    gameBridge.emit("player:resource", {
+      current: this.stats.currentMana,
+      max: this.stats.maxMana,
+      type: "mana",
+    });
+    gameBridge.emit("player:resource", {
+      current: this.stats.currentStamina,
+      max: this.stats.maxStamina,
+      type: "stamina",
+    });
+    gameBridge.emit("player:level", {
+      level: this.stats.level,
+      xp: this.stats.xp,
+      xpToNext: this.stats.xpToNext,
+    });
   }
 
   update(): void {
     if (!this.matchStarted) return;
 
     this.handleMovement();
+    this.handleAttack();
+    this.updatePlayerAnimation();
   }
 
   private handleMovement(): void {
@@ -179,6 +220,29 @@ export class MatchScene extends Phaser.Scene {
     const body = this.player.body;
     if (body && body.velocity) {
       body.velocity.normalize().scale(speed);
+    }
+  }
+
+  /** Space: Basisangriff-Animation (einmalig, mit Cooldown bis Animationsende). */
+  private handleAttack(): void {
+    if (Phaser.Input.Keyboard.JustDown(this.attackKey) && !this.attacking) {
+      this.attacking = true;
+      this.player.play(CHARACTER_ANIMS.player.attack, true);
+      this.player.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+        this.attacking = false;
+      });
+    }
+  }
+
+  /** Idle-/Walk-Animation passend zur Bewegung (Attack läuft ungestört weiter). */
+  private updatePlayerAnimation(): void {
+    if (this.attacking) return;
+    const body = this.player.body;
+    const moving = body !== null && body.velocity.length() > 0;
+    const anim = moving ? CHARACTER_ANIMS.player.walk : CHARACTER_ANIMS.player.idle;
+    if (!this.anims.exists(anim)) return;
+    if (this.player.anims.currentAnim?.key !== anim) {
+      this.player.play(anim, true);
     }
   }
 

@@ -57,7 +57,6 @@ export interface RuntimeTexture {
   path: string;
   sheet?: { frameWidth: number; frameHeight: number; frameMax: number };
 }
-
 export const RUNTIME_TEXTURES: Record<string, RuntimeTexture> = {
   player: {
     path: "assets/characters/base_walk_strip8.png",
@@ -71,6 +70,52 @@ export const RUNTIME_TEXTURES: Record<string, RuntimeTexture> = {
   tile_wall: { path: "assets/tilesets/spr_tileset_sunnysideworld_forest_32px.png" },
   chest: { path: "assets/elements/crops/crate_base.png" },
 };
+
+/**
+ * Aktions-Spritesheets je Charakter (P5, Workboard #84).
+ * Dateiname ohne Extension; Keys werden `${character}_${action}`.
+ */
+export interface CharacterSheetSet {
+  idle: string;
+  walk: string;
+  run?: string;
+  attack: string;
+  hurt: string;
+  death: string;
+}
+
+export const CHARACTER_SHEETS: Record<string, CharacterSheetSet> = {
+  player: {
+    idle: "base_idle_strip9",
+    walk: "base_walk_strip8",
+    run: "base_run_strip8",
+    attack: "base_attack_strip10",
+    hurt: "base_hurt_strip8",
+    death: "base_death_strip13",
+  },
+  skeleton: {
+    idle: "skeleton_idle_strip6",
+    walk: "skeleton_walk_strip8",
+    attack: "skeleton_attack_strip7",
+    hurt: "skeleton_hurt_strip7",
+    death: "skeleton_death_strip10",
+  },
+};
+
+/**
+ * Registriert die Aktions-Spritesheets (96x64) aller Charaktere.
+ * Keys: `${character}_${action}` → assets/characters/${file}.png
+ */
+export function registerCharacterSheets(scene: Phaser.Scene): void {
+  for (const [character, actions] of Object.entries(CHARACTER_SHEETS)) {
+    for (const [action, file] of Object.entries(actions)) {
+      if (!file) continue;
+      scene.load.spritesheet(`${character}_${action}`, `assets/characters/${file}.png`, {
+        ...CHARACTER_FRAME,
+      });
+    }
+  }
+}
 
 /**
  * Registriert alle Manifest-Assets beim Phaser-Loader.
