@@ -1,6 +1,14 @@
 import Phaser from "phaser";
 import { gameBridge, type GameBridgeEvents } from "@kleeblatt/shared";
 
+/** Dev-only logging helper. */
+function devLog(...args: unknown[]) {
+  if (import.meta.env.DEV) console.log(...args);
+}
+function devError(...args: unknown[]) {
+  if (import.meta.env.DEV) console.error(...args);
+}
+
 export class MatchScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -29,18 +37,24 @@ export class MatchScene extends Phaser.Scene {
 
   private matchId: string;
   private matchStarted = false;
-  private enemiesKilled = 0;
+private enemiesKilled = 0;
   private chestsOpened = 0;
-  private readonly pauseHandler = () => this.scene.pause();
-  private readonly resumeHandler = () => this.scene.resume();
+  private readonly pauseHandler = () => this.scene.pause("match");
+  private readonly resumeHandler = () => this.scene.resume("match");
   private readonly matchExitHandler = () => this.onMatchExit();
   private readonly matchStartHandler = this.onMatchStart.bind(this);
   private readonly loadoutUpdateHandler = this.onLoadoutUpdate.bind(this);
   private vfxZones: Array<{ x: number; y: number; radius: number; key: string }> = [];
   private enemy!: Phaser.Physics.Arcade.Sprite;
-  private villageZone = { x: 320, y: 240, width: 320, height: 240 };
+  private villageZone!: { x: number; y: number; width: number; height: number };
   private landmarks: Array<{ label: string; x: number; y: number }> = [];
   private npcs: Array<{ label: string; x: number; y: number }> = [];
+  private activeTimers: Phaser.Time.TimerEvent[] = [];
+
+  // Pre-created particle emitters (avoids per-frame allocation leak)
+  private vfxEmitters: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
+  private vfxLastSpawn = 0;
+  private readonly VFX_THROTTLE_MS = 200;
 
   constructor() {
     super("match");
@@ -49,86 +63,32 @@ export class MatchScene extends Phaser.Scene {
 
   create(): void {
     try {
-      console.log("[MatchScene] create() started");
+      devLog("[MatchScene] create() started");
       this.createMap();
-      console.log("[MatchScene] map created");
+      devLog("[MatchScene] map created");
       this.createVillage();
-      console.log("[MatchScene] village created");
+      devLog("[MatchScene] village created");
       this.createPlayer();
-      console.log("[MatchScene] player created");
+      devLog("[MatchScene] player created");
       this.createSkeleton();
-      console.log("[MatchScene] skeleton created");
+      devLog("[MatchScene] skeleton created");
       this.createCrops();
       this.createAnimals();
       this.createVfxTriggers();
+      this.createVfxEmitters();
       this.setupInput();
       this.setupCamera();
       this.setupCollisions();
       this.setupGameBridge();
 
-      console.log("[MatchScene] auto-starting match");
+      devLog("[MatchScene] auto-starting match");
       this.matchStarted = true;
       this.emitInitialStats();
       gameBridge.emit("match:started", { matchId: this.matchId });
-      console.log("[MatchScene] match started, player at", this.player.x, this.player.y);
+      devLog("[MatchScene] match started, player at", this.player.x, this.player.y);
     } catch (e) {
-      console.error(`[MatchScene] create() CRASHED: ${e}`);
+      devError(`[MatchScene] create() CRASHED: ${e}`);
     }
-  }
-
-  private createVillage(): void {
-    const zone = this.villageZone;
-
-    this.add.rectangle(zone.x + zone.width / 2, zone.y + zone.height / 2, zone.width, zone.height, 0x2a4a2e, 0.25)
-      .setDepth(0).setScrollFactor(0);
-
-    this.add.text(zone.x + zone.width / 2, zone.y - 15, "Willkommen-Dorf", {
-      fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-      fontSize: "18px",
-      color: "#88ff88",
-    }).setOrigin(0.5).setDepth(2);
-
-    this.add.text(zone.x + zone.width / 2, zone.y + zone.height + 15, "Sicherer Bereich", {
-      fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-      fontSize: "12px",
-      color: "#8fa88f",
-    }).setOrigin(0.5).setDepth(2);
-
-    this.landmarks = [
-      { label: "Rathaus", x: 400, y: 200 },
-      { label: "Taverne", x: 560, y: 200 },
-      { label: "Lagerfeuer", x: 480, y: 360 },
-    ];
-
-    this.npcs = [
-      { label: "Auftraggeber", x: 420, y: 260 },
-      { label: "Händler", x: 540, y: 260 },
-    ];
-
-    for (const lm of this.landmarks) {
-      this.add.rectangle(lm.x, lm.y, 40, 40, 0x5a3a1a, 0.8).setDepth(1);
-      this.add.text(lm.x, lm.y - 25, lm.label, {
-        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-        fontSize: "11px",
-        color: "#e8f0e8",
-      }).setOrigin(0.5).setDepth(2);
-    }
-
-    for (const npc of this.npcs) {
-      this.add.circle(npc.x, npc.y, 12, 0x88cc44, 0.9).setDepth(1);
-      this.add.text(npc.x, npc.y - 20, npc.label, {
-        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-        fontSize: "10px",
-        color: "#ffcc44",
-      }).setOrigin(0.5).setDepth(2);
-    }
-  }
-
-  private createSkeleton(): void {
-    this.enemy = this.physics.add.sprite(800, 400, "skeleton_idle");
-    this.enemy.setCollideWorldBounds(true);
-    this.enemy.setDepth(10);
-    this.enemy.play("skeleton_idle");
   }
 
   private createMap(): void {
@@ -145,6 +105,12 @@ export class MatchScene extends Phaser.Scene {
     if (forestTileset) {
       const groundLayer = this.map.createBlankLayer("ground", forestTileset, 0, 0);
       if (groundLayer) {
+        // Fill ground with tile 0
+        for (let x = 0; x < width; x++) {
+          for (let y = 0; y < height; y++) {
+            groundLayer.putTileAt(0, x, y, true);
+          }
+        }
       }
     }
 
@@ -175,14 +141,99 @@ export class MatchScene extends Phaser.Scene {
     }
   }
 
-  private createPlayer(): void {
-    const startX = 640;
-    const startY = 480;
+  private createVillage(): void {
+    const mapW = this.map.widthInPixels;
+    const mapH = this.map.heightInPixels;
 
-    this.player = this.physics.add.sprite(startX, startY, "hero_idle");
+    // Village zone centered in the map
+    this.villageZone = {
+      x: mapW * 0.2,
+      y: mapH * 0.2,
+      width: mapW * 0.6,
+      height: mapH * 0.6,
+    };
+
+    const zone = this.villageZone;
+
+    this.add.rectangle(zone.x + zone.width / 2, zone.y + zone.height / 2, zone.width, zone.height, 0x2a4a2e, 0.25)
+      .setDepth(0).setScrollFactor(0);
+
+    this.add.text(zone.x + zone.width / 2, zone.y - 15, "Willkommen-Dorf", {
+      fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+      fontSize: "18px",
+      color: "#88ff88",
+    }).setOrigin(0.5).setDepth(2);
+
+    this.add.text(zone.x + zone.width / 2, zone.y + zone.height + 15, "Sicherer Bereich", {
+      fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+      fontSize: "12px",
+      color: "#8fa88f",
+    }).setOrigin(0.5).setDepth(2);
+
+    this.landmarks = [
+      { label: "Rathaus", x: zone.x + zone.width * 0.25, y: zone.y + zone.height * 0.25 },
+      { label: "Taverne", x: zone.x + zone.width * 0.75, y: zone.y + zone.height * 0.25 },
+      { label: "Lagerfeuer", x: zone.x + zone.width * 0.5, y: zone.y + zone.height * 0.75 },
+    ];
+
+    this.npcs = [
+      { label: "Auftraggeber", x: zone.x + zone.width * 0.3, y: zone.y + zone.height * 0.5 },
+      { label: "Händler", x: zone.x + zone.width * 0.7, y: zone.y + zone.height * 0.5 },
+    ];
+
+    for (const lm of this.landmarks) {
+      this.add.rectangle(lm.x, lm.y, 40, 40, 0x5a3a1a, 0.8).setDepth(1);
+      this.add.text(lm.x, lm.y - 25, lm.label, {
+        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+        fontSize: "11px",
+        color: "#e8f0e8",
+      }).setOrigin(0.5).setDepth(2);
+    }
+
+    for (const npc of this.npcs) {
+      this.add.circle(npc.x, npc.y, 12, 0x88cc44, 0.9).setDepth(1);
+      this.add.text(npc.x, npc.y - 20, npc.label, {
+        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+        fontSize: "10px",
+        color: "#ffcc44",
+      }).setOrigin(0.5).setDepth(2);
+    }
+  }
+
+  private createPlayer(): void {
+    const mapW = this.map.widthInPixels;
+    const mapH = this.map.heightInPixels;
+
+    this.player = this.physics.add.sprite(mapW * 0.5, mapH * 0.5, "hero_idle");
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(10);
-    this.player.play("hero_idle");
+    this.player.play("hero_idle", true);
+  }
+
+  private createSkeleton(): void {
+    const mapW = this.map.widthInPixels;
+    const mapH = this.map.heightInPixels;
+
+    this.enemy = this.physics.add.sprite(mapW * 0.75, mapH * 0.75, "skeleton_idle");
+    this.enemy.setCollideWorldBounds(true);
+    this.enemy.setDepth(10);
+    this.enemy.play("skeleton_idle", true);
+  }
+
+  private createVfxEmitters(): void {
+    // Pre-create one emitter per VFX zone to avoid per-frame allocation leak
+    for (const zone of this.vfxZones) {
+      const emitter = this.add.particles(zone.x, zone.y, zone.key, {
+        speed: { min: 10, max: 30 },
+        lifespan: 600,
+        quantity: 1,
+        scale: { start: 0.5, end: 0 },
+        alpha: { start: 0.6, end: 0 },
+        maxParticles: 30,
+        emitting: false,
+      });
+      this.vfxEmitters.push(emitter);
+    }
   }
 
   private setupInput(): void {
@@ -193,6 +244,19 @@ export class MatchScene extends Phaser.Scene {
       S: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
       D: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
+
+    // Capture game keys to prevent browser scrolling
+    this.input.keyboard!.addCapture([
+      Phaser.Input.Keyboard.KeyCodes.UP,
+      Phaser.Input.Keyboard.KeyCodes.DOWN,
+      Phaser.Input.Keyboard.KeyCodes.LEFT,
+      Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      Phaser.Input.Keyboard.KeyCodes.W,
+      Phaser.Input.Keyboard.KeyCodes.A,
+      Phaser.Input.Keyboard.KeyCodes.S,
+      Phaser.Input.Keyboard.KeyCodes.D,
+      Phaser.Input.Keyboard.KeyCodes.SPACE,
+    ]);
   }
 
   private setupCamera(): void {
@@ -204,6 +268,7 @@ export class MatchScene extends Phaser.Scene {
   private setupCollisions(): void {
     if (this.wallLayer) {
       this.physics.add.collider(this.player, this.wallLayer);
+      this.physics.add.collider(this.enemy, this.wallLayer);
     }
   }
 
@@ -216,11 +281,12 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private createCrops(): void {
+    const zone = this.villageZone;
     const crops = [
-      { x: 200, y: 200, key: "crop_wheat" },
-      { x: 240, y: 200, key: "crop_wheat" },
-      { x: 200, y: 240, key: "crop_carrot" },
-      { x: 400, y: 300, key: "crop_pumpkin" },
+      { x: zone.x + 40, y: zone.y + 40, key: "crop_wheat" },
+      { x: zone.x + 80, y: zone.y + 40, key: "crop_wheat" },
+      { x: zone.x + 40, y: zone.y + 80, key: "crop_carrot" },
+      { x: zone.x + zone.width - 60, y: zone.y + zone.height - 60, key: "crop_pumpkin" },
     ];
 
     for (const crop of crops) {
@@ -229,9 +295,10 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private createAnimals(): void {
+    const zone = this.villageZone;
     const animals = [
-      { x: 700, y: 300, key: "animal_cow" },
-      { x: 750, y: 320, key: "animal_chicken" },
+      { x: zone.x + zone.width * 0.8, y: zone.y + zone.height * 0.3, key: "animal_cow" },
+      { x: zone.x + zone.width * 0.85, y: zone.y + zone.height * 0.35, key: "animal_chicken" },
     ];
 
     for (const animal of animals) {
@@ -240,27 +307,30 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private createVfxTriggers(): void {
+    const mapW = this.map.widthInPixels;
+    const mapH = this.map.heightInPixels;
+
     this.vfxZones = [
-      { x: 500, y: 500, radius: 80, key: "vfx_dust" },
-      { x: 900, y: 200, radius: 60, key: "vfx_smoke" },
+      { x: mapW * 0.4, y: mapH * 0.6, radius: 80, key: "vfx_dust" },
+      { x: mapW * 0.8, y: mapH * 0.2, radius: 60, key: "vfx_smoke" },
     ];
   }
 
-  private maybeSpawnVfx(x: number, y: number): void {
-    if (!this.vfxZones) return;
-    for (const zone of this.vfxZones) {
+  private maybeSpawnVfx(x: number, y: number, time: number): void {
+    // Throttle VFX spawning to avoid per-frame allocation
+    if (time - this.vfxLastSpawn < this.VFX_THROTTLE_MS) return;
+
+    for (let i = 0; i < this.vfxZones.length; i++) {
+      const zone = this.vfxZones[i];
+      if (!zone) continue;
       const dx = x - zone.x;
       const dy = y - zone.y;
       if (dx * dx + dy * dy <= zone.radius * zone.radius) {
-        const emitter = this.add.particles(zone.x, zone.y, zone.key, {
-          speed: { min: 10, max: 30 },
-          lifespan: 600,
-          quantity: 1,
-          scale: { start: 1, end: 0 },
-          alpha: { start: 0.6, end: 0 },
-          emitting: false,
-        });
-        emitter.explode(8);
+        const emitter = this.vfxEmitters[i];
+        if (emitter) {
+          emitter.explode(8);
+          this.vfxLastSpawn = time;
+        }
       }
     }
   }
@@ -319,25 +389,31 @@ export class MatchScene extends Phaser.Scene {
     });
   }
 
-  update(): void {
+  update(time: number, _delta: number): void {
     if (!this.matchStarted) return;
 
     this.handleMovement();
-    this.maybeSpawnVfx(this.player.x, this.player.y);
+    this.maybeSpawnVfx(this.player.x, this.player.y, time);
     this.updatePlayerAnimation();
     this.updateEnemyAnimation();
   }
 
   private updatePlayerAnimation(): void {
-    const body = this.player.body;
+    if (!this.player.active) return;
+
+    const body = this.player.body as Phaser.Physics.Arcade.Body | null;
     const vx = body?.velocity.x ?? 0;
     const vy = body?.velocity.y ?? 0;
     const speed = Math.sqrt(vx * vx + vy * vy);
-    if (speed > 10) {
+
+    if (speed > 150) {
+      this.player.anims.stop();
       this.player.play("hero_run", true);
-    } else if (speed > 0) {
+    } else if (speed > 10) {
+      this.player.anims.stop();
       this.player.play("hero_walk", true);
     } else {
+      this.player.anims.stop();
       this.player.play("hero_idle", true);
     }
   }
@@ -354,25 +430,41 @@ export class MatchScene extends Phaser.Scene {
     const up = this.cursors.up?.isDown || this.wasd.W?.isDown;
     const down = this.cursors.down?.isDown || this.wasd.S?.isDown;
 
-    this.player.setVelocity(0);
+    // Compute normalized direction in local variables (don't mutate body.velocity directly)
+    let vx = 0;
+    let vy = 0;
 
-    if (left) this.player.setVelocityX(-speed);
-    else if (right) this.player.setVelocityX(speed);
+    if (left) vx -= 1;
+    if (right) vx += 1;
+    if (up) vy -= 1;
+    if (down) vy += 1;
 
-    if (up) this.player.setVelocityY(-speed);
-    else if (down) this.player.setVelocityY(speed);
-
-    const body = this.player.body;
-    if (body && body.velocity) {
-      body.velocity.normalize().scale(speed);
+    if (vx !== 0 || vy !== 0) {
+      const len = Math.sqrt(vx * vx + vy * vy);
+      this.player.setVelocity((vx / len) * speed, (vy / len) * speed);
+    } else {
+      this.player.setVelocity(0);
     }
   }
 
   shutdown(): void {
-    gameBridge!.off("match:start", this.matchStartHandler);
-    gameBridge!.off("loadout:update", this.loadoutUpdateHandler);
-    gameBridge!.off("pause", this.pauseHandler);
-    gameBridge!.off("resume", this.resumeHandler);
-    gameBridge!.off("match:exit", this.matchExitHandler);
+    // Clean up tracked timers
+    for (const t of this.activeTimers) {
+      t.remove(false);
+    }
+    this.activeTimers = [];
+
+    // Clean up particle emitters
+    for (const emitter of this.vfxEmitters) {
+      emitter.destroy();
+    }
+    this.vfxEmitters = [];
+
+    // Clean up gameBridge listeners
+    gameBridge.off("match:start", this.matchStartHandler);
+    gameBridge.off("loadout:update", this.loadoutUpdateHandler);
+    gameBridge.off("pause", this.pauseHandler);
+    gameBridge.off("resume", this.resumeHandler);
+    gameBridge.off("match:exit", this.matchExitHandler);
   }
 }

@@ -179,6 +179,22 @@ export async function fetchOnboardingStatus(): Promise<ApiResult<OnboardingStatu
   return { ok: true, status: res.status, data: body as OnboardingStatus };
 }
 
+export async function fetchWalletBalance(): Promise<ApiResult<import("@kleeblatt/shared").WalletBalance>> {
+  const res = await apiFetch("/wallet/balance");
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Wallet-Balance konnte nicht geladen werden.") };
+  return { ok: true, status: res.status, data: body as import("@kleeblatt/shared").WalletBalance };
+}
+
+export async function walletAuth(address: string): Promise<ApiResult<{ ok: boolean; redirect: string }>> {
+  const res = await apiFetch("/wallet/auth", { method: "POST", body: JSON.stringify({ address }) });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Wallet-Login fehlgeschlagen.") };
+  return { ok: true, status: res.status, data: body as { ok: boolean; redirect: string } };
+}
+
 export async function chooseOnboardingPath(path: OnboardingPath): Promise<ApiResult<OnboardingStatus>> {
   const res = await apiFetch("/onboarding/path", { method: "POST", body: JSON.stringify({ path }) });
   const body = await res.json().catch(() => null);

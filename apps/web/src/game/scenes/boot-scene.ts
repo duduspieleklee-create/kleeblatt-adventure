@@ -1,5 +1,16 @@
 import Phaser from "phaser";
 
+/** SunnySide character spritesheets: 96px wide per frame, 64px high. */
+const CHAR_FRAME = { frameWidth: 96, frameHeight: 64 } as const;
+
+/** Dev-only logging helper. */
+function devLog(...args: unknown[]) {
+  if (import.meta.env.DEV) console.log(...args);
+}
+function devWarn(...args: unknown[]) {
+  if (import.meta.env.DEV) console.warn(...args);
+}
+
 export class BootScene extends Phaser.Scene {
   private loadingText!: Phaser.GameObjects.Text;
   private detailText!: Phaser.GameObjects.Text;
@@ -14,18 +25,24 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    const { width, height } = this.scale;
+    const barWidth = Math.min(360, width * 0.55);
+    const barX = (width - barWidth) / 2;
+    const barY = height / 2 + 20;
+
     this.progressBox = this.add.graphics();
-    this.progressBox.fillStyle(0x1a221c, 0.8);
-    this.progressBox.fillRoundedRect(220, 260, 320, 24, 12);
+    this.progressBox.fillStyle(0x1a221c, 0.85);
+    this.progressBox.fillRoundedRect(barX, barY, barWidth, 20, 10);
+
     this.progressBar = this.add.graphics();
 
-    this.loadingText = this.add.text(380, 235, "Lade Assets …", {
+    this.loadingText = this.add.text(width / 2, height / 2 - 40, "Lade Assets …", {
       fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-      fontSize: "16px",
+      fontSize: "18px",
       color: "#e8f0e8",
     }).setOrigin(0.5);
 
-    this.detailText = this.add.text(380, 295, "", {
+    this.detailText = this.add.text(width / 2, barY + 32, "", {
       fontFamily: "Cascadia Code, Fira Code, monospace",
       fontSize: "11px",
       color: "#8fa88f",
@@ -45,24 +62,22 @@ export class BootScene extends Phaser.Scene {
       this.loadDone = Math.round(value * this.loadTotal);
       this.progressBar.clear();
       this.progressBar.fillStyle(0x3faf4a, 1);
-      this.progressBar.fillRoundedRect(226, 266, 288 * value, 12, 8);
+      this.progressBar.fillRoundedRect(barX + 3, barY + 3, (barWidth - 6) * value, 14, 7);
       this.loadingText.setText(`Lade Assets … (${this.loadDone}/${this.loadTotal})`);
     });
 
-    this.load.on("filecomplete", (_key: string, _file: unknown) => {
-      const current = allFiles[this.loadDone - 1];
-      if (current) {
-        this.detailText.setText(`✓ ${current}`);
-        console.log(`[BootScene] loaded ${current} (${this.loadDone}/${this.loadTotal})`);
-      }
+    this.load.on("filecomplete", (key: string, _fileType: string) => {
+      this.detailText.setText(`✓ ${key}`);
+      this.detailText.setColor("#8fa88f");
+      devLog(`[BootScene] loaded ${key} (${this.loadDone}/${this.loadTotal})`);
     });
 
-    this.load.on("loaderror", (file: { key?: string; url?: string }) => {
-      const key = file.key || file.url || "unknown";
+    this.load.on("loaderror", (_file: Phaser.Loader.File, _key: string, _frame: string, xhr: unknown) => {
+      const key = _key || _file?.key || "unknown";
       this.loadErrors.push(key);
       this.detailText.setText(`✗ ${key} (FEHLGESCHLAGEN)`);
       this.detailText.setColor("#ff4444");
-      console.error(`[BootScene] FAILED: ${key}`);
+      console.error(`[BootScene] FAILED: ${key}`, xhr);
     });
 
     this.load.on("complete", () => {
@@ -70,20 +85,26 @@ export class BootScene extends Phaser.Scene {
       this.detailText.setText(`${this.loadDone}/${this.loadTotal} geladen${this.loadErrors.length ? ` · ${this.loadErrors.length} Fehler` : ""}`);
     });
 
+    // Tilesets (single images)
     this.load.image("tiles_buildings", "assets/tilesets/SUNNYSIDE_WORLD_BUILDINGS_V0.01.png");
     this.load.image("tiles_forest", "assets/tilesets/spr_tileset_sunnysideworld_forest_32px.png");
     this.load.image("tiles_16", "assets/tilesets/spr_tileset_sunnysideworld_16px.png");
-    this.load.spritesheet("hero_idle", "assets/characters/base_idle_strip9.png", { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet("hero_walk", "assets/characters/base_walk_strip8.png", { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet("hero_run", "assets/characters/base_run_strip8.png", { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet("hero_attack", "assets/characters/base_attack_strip10.png", { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet("hero_hurt", "assets/characters/base_hurt_strip8.png", { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet("hero_death", "assets/characters/base_death_strip13.png", { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet("skeleton_idle", "assets/characters/skeleton_idle_strip6.png", { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet("skeleton_walk", "assets/characters/skeleton_walk_strip8.png", { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet("skeleton_attack", "assets/characters/skeleton_attack_strip7.png", { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet("skeleton_hurt", "assets/characters/skeleton_hurt_strip7.png", { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet("skeleton_death", "assets/characters/skeleton_death_strip10.png", { frameWidth: 64, frameHeight: 64 });
+
+    // Character spritesheets — 96×64 frames (SunnySide convention)
+    this.load.spritesheet("hero_idle", "assets/characters/base_idle_strip9.png", CHAR_FRAME);
+    this.load.spritesheet("hero_walk", "assets/characters/base_walk_strip8.png", CHAR_FRAME);
+    this.load.spritesheet("hero_run", "assets/characters/base_run_strip8.png", CHAR_FRAME);
+    this.load.spritesheet("hero_attack", "assets/characters/base_attack_strip10.png", CHAR_FRAME);
+    this.load.spritesheet("hero_hurt", "assets/characters/base_hurt_strip8.png", CHAR_FRAME);
+    this.load.spritesheet("hero_death", "assets/characters/base_death_strip13.png", CHAR_FRAME);
+
+    this.load.spritesheet("skeleton_idle", "assets/characters/skeleton_idle_strip6.png", CHAR_FRAME);
+    this.load.spritesheet("skeleton_walk", "assets/characters/skeleton_walk_strip8.png", CHAR_FRAME);
+    this.load.spritesheet("skeleton_attack", "assets/characters/skeleton_attack_strip7.png", CHAR_FRAME);
+    this.load.spritesheet("skeleton_hurt", "assets/characters/skeleton_hurt_strip7.png", CHAR_FRAME);
+    this.load.spritesheet("skeleton_death", "assets/characters/skeleton_death_strip10.png", CHAR_FRAME);
+
+    // Elements (single images)
     this.load.image("crop_wheat", "assets/elements/crops/wheat_00.png");
     this.load.image("crop_carrot", "assets/elements/crops/carrot_00.png");
     this.load.image("crop_pumpkin", "assets/elements/crops/pumpkin_00.png");
@@ -95,7 +116,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     try {
-      console.log("[BootScene] create() started");
+      devLog("[BootScene] create() started");
 
       if (this.loadErrors.length) {
         console.error(
@@ -103,21 +124,23 @@ export class BootScene extends Phaser.Scene {
         );
       }
 
-      const missing = [
-        "hero_idle","hero_walk","hero_run","hero_attack","hero_hurt","hero_death",
-        "skeleton_idle","skeleton_walk","skeleton_attack","skeleton_hurt","skeleton_death",
+      // Generate fallback textures for missing character spritesheets
+      const charFallbacks = [
+        "hero_idle", "hero_walk", "hero_run", "hero_attack", "hero_hurt", "hero_death",
+        "skeleton_idle", "skeleton_walk", "skeleton_attack", "skeleton_hurt", "skeleton_death",
       ];
-      for (const key of missing) {
+      for (const key of charFallbacks) {
         if (!this.textures.exists(key)) {
           const g = this.make.graphics({ x: 0, y: 0 });
           g.fillStyle(0xffffff, 1);
-          g.fillRect(0, 0, 64, 64);
-          g.generateTexture(key, 64, 64);
+          g.fillRect(0, 0, 96, 64);
+          g.generateTexture(key, 96, 64);
           g.destroy();
-          console.warn(`[BootScene] fallback generated for ${key}`);
+          devWarn(`[BootScene] fallback generated for ${key}`);
         }
       }
 
+      // Generate fallback for missing tilesets
       const tileFallbacks: Array<{ key: string; w: number; h: number; color: number }> = [
         { key: "tiles_buildings", w: 32, h: 32, color: 0x5a3a1a },
         { key: "tiles_forest", w: 32, h: 32, color: 0x2a5a2a },
@@ -130,27 +153,28 @@ export class BootScene extends Phaser.Scene {
           g.fillRect(0, 0, t.w, t.h);
           g.generateTexture(t.key, t.w, t.h);
           g.destroy();
-          console.warn(`[BootScene] fallback generated for ${t.key}`);
+          devWarn(`[BootScene] fallback generated for ${t.key}`);
         }
       }
 
-      const uiFallbacks = [
+      // Generate fallback for missing elements
+      const elFallbacks = [
         "crop_wheat", "crop_carrot", "crop_pumpkin",
         "animal_cow", "animal_chicken",
         "vfx_dust", "vfx_smoke",
       ];
-      for (const key of uiFallbacks) {
+      for (const key of elFallbacks) {
         if (!this.textures.exists(key)) {
           const g = this.make.graphics({ x: 0, y: 0 });
           g.fillStyle(0x888888, 1);
           g.fillRect(0, 0, 32, 32);
           g.generateTexture(key, 32, 32);
           g.destroy();
-          console.warn(`[BootScene] fallback generated for ${key}`);
+          devWarn(`[BootScene] fallback generated for ${key}`);
         }
       }
 
-      console.log("[BootScene] creating animations");
+      devLog("[BootScene] creating animations");
       this.anims.create({
         key: "hero_idle",
         frames: this.anims.generateFrameNumbers("hero_idle", { start: 0, end: 8 }),
@@ -218,7 +242,7 @@ export class BootScene extends Phaser.Scene {
         repeat: 0,
       });
 
-      console.log("[BootScene] all animations created, starting match scene");
+      devLog("[BootScene] all animations created, starting match scene");
       this.scene.start("match");
     } catch (e) {
       console.error(`[BootScene] create() CRASHED: ${e}`);

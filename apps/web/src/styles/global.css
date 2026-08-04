@@ -492,6 +492,18 @@ button.primary:disabled {
   image-rendering: pixelated;
 }
 
+.topbar-balance {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  color: #b8cbb8;
+  background: #2a3a2e;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .topbar-account {
   display: flex;
   align-items: center;
@@ -764,6 +776,36 @@ button.primary:disabled {
   text-align: center;
   font-size: 1rem;
   padding: 0.75rem 1rem;
+}
+
+.btn.wallet-link {
+  background: transparent;
+  border: 1px dashed #2a3a2e;
+  color: #8fa88f;
+  font-size: 0.9rem;
+  padding: 0.6rem 1rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.btn.wallet-link:hover {
+  border-color: #44aacc;
+  color: #44aacc;
+  background: transparent;
+}
+
+.btn.wallet-back {
+  background: transparent;
+  border: 1px solid #2a3a2e;
+  color: #8fa88f;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+}
+
+.btn.wallet-back:hover {
+  border-color: #8fa88f;
+  color: #e8f0e8;
 }
 
 /* ─── Responsive ────────────────────────────────────────── */
