@@ -1,65 +1,122 @@
-import { useCallback } from "react";
-import { useHealth } from "../hooks/useHealth";
+import { useState, useCallback, useEffect } from "react";
 import { useMe } from "../hooks/useMe";
 import { useHero } from "../hooks/useHero";
-import { WalletCard } from "../components/WalletCard";
-import { StatusCard } from "../components/StatusCard";
-import { AuthCard } from "../components/AuthCard";
-import { HeroSetupCard } from "../components/HeroSetupCard";
-import { HeroDashboardCard } from "../components/HeroDashboardCard";
-import { NextStepsCard } from "../components/NextStepsCard";
+import { TopBar } from "../components/TopBar";
+import { LandingPage } from "../components/LandingPage";
+import { AuthOverlay } from "../components/AuthOverlay";
+import { DebugConsole } from "../components/DebugConsole";
 import { MatchPage } from "./MatchPage";
-
-const showDevLogin = import.meta.env.DEV;
+import type { HeroResponse } from "@kleeblatt/shared";
 
 export function HomePage() {
-  const health = useHealth();
-  const { state: meState, logout } = useMe();
+  const { state: meState, logout, refresh: refreshMe } = useMe();
   const hero = useHero();
+  const [showAuth, setShowAuth] = useState(false);
 
-  const handleCreated = useCallback(() => {
-    void hero.refresh();
-  }, [hero]);
+  const isAuthenticated = meState.status === "authenticated";
+
+  const handlePlay = useCallback(() => {
+    if (!isAuthenticated) {
+      setShowAuth(true);
+    } else if (hero.state.status === "none") {
+      setShowAuth(true);
+    }
+  }, [isAuthenticated, hero.state.status]);
+
+  const handleHeroCreated = useCallback(
+    (_resp: HeroResponse) => {
+      void hero.refresh();
+      void refreshMe();
+      setShowAuth(false);
+    },
+    [hero, refreshMe],
+  );
+
+  const handleAuthenticated = useCallback(() => {
+    void refreshMe();
+  }, [refreshMe]);
+
+  useEffect(() => {
+    if (isAuthenticated) setShowAuth(false);
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="app-shell">
+        <LandingPage onPlay={handlePlay} />
+        {showAuth && (
+          <AuthOverlay
+            meState={meState}
+            onAuthenticated={handleAuthenticated}
+            onHeroCreated={handleHeroCreated}
+            onClose={() => setShowAuth(false)}
+          />
+        )}
+        <DebugConsole />
+      </div>
+    );
+  }
+
+  if (hero.state.status === "loading") {
+    return (
+      <div className="app-shell">
+        <TopBar meState={meState} hero={null} walletAddress={undefined} onLogout={() => void logout()} />
+        <div className="app-body app-center">
+          <p className="muted">Lade Held-Daten …</p>
+        </div>
+        <DebugConsole />
+      </div>
+    );
+  }
+
+  if (hero.state.status === "error") {
+    return (
+      <div className="app-shell">
+        <TopBar meState={meState} hero={null} walletAddress={undefined} onLogout={() => void logout()} />
+        <div className="app-body app-center">
+          <p className="error">{hero.state.message}</p>
+        </div>
+        <DebugConsole />
+      </div>
+    );
+  }
+
+  if (hero.state.status === "none") {
+    return (
+      <div className="app-shell">
+        <TopBar meState={meState} hero={null} walletAddress={undefined} onLogout={() => void logout()} />
+        <div className="app-body">
+          <LandingPage onPlay={handlePlay} />
+        </div>
+        {showAuth && (
+          <AuthOverlay
+            meState={meState}
+            onAuthenticated={handleAuthenticated}
+            onHeroCreated={handleHeroCreated}
+            onClose={() => setShowAuth(false)}
+          />
+        )}
+        <DebugConsole />
+      </div>
+    );
+  }
 
   return (
-    <div className="app">
-      <header>
-        <h1>Kleeblatt Adventure</h1>
-        <p className="tag">Prototyp – P9 Wallet</p>
-      </header>
-      <main>
-        <StatusCard health={health} hero={hero.state.status === "ready" ? hero.state.hero : null} />
-        <AuthCard state={meState} onLogout={() => void logout()} showDevLogin={showDevLogin} />
-
-        {meState.status === "authenticated" &&
-          (hero.state.status === "loading" ? (
-            <section className="card">
-              <p className="muted">Lade Held …</p>
-            </section>
-          ) : hero.state.status === "error" ? (
-            <section className="card">
-              <p className="error">{hero.state.message}</p>
-            </section>
-          ) : hero.state.status === "none" ? (
-            <HeroSetupCard onCreated={handleCreated} />
-          ) : (
-            <>
-              <HeroDashboardCard
-                hero={hero.state.hero}
-                inventory={hero.state.inventory}
-                onChange={hero.refresh}
-              />
-              <WalletCard />
-              <MatchPage
-                heroClass={hero.state.hero.class}
-                heroLevel={hero.state.hero.level}
-                equippedStats={{}}
-              />
-            </>
-          ))}
-
-        <NextStepsCard />
-      </main>
+    <div className="app-shell">
+      <TopBar
+        meState={meState}
+        hero={hero.state.hero}
+        walletAddress={undefined}
+        onLogout={() => void logout()}
+      />
+      <div className="app-body game-wrapper">
+        <MatchPage
+          heroClass={hero.state.hero.class}
+          heroLevel={hero.state.hero.level}
+          equippedStats={{}}
+        />
+      </div>
+      <DebugConsole />
     </div>
   );
 }
