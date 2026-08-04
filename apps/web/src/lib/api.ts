@@ -122,3 +122,30 @@ export function googleLoginUrl(): string {
 export function devLoginUrl(): string {
   return apiUrl("/auth/dev-login");
 }
+
+export interface MatchResultResponse {
+  matchId: string;
+  xpGained: number;
+  newLevel: number;
+  xp: number;
+  xpToNext: number | null;
+  leveledUp: boolean;
+  hero: Hero;
+}
+
+/** POST /match/result – XP + Level-Up server-authoritativ verrechnen. */
+export async function submitMatchResult(input: {
+  matchId: string;
+  enemiesKilled: number;
+  chestsOpened: number;
+}): Promise<ApiResult<MatchResultResponse>> {
+  const res = await apiFetch("/match/result", { method: "POST", body: JSON.stringify(input) });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return {
+      ok: false,
+      status: res.status,
+      message: errorMessage(body, "Match-Ergebnis konnte nicht gespeichert werden."),
+    };
+  return { ok: true, status: res.status, data: body as MatchResultResponse };
+}

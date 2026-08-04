@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type { HeroResponse } from "@kleeblatt/shared";
 import { StatusCard } from "../components/StatusCard";
 import { NextStepsCard } from "../components/NextStepsCard";
@@ -12,6 +12,23 @@ import { useHero } from "../hooks/useHero";
 
 const showDevLogin = import.meta.env.DEV;
 
+/** Summiere Stats aller ausgerüsteten Items. */
+function sumEquippedStats(
+  hero: { equipped: Record<string, string> },
+  inventory: Array<{ itemId: string; stats: Record<string, number> }>,
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const itemId of Object.values(hero.equipped ?? {})) {
+    const item = inventory.find((i) => i.itemId === itemId);
+    if (item?.stats) {
+      for (const [key, val] of Object.entries(item.stats)) {
+        result[key] = (result[key] ?? 0) + val;
+      }
+    }
+  }
+  return result;
+}
+
 export function HomePage() {
   const health = useHealth();
   const { state: meState, logout } = useMe();
@@ -24,11 +41,22 @@ export function HomePage() {
     [hero],
   );
 
+  // Equipped stats für MatchPage berechnen
+  const equippedStats = useMemo(() => {
+    if (hero.state.status !== "ready") return {};
+    return sumEquippedStats(hero.state.hero, hero.state.inventory);
+  }, [hero.state]);
+
+  // Nach Match-Ende (XP + Level-Up verrechnet) Held neu laden
+  const handleMatchResult = useCallback(() => {
+    hero.refresh();
+  }, [hero]);
+
   return (
     <div className="app">
       <header>
         <h1>Kleeblatt Adventure</h1>
-        <p className="tag">Prototyp – P2 Held &amp; Starter-Gear</p>
+        <p className="tag">Prototyp – P4/P6 MatchScene + XP</p>
       </header>
       <main>
         <StatusCard health={health} />
@@ -52,7 +80,12 @@ export function HomePage() {
                 inventory={hero.state.inventory}
                 onChange={hero.refresh}
               />
-              <MatchPage />
+              <MatchPage
+                heroClass={hero.state.hero.class}
+                heroLevel={hero.state.hero.level}
+                equippedStats={equippedStats}
+                onMatchResult={handleMatchResult}
+              />
             </>
           ))}
 
