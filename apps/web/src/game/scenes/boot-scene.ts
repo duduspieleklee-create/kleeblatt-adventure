@@ -1,58 +1,59 @@
 import Phaser from "phaser";
-import { gameBridge } from "@kleeblatt/shared";
+import {
+  ensureFallbackTextures,
+  registerCharacterSheets,
+  registerManifestAssets,
+  registerRuntimeTextures,
+  setupLoadingProgress,
+  type AssetManifest,
+} from "../asset-loader";
 
 /**
- * BootScene – lädt Platzhalter-Assets für den Prototyp (P4).
- * Nach Abschluss emittiert sie "match:started" via gameBridge,
- * damit React das HUD einblenden kann.
+ * BootScene – lädt echte Assets aus dem asset-manifest (P5, #83).
+ *
+ * Phase 1 (preload): Laufzeit-Texturen (player, enemy_bruiser, tile_ground,
+ * tile_wall, chest) + asset-manifest.json, mit Ladebalken.
+ * Phase 2 (create): alle Manifest-Assets + Charakter-Sheets nachladen
+ * (der Loader verarbeitet die Queue sequenziell – neue Dateien während des
+ * Ladens sind nicht erlaubt), dann Start der MatchScene.
+ * Fallback: fehlende/failed Assets werden als Platzhalter-Texturen
+ * generiert, damit der Prototyp nie an fehlenden Dateien hängt.
  */
 export class BootScene extends Phaser.Scene {
+  private manifest: AssetManifest | null = null;
+  private assetsQueued = false;
+
   constructor() {
     super("boot");
   }
 
   preload(): void {
-    // Einfache Platzhalter-Grafiken per Code generieren (keine externen Assets nötig)
-    const graphics = this.make.graphics({ x: 0, y: 0 });
-
-    // Spieler: grünes Quadrat (32x32)
-    graphics.fillStyle(0x00cc44, 1);
-    graphics.fillRect(0, 0, 32, 32);
-    graphics.generateTexture("player", 32, 32);
-    graphics.clear();
-
-    // Enemy (Bruiser): rotes Quadrat (40x40)
-    graphics.fillStyle(0xcc2222, 1);
-    graphics.fillRect(0, 0, 40, 40);
-    graphics.generateTexture("enemy_bruiser", 40, 40);
-    graphics.clear();
-
-    // Tile (Boden): graues Quadrat (32x32)
-    graphics.fillStyle(0x444444, 1);
-    graphics.fillRect(0, 0, 32, 32);
-    graphics.generateTexture("tile_ground", 32, 32);
-    graphics.clear();
-
-    // Tile (Wand): dunkelgraues Quadrat (32x32)
-    graphics.fillStyle(0x222222, 1);
-    graphics.fillRect(0, 0, 32, 32);
-    graphics.generateTexture("tile_wall", 32, 32);
-    graphics.clear();
-
-    // Kiste: gelbes Quadrat (28x28)
-    graphics.fillStyle(0xccaa00, 1);
-    graphics.fillRect(0, 0, 28, 28);
-    graphics.generateTexture("chest", 28, 28);
-    graphics.clear();
-
-    // Projectile (Basisangriff): kleines weißes Quadrat (8x8)
-    graphics.fillStyle(0xffffff, 1);
-    graphics.fillRect(0, 0, 8, 8);
-    graphics.generateTexture("projectile", 8, 8);
-    graphics.destroy();
+    setupLoadingProgress(this);
+    registerRuntimeTextures(this);
+    this.load.json("asset-manifest", "assets/asset-manifest.json");
   }
 
   create(): void {
+    if (!this.manifest) {
+      const cached = this.cache.json.get("asset-manifest") as AssetManifest | null;
+      if (cached) this.manifest = cached;
+    }
+
+    // Phase 2: Manifest-Assets + Charakter-Sheets nachladen.
+    if (this.manifest && !this.assetsQueued) {
+      this.assetsQueued = true;
+      registerManifestAssets(this, this.manifest);
+      registerCharacterSheets(this);
+      this.load.once("complete", () => this.startMatch());
+      this.load.start();
+      return;
+    }
+
+    this.startMatch();
+  }
+
+  private startMatch(): void {
+    ensureFallbackTextures(this);
     this.scene.start("match");
   }
 }
