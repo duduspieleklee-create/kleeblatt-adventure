@@ -31,7 +31,7 @@ export function HomePage() {
         <p className="tag">Prototyp – P2 Held &amp; Starter-Gear</p>
       </header>
       <main>
-        <StatusCard health={health} />
+        <StatusCard health={health} hero={hero.state.status === "ready" ? hero.state.hero : null} />
         <AuthCard state={meState} onLogout={() => void logout()} showDevLogin={showDevLogin} />
 
         {meState.status === "authenticated" &&

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { HERO_CLASS_OPTIONS, type Hero, type InventoryItem } from "@kleeblatt/shared";
 import { equipItem, unequipItem } from "../lib/api";
+import { getSlotIcon, getToolIcon } from "../lib/gameStats";
+import { UI_ASSETS } from "../lib/uiAssets";
 
 interface HeroDashboardCardProps {
   hero: Hero;
@@ -84,7 +86,10 @@ export function HeroDashboardCard({ hero, inventory, onChange }: HeroDashboardCa
             {inventory.map((item) => (
               <li key={item.itemId} className={`item${item.equipped ? " equipped" : ""}`}>
                 <div>
-                  <strong>{item.name}</strong>
+                  <strong>
+                    <img src={getToolIcon(item.templateId)} alt="" className="item-icon" />
+                    {item.name}
+                  </strong>
                   <span className="muted">
                     {item.slot ? (SLOT_LABELS[item.slot] ?? item.slot) : "?"} · {item.rarity}
                     {item.stats && Object.keys(item.stats).length > 0
