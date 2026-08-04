@@ -8,6 +8,10 @@ export interface WalletResponse {
   provider: string;
   depositAddress?: string;
   chainId?: number;
+  /** Mock ETH balance (wei → ETH formatted) */
+  ethBalance?: string;
+  /** Mock IMX balance */
+  imxBalance?: string;
 }
 
 export interface WalletConnectRequest {
@@ -22,4 +26,10 @@ export interface WalletConnectResponse {
   provider: string;
   depositAddress: string;
   isNewUser: boolean;
+}
+
+export interface WalletBalance {
+  address: string;
+  ethBalance: string;
+  imxBalance: string;
 }

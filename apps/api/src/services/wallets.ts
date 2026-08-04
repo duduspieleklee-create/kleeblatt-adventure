@@ -23,6 +23,20 @@ export function mockDepositAddress(address: string): string {
   return `0x${address.slice(2).split("").reverse().join("").slice(0, 40)}`;
 }
 
+/** Deterministic mock balance from address (for prototype display). */
+function mockBalance(address: string): { eth: string; imx: string } {
+  const seed = address
+    .split("")
+    .reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 2166136261);
+  const eth = ((seed % 50000) / 10000).toFixed(4);
+  const imx = ((seed % 250000) / 100).toFixed(2);
+  return { eth, imx };
+}
+
+export function getMockBalance(address: string): { eth: string; imx: string } {
+  return mockBalance(address);
+}
+
 export interface WalletView {
   address: string;
   status: "pending" | "ready" | "disconnected";

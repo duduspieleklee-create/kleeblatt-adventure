@@ -6,12 +6,14 @@ interface TopBarProps {
   meState: MeState;
   hero: Hero | null;
   walletAddress?: string;
+  ethBalance?: string;
+  imxBalance?: string;
   onLogout: () => void;
   onInventory?: () => void;
   onSettings?: () => void;
 }
 
-export function TopBar({ meState, hero, walletAddress, onLogout, onInventory, onSettings }: TopBarProps) {
+export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, onLogout, onInventory, onSettings }: TopBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (meState.status !== "authenticated") return null;
@@ -52,6 +54,16 @@ export function TopBar({ meState, hero, walletAddress, onLogout, onInventory, on
           <span className="topbar-wallet" title={walletAddress}>
             <img src="/assets/ui/wallet.png" alt="" className="topbar-wallet-icon" onError={(e) => (e.currentTarget.style.display = "none")} />
             {walletAddress.slice(0, 4)}…{walletAddress.slice(-4)}
+          </span>
+        )}
+        {ethBalance && (
+          <span className="topbar-balance" title={ethBalance}>
+            {ethBalance} ETH
+          </span>
+        )}
+        {imxBalance && (
+          <span className="topbar-balance" title={imxBalance}>
+            {imxBalance} IMX
           </span>
         )}
 

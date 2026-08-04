@@ -1,4 +1,4 @@
-/** Drizzle-Schema: users, heroes, items, item_templates (siehe docs/architecture/23-db-schema.md) */
+/** Drizzle-Schema: users, heroes, items, item_templates, wallets, user_onboarding */
 
 import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
@@ -66,8 +66,22 @@ export const wallets = pgTable("wallets", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Onboarding: Pfad-Wahl + Intro-Fortschritt (docs/architecture/11-onboarding-journey.md) */
+export const userOnboardings = pgTable("user_onboarding", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id),
+  /** "casual" (Neuling) oder "expert" (Experte) */
+  path: text("path").notNull().default("casual"),
+  /** Intro abgeschlossen? */
+  introCompleted: boolean("intro_completed").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type HeroRow = typeof heroes.$inferSelect;
 export type ItemRow = typeof items.$inferSelect;
 export type ItemTemplateRow = typeof itemTemplates.$inferSelect;
 export type WalletRow = typeof wallets.$inferSelect;
+export type UserOnboardingRow = typeof userOnboardings.$inferSelect;
