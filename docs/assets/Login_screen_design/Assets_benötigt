@@ -1,0 +1,22 @@
+Witzeklon/
+│
+├── index.html
+├── style.css
+├── script.js
+├── README.md
+├── .gitignore
+│
+└── assets/
+    └── img/
+        ├── background.png
+        ├── logo.png
+        ├── logo_bird_right.png
+        ├── goblin_hidden.png
+        ├── hut.png
+        ├── smoke.png
+        ├── fire.png
+        ├── cloud.png
+        ├── icon_swords.png
+        ├── icon_map.png
+        ├── icon_backpack.png
+        └── button_wood.png
