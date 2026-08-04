@@ -19,10 +19,15 @@ export function MatchPage({ heroClass, heroLevel, equippedStats }: MatchPageProp
     const game = createGame(container);
 
     game.events.on("ready", () => {
-      gameBridge.emit("match:start", {
-        heroClass: heroClass ?? "melee",
-        level: heroLevel ?? 1,
-        equippedStats: equippedStats ?? {},
+      game.events.once("scene:complete", (scene: { key: string }) => {
+        if (scene.key === "match") {
+          console.log("[MatchPage] MatchScene ready, emitting match:start");
+          gameBridge.emit("match:start", {
+            heroClass: heroClass ?? "melee",
+            level: heroLevel ?? 1,
+            equippedStats: equippedStats ?? {},
+          });
+        }
       });
     });
 

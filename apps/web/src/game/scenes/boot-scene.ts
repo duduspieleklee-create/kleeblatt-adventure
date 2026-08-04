@@ -2,14 +2,16 @@ import Phaser from "phaser";
 
 export class BootScene extends Phaser.Scene {
   private loadingText!: Phaser.GameObjects.Text;
+  private detailText!: Phaser.GameObjects.Text;
   private progressBox!: Phaser.GameObjects.Graphics;
   private progressBar!: Phaser.GameObjects.Graphics;
+  private loadErrors: string[] = [];
+  private loadTotal = 0;
+  private loadDone = 0;
 
   constructor() {
     super("boot");
   }
-
-  private loadErrors: string[] = [];
 
   preload(): void {
     this.progressBox = this.add.graphics();
@@ -23,23 +25,49 @@ export class BootScene extends Phaser.Scene {
       color: "#e8f0e8",
     }).setOrigin(0.5);
 
+    this.detailText = this.add.text(380, 295, "", {
+      fontFamily: "Cascadia Code, Fira Code, monospace",
+      fontSize: "11px",
+      color: "#8fa88f",
+    }).setOrigin(0.5);
+
+    const allFiles = [
+      "tiles_buildings", "tiles_forest", "tiles_16",
+      "hero_idle", "hero_walk", "hero_run", "hero_attack", "hero_hurt", "hero_death",
+      "skeleton_idle", "skeleton_walk", "skeleton_attack", "skeleton_hurt", "skeleton_death",
+      "crop_wheat", "crop_carrot", "crop_pumpkin",
+      "animal_cow", "animal_chicken",
+      "vfx_dust", "vfx_smoke",
+    ];
+    this.loadTotal = allFiles.length;
+
     this.load.on("progress", (value: number) => {
+      this.loadDone = Math.round(value * this.loadTotal);
       this.progressBar.clear();
       this.progressBar.fillStyle(0x3faf4a, 1);
       this.progressBar.fillRoundedRect(226, 266, 288 * value, 12, 8);
+      this.loadingText.setText(`Lade Assets … (${this.loadDone}/${this.loadTotal})`);
     });
 
-    this.load.on("complete", () => {
-      this.progressBox.destroy();
-      this.progressBar.destroy();
-      this.loadingText.destroy();
+    this.load.on("filecomplete", (_key: string, _file: unknown) => {
+      const current = allFiles[this.loadDone - 1];
+      if (current) {
+        this.detailText.setText(`✓ ${current}`);
+        console.log(`[BootScene] loaded ${current} (${this.loadDone}/${this.loadTotal})`);
+      }
     });
 
     this.load.on("loaderror", (file: { key?: string; url?: string }) => {
       const key = file.key || file.url || "unknown";
-      const msg = `[BootScene] FAILED: ${key}`;
-      console.error(msg);
       this.loadErrors.push(key);
+      this.detailText.setText(`✗ ${key} (FEHLGESCHLAGEN)`);
+      this.detailText.setColor("#ff4444");
+      console.error(`[BootScene] FAILED: ${key}`);
+    });
+
+    this.load.on("complete", () => {
+      this.detailText.setColor("#8fa88f");
+      this.detailText.setText(`${this.loadDone}/${this.loadTotal} geladen${this.loadErrors.length ? ` · ${this.loadErrors.length} Fehler` : ""}`);
     });
 
     this.load.image("tiles_buildings", "assets/tilesets/SUNNYSIDE_WORLD_BUILDINGS_V0.01.png");
@@ -83,6 +111,7 @@ export class BootScene extends Phaser.Scene {
         g.fillRect(0, 0, 64, 64);
         g.generateTexture(key, 64, 64);
         g.destroy();
+        console.warn(`[BootScene] fallback generated for ${key}`);
       }
     }
 
@@ -114,6 +143,7 @@ export class BootScene extends Phaser.Scene {
         g.fillRect(0, 0, 32, 32);
         g.generateTexture(key, 32, 32);
         g.destroy();
+        console.warn(`[BootScene] fallback generated for ${key}`);
       }
     }
 
