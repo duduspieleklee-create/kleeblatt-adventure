@@ -72,10 +72,6 @@ export default class NPC {
   }
 
   update(time: number, _delta: number) {
-    if (!this.playerRef) return;
-    this.playerRef.x = this.playerRef.x;
-    this.playerRef.y = this.playerRef.y;
-
     if (time - this.lastDecisionTime < 500) {
       this.act(_delta);
       return;
