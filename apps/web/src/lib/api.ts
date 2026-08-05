@@ -1,6 +1,15 @@
 /** Thin fetch helpers toward Game API (credentials for session cookie) */
 
-import type { CreateHeroInput, Hero, HeroResponse, InventoryItem, OnboardingPath, OnboardingStatus } from "@kleeblatt/shared";
+import type {
+  CreateHeroInput,
+  Hero,
+  HeroResponse,
+  InventoryItem,
+  InventoryStacks,
+  InventoryStacksResponse,
+  OnboardingPath,
+  OnboardingStatus,
+} from "@kleeblatt/shared";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 // Default: /api-Prefix (Doku-Architektur Web → /api/* → nginx/vite → API,
@@ -90,6 +99,36 @@ export async function fetchInventory(): Promise<ApiResult<InventoryItem[]>> {
     };
   const data = body as { items?: InventoryItem[] };
   return { ok: true, status: res.status, data: data.items ?? [] };
+}
+
+/** Material/consumable stacks (Rucksack). */
+export async function fetchInventoryStacks(): Promise<ApiResult<InventoryStacksResponse>> {
+  const res = await apiFetch("/inventory/stacks");
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return {
+      ok: false,
+      status: res.status,
+      message: errorMessage(body, "Stacks konnten nicht geladen werden."),
+    };
+  return { ok: true, status: res.status, data: body as InventoryStacksResponse };
+}
+
+export async function putInventoryStacks(
+  stacks: InventoryStacks,
+): Promise<ApiResult<InventoryStacksResponse>> {
+  const res = await apiFetch("/inventory/stacks", {
+    method: "PUT",
+    body: JSON.stringify({ stacks }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return {
+      ok: false,
+      status: res.status,
+      message: errorMessage(body, "Stacks konnten nicht gespeichert werden."),
+    };
+  return { ok: true, status: res.status, data: body as InventoryStacksResponse };
 }
 
 export async function equipItem(
