@@ -7,16 +7,14 @@
 
 import type { InventoryStacks } from "./types/inventory.js";
 
-/** Loose bag for town/legacy payloads (shape still documented below). */
+/** Loose bag for town/legacy payloads. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Loose = Record<string, any>;
 
 /**
- * Event-Payloads der gameBridge.
- * Match-Vertrag ist strikt; Town/Legacy bewusst als Loose, bis Systeme vereinheitlicht sind.
+ * Documented event payloads. Runtime still accepts string keys from PhaserEvents.
  */
 export type GameBridgeEvents = {
-  // ── Phaser → React (Match / Architektur-Vertrag) ───────────────────
   "player:hp": { current: number; max: number };
   "player:resource": { current: number; max: number; type: "mana" | "stamina" };
   "player:level": { level: number; xp: number; xpToNext: number };
@@ -32,7 +30,6 @@ export type GameBridgeEvents = {
   "chest:opened": { chestId: string };
   "inventory:updated": { stacks: InventoryStacks };
 
-  // ── Phaser → React (Town / Legacy — loose until unified) ───────────
   "player:statsUpdated": Loose;
   "player:hpChanged": Loose;
   "player:xpChanged": Loose;
@@ -54,7 +51,6 @@ export type GameBridgeEvents = {
   "enemy:spawned": Loose;
   "enemy:killed": Loose;
 
-  // ── React → Phaser (Match) ────────────────────────────────────────
   "match:start": {
     heroClass: string;
     level: number;
@@ -66,7 +62,6 @@ export type GameBridgeEvents = {
   resume: Record<string, never>;
   "inventory:hydrate": { stacks: InventoryStacks };
 
-  // ── React → Phaser (Town / Legacy-Commands) ───────────────────────
   "react:useItem": { itemId: string };
   "react:equipItem": { itemId: string };
   "react:unequipItem": { slot: string };
@@ -81,32 +76,30 @@ export type GameBridgeEvents = {
 };
 
 /**
- * Typed event bus. Handlers accept `any` payload so legacy town code
- * (mixed shapes) typechecks; prefer documented shapes for new code.
+ * Event bus. `on`/`emit` take `string` so PhaserEvents/ReactCommands constants typecheck.
  */
-export class TypedEmitter<Events extends Record<string, unknown>> {
+export class TypedEmitter<_Events extends Record<string, unknown> = GameBridgeEvents> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private handlers = new Map<keyof Events, Set<(payload: any) => void>>();
+  private handlers = new Map<string, Set<(payload: any) => void>>();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  on<K extends keyof Events>(type: K, handler: (payload: any) => void): void {
+  on(type: string, handler: (payload: any) => void): void {
     const set = this.handlers.get(type) ?? new Set<(payload: any) => void>();
     set.add(handler);
     this.handlers.set(type, set);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  off<K extends keyof Events>(type: K, handler: (payload: any) => void): void {
+  off(type: string, handler: (payload: any) => void): void {
     this.handlers.get(type)?.delete(handler);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  emit<K extends keyof Events>(type: K, payload?: any): void {
+  emit(type: string, payload?: any): void {
     for (const handler of this.handlers.get(type) ?? []) {
       handler(payload);
     }
   }
 }
 
-/** Singleton – die eine gameBridge für React ↔ Phaser. */
 export const gameBridge = new TypedEmitter<GameBridgeEvents>();
