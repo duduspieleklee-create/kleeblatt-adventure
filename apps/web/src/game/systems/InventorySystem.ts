@@ -35,12 +35,7 @@ export default class InventorySystem {
   }
 
   private notify(): void {
-    // Legacy UI event (string key used by some components)
-    gameBridge.emit(PhaserEvents.INVENTORY_UPDATED as "inventory:updated", {
-      stacks: { ...this.slots },
-    });
-    // Persistence contract
-    gameBridge.emit("inventory:updated", { stacks: { ...this.slots } });
+    gameBridge.emit(PhaserEvents.INVENTORY_UPDATED, { stacks: { ...this.slots } });
   }
 
   addItem(itemId: string, amount: number = 1): boolean {
@@ -96,11 +91,11 @@ export default class InventorySystem {
         break;
       case "mana":
         player.stats.mana = Math.min(player.stats.maxMana, player.stats.mana + value);
-        gameBridge.emit(PhaserEvents.PLAYER_STATS_UPDATED as never, { ...player.stats } as never);
+        gameBridge.emit(PhaserEvents.PLAYER_STATS_UPDATED, { ...player.stats });
         break;
       case "stamina":
         player.stats.stamina = Math.min(player.stats.maxStamina, player.stats.stamina + value);
-        gameBridge.emit(PhaserEvents.PLAYER_STATS_UPDATED as never, { ...player.stats } as never);
+        gameBridge.emit(PhaserEvents.PLAYER_STATS_UPDATED, { ...player.stats });
         break;
     }
 
