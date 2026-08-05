@@ -1,5 +1,9 @@
+// ============================================================
+//  KORREKTE IMPORTS FÜR `src/scenes/town-scene.ts`
+// ============================================================
+
 import Phaser from 'phaser';
-import { gameBridge } from '../../lib/gameBridge';
+import { gameBridge } from '../lib/gameBridge';
 import { PhaserEvents, ReactCommands } from '../core/GameEvents';
 import Player from '../entities/Player';
 import NPC, { NPCDialogue } from '../entities/NPC';
