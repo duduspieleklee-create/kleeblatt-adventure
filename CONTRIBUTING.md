@@ -1,7 +1,7 @@
 # Contributing to Kleeblatt Adventure
 
 **Updated:** 3 August 2026  
-**Stack:** TypeScript monorepo (Hono + React/Vite + Phaser 3)
+**Stack:** TypeScript monorepo (Hono + React/Vite + Phaser 4
 
 ---
 
