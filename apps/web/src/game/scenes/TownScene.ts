@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { gameBridge } from '../../../lib/gameBridge';
-import { PhaserEvents, ReactCommands } from '../../../core/GameEvents';
+import { gameBridge } from '../../lib/gameBridge';
+import { PhaserEvents, ReactCommands } from '../core/GameEvents';
 import Player from '../entities/Player';
 import NPC, { NPCDialogue } from '../entities/NPC';
 import Enemy from '../entities/Enemy';

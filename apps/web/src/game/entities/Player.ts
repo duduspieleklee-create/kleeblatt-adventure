@@ -1,5 +1,5 @@
-import { gameBridge } from '../../../lib/gameBridge';
-import { PhaserEvents } from '../../../core/GameEvents';
+import { gameBridge } from '../../lib/gameBridge';
+import { PhaserEvents } from '../core/GameEvents';
 
 export interface PlayerStats {
   hp: number;
