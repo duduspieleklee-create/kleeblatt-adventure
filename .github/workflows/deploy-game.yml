@@ -45,4 +45,8 @@ jobs:
           ssh-keyscan -H "${DEPLOY_HOST}" >> "${HOME}/.ssh/known_hosts"
           scp -o StrictHostKeyChecking=accept-new -r apps/web/dist apps/api/dist package*.json game-config.json \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
-          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "cd ${DEPLOY_PATH} && npm ci --production && pm2 restart all"
+          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc '
+            export PATH=\"\$PATH:\$(npm config get prefix)/bin\"
+            command -v pm2 >/dev/null 2>&1 || npm install -g pm2
+            cd ${DEPLOY_PATH} && npm ci --production && pm2 restart all
+          '"
