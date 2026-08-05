@@ -5,6 +5,7 @@ import { createGame } from "../game/createGame";
 import type { HeroClass } from "@kleeblatt/shared";
 import { GameHud } from "../components/GameHud";
 import { submitMatchResult } from "../lib/api";
+import { useInventoryPersistence } from "../hooks/useInventoryPersistence";
 
 interface MatchPageProps {
   heroClass?: HeroClass;
@@ -18,6 +19,9 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
   const containerRef = useRef<HTMLDivElement>(null);
   const [matchActive, setMatchActive] = useState(true);
   const [showInventory, setShowInventory] = useState(false);
+
+  // Load stacks from API/localStorage, hydrate Phaser, debounce-save on inventory:updated
+  useInventoryPersistence(true);
 
   const toggleInventory = () => {
     setShowInventory(!showInventory);
