@@ -1,3 +1,4 @@
+import Phaser from "phaser";
 import { gameBridge } from "../../lib/gameBridge";
 import { PhaserEvents } from "../core/GameEvents";
 import Player from "../entities/Player";
