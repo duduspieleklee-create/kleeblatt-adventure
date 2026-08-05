@@ -1,6 +1,6 @@
 /** In-Memory-Fallback-Store (Prototyp ohne Postgres). Gemeinsam genutzt von users/heroes/items. */
 
-import type { Hero, InventoryItem, OnboardingStatus, SessionUser } from "@kleeblatt/shared";
+import type { Hero, InventoryItem, InventoryStacks, OnboardingStatus, SessionUser } from "@kleeblatt/shared";
 
 export const memUsers = new Map<string, SessionUser>();
 export const memHeroes = new Map<string, Hero>();
@@ -17,3 +17,9 @@ export const memChestOpens = new Map<string, string>();
 
 /** Onboarding-Status je User (P11) */
 export const memOnboardings = new Map<string, OnboardingStatus>();
+
+/** Material/consumable stacks je User (Rucksack). */
+export const memInventoryStacks = new Map<
+  string,
+  { stacks: InventoryStacks; updatedAt: string }
+>();
