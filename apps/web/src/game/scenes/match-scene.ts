@@ -143,16 +143,25 @@ export class MatchScene extends Phaser.Scene {
 
     this.map = this.make.tilemap({ tileWidth: tileSize, tileHeight: tileSize, width, height });
 
-    const forestTileset = this.map.addTilesetImage("forest", "tiles_forest", tileSize, tileSize, 0, 0);
-    const buildingTileset = this.map.addTilesetImage("buildings", "tiles_buildings", tileSize, tileSize, 0, 0);
-    const smallTileset = this.map.addTilesetImage("ui16", "tiles_16", 16, 16, 0, 0);
+    // Load actual tilesets from assets
+    const forestTileset = this.map.addTilesetImage("spr_tileset_sunnysideworld_forest_32px", "spr_tileset_sunnysideworld_forest_32px", tileSize, tileSize, 0, 0);
+    const buildingTileset = this.map.addTilesetImage("SUNNYSIDE_WORLD_BUILDINGS_V0.01", "SUNNYSIDE_WORLD_BUILDINGS_V0.01", tileSize, tileSize, 0, 0);
+    const smallTileset = this.map.addTilesetImage("spr_tileset_sunnysideworld_16px", "spr_tileset_sunnysideworld_16px", 16, 16, 0, 0);
 
     if (forestTileset) {
       const groundLayer = this.map.createBlankLayer("ground", forestTileset, 0, 0);
       if (groundLayer) {
+        // Create a more interesting terrain with some variation
         for (let x = 0; x < width; x++) {
           for (let y = 0; y < height; y++) {
-            groundLayer.putTileAt(0, x, y, true);
+            // Create a pattern that's mostly grass but with some variation
+            let tileIndex = 0; // Default grass tile
+            if (Math.random() > 0.95) {
+              tileIndex = 1; // Some dirt tiles
+            } else if (Math.random() > 0.98) {
+              tileIndex = 2; // Some stone tiles
+            }
+            groundLayer.putTileAt(tileIndex, x, y, true);
           }
         }
       }
@@ -162,6 +171,8 @@ export class MatchScene extends Phaser.Scene {
       const wallLayer = this.map.createBlankLayer("walls", buildingTileset, 0, 0);
       if (wallLayer) {
         this.wallLayer = wallLayer;
+        
+        // Create a border around the map
         for (let x = 0; x < width; x++) {
           this.wallLayer.putTileAt(1, x, 0, true);
           this.wallLayer.putTileAt(1, x, height - 1, true);
@@ -170,18 +181,56 @@ export class MatchScene extends Phaser.Scene {
           this.wallLayer.putTileAt(1, 0, y, true);
           this.wallLayer.putTileAt(1, width - 1, y, true);
         }
-        this.wallLayer.putTileAt(1, 10, 10, true);
-        this.wallLayer.putTileAt(1, 11, 10, true);
-        this.wallLayer.putTileAt(1, 20, 15, true);
-        this.wallLayer.putTileAt(1, 21, 15, true);
-        this.wallLayer.putTileAt(1, 30, 5, true);
-        this.wallLayer.setCollision(1);
+        
+        // Add some internal walls to create rooms and corridors
+        // Wall 1: Horizontal wall
+        for (let x = 10; x < 20; x++) {
+          this.wallLayer.putTileAt(1, x, 10, true);
+        }
+        
+        // Wall 2: Vertical wall
+        for (let y = 15; y < 25; y++) {
+          this.wallLayer.putTileAt(1, 15, y, true);
+        }
+        
+        // Wall 3: Another horizontal wall
+        for (let x = 25; x < 35; x++) {
+          this.wallLayer.putTileAt(1, x, 20, true);
+        }
+        
+        // Wall 4: Another vertical wall
+        for (let y = 5; y < 15; y++) {
+          this.wallLayer.putTileAt(1, 30, y, true);
+        }
+        
+        // Add some decorative buildings
+        // Building 1
+        this.wallLayer.putTileAt(2, 10, 15, true);
+        this.wallLayer.putTileAt(3, 11, 15, true);
+        this.wallLayer.putTileAt(4, 10, 16, true);
+        this.wallLayer.putTileAt(5, 11, 16, true);
+        
+        // Building 2
+        this.wallLayer.putTileAt(2, 25, 5, true);
+        this.wallLayer.putTileAt(3, 26, 5, true);
+        this.wallLayer.putTileAt(4, 25, 6, true);
+        this.wallLayer.putTileAt(5, 26, 6, true);
+        
+        this.wallLayer.setCollision(1, true); // Set collision for walls
       }
     }
 
+    // Add some decorative elements using the 16px tileset
     if (smallTileset) {
-      this.add.image(120, 120, "tiles_16").setDisplaySize(32, 32).setDepth(0);
-      this.add.image(800, 100, "tiles_16").setDisplaySize(32, 32).setDepth(0);
+      // Add some trees and bushes
+      for (let i = 0; i < 20; i++) {
+        const x = 10 + Math.floor(Math.random() * 20);
+        const y = 10 + Math.floor(Math.random() * 10);
+        // Place a tree tile (assuming tile 0 in the 16px set represents a tree)
+        this.add.image(x * 32, y * 32, "spr_tileset_sunnysideworld_16px")
+          .setDisplaySize(32, 32)
+          .setDepth(0);
+      }
     }
   }
 
