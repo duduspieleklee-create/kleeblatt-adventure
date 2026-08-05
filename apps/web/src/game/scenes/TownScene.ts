@@ -1,31 +1,32 @@
 import Phaser from 'phaser';
-import { gameBridge } from '../../lib/gameBridge';
-import { PhaserEvents, ReactCommands } from '../core/GameEvents';
+import { gameBridge } from '../../../lib/gameBridge';
+import { PhaserEvents, ReactCommands } from '../../../core/GameEvents';
 import Player from '../entities/Player';
 import NPC, { NPCDialogue } from '../entities/NPC';
 import Enemy from '../entities/Enemy';
 import InteractionZone from '../entities/InteractionZone';
 import Building from '../entities/Building';
-import InventorySystem from '../systems/InventorySystem';
-import EquipmentSystem from '../systems/EquipmentSystem';
-import CombatSystem from '../systems/CombatSystem';
-import SkillSystem from '../systems/SkillSystem';
-import LootSystem from '../systems/LootSystem';
-import QuestSystem from '../systems/QuestSystem';
-import ShopSystem from '../systems/ShopSystem';
-import DialogueSystem, { DialogueData } from '../systems/DialogueSystem';
+import InventorySystem from '../../systems/InventorySystem';
+import EquipmentSystem from '../../systems/EquipmentSystem';
+import CombatSystem from '../../systems/CombatSystem';
+import SkillSystem from '../../systems/SkillSystem';
+import LootSystem from '../../systems/LootSystem';
+import QuestSystem from '../../systems/QuestSystem';
+import ShopSystem from '../../systems/ShopSystem';
+import DialogueSystem, { DialogueData } from '../../systems/DialogueSystem';
 import { createWorldMap } from '../maps/createWorldMap';
+import { CAMERA_ZOOM, CAMERA_DEADZONE } from '../../../constants';
 
-/** World size in pixels (not tiles). */
 const WORLD_W = 1200;
 const WORLD_H = 1200;
 
-export class TownScene extends Phaser.Scene {
+export class TowerScene extends Phaser.Scene {
   private player!: Player;
   private npcs: NPC[] = [];
   private enemies: Enemy[] = [];
   private interactionZones: InteractionZone[] = [];
   private buildings: Building[] = [];
+  private trees!: Phaser.Physics.Arcade.StaticGroup;
   private wallLayer: Phaser.Tilemaps.TilemapLayer | null = null;
 
   private inventorySystem!: InventorySystem;
@@ -51,11 +52,21 @@ export class TownScene extends Phaser.Scene {
     J: Phaser.Input.Keyboard.Key;
   };
 
+  private bridgeHandlers: Array<[string, (payload: unknown) => void]> = [];
+
   constructor() {
-    super('town');
+    super('TowerScene');
+  }
+
+  private onBridge<T>(event: string, handler: (payload: T) => void): void {
+    const wrapped = handler as (payload: unknown) => void;
+    gameBridge.on(event, wrapped);
+    this.bridgeHandlers.push([event, wrapped]);
   }
 
   create(): void {
+    this.registerShutdownCleanup();
+
     this.inventorySystem = new InventorySystem(this);
     this.equipmentSystem = new EquipmentSystem(this);
     this.combatSystem = new CombatSystem(this);
@@ -70,187 +81,134 @@ export class TownScene extends Phaser.Scene {
     this.shopSystem.setInventorySystem(this.inventorySystem);
     this.dialogueSystem = new DialogueSystem(this);
 
-    // Efficient large map: TileSprite ground + sparse wall layer (no O(n²) fill)
+    // 1. WELT BAUEN
     const world = createWorldMap(this, {
       widthPx: WORLD_W,
       heightPx: WORLD_H,
-      groundKey: 'tiles_forest',
-      wallTilesetKey: 'tiles_buildings',
+      groundKey: 'ground_tile',
+      wallTilesetKey: 'wall_tile',
       borderWalls: true,
     });
     this.wallLayer = world.wallLayer;
 
-    this.createPaths();
-    this.createDecorations();
+    // 2. BÄUME MIT KOLLISION
+    this.trees = this.physics.add.staticGroup();
+    this.spawnTrees();
 
+    // 3. DORF-GEBÄUDE
+    this.spawnVillage();
+
+    // 4. SPIELER
     const spawnX = world.widthPx / 2;
     const spawnY = world.heightPx / 2;
-
     this.player = new Player(this, spawnX, spawnY, 'hero_idle');
     this.player.sprite.setScale(1.5);
 
+    // 5. KOLLISIONEN
     if (this.wallLayer) {
       this.physics.add.collider(this.player.sprite, this.wallLayer);
     }
+    this.physics.add.collider(this.player.sprite, this.trees);
 
+    // 6. KAMERA
     this.cameras.main.setBounds(0, 0, world.widthPx, world.heightPx);
     this.cameras.main.startFollow(this.player.sprite, true, 0.08, 0.08);
-    this.cameras.main.setZoom(1.2);
+    this.cameras.main.setZoom(CAMERA_ZOOM);
+    this.cameras.main.setDeadzone(CAMERA_DEADZONE.width, CAMERA_DEADZONE.height);
     this.cameras.main.roundPixels = true;
 
+    // 7. NPCS, GEGNER, ZONEN
     this.spawnNPCs(spawnX, spawnY);
     this.spawnEnemies(spawnX, spawnY);
-    this.spawnBuildings(spawnX, spawnY);
     this.createInteractionZones();
     this.setupInput();
     this.setupInteractionOverlap();
     this.setupSkillListeners();
 
-    gameBridge.emit(PhaserEvents.SCENE_LOADED, { scene: 'TownScene' });
+    gameBridge.emit(PhaserEvents.SCENE_LOADED, { scene: 'TowerScene' });
   }
 
   update(time: number, delta: number): void {
     try {
       this.player.update(this.wasd, this.cursors);
-      for (const npc of this.npcs) {
-        npc.update(time, delta);
-      }
-      for (const enemy of this.enemies) {
-        enemy.update(time, delta);
-      }
+      for (const npc of this.npcs) npc.update(time, delta);
+      for (const enemy of this.enemies) enemy.update(time, delta);
       this.handleSkillInput();
     } catch (e) {
-      console.error('[TownScene] update error:', e);
+      console.error('[TowerScene] update error:', e);
     }
   }
 
-  private createPaths(): void {
-    const cx = WORLD_W / 2;
-    const cy = WORLD_H / 2;
-    const pw = 64;
+  // ============================================================
+  //  BÄUME MIT KOLLISION
+  // ============================================================
+  private spawnTrees(): void {
+    const treePositions = [
+      [200, 300], [400, 150], [600, 500], [800, 200], [1000, 700],
+      [150, 600], [350, 800], [550, 200], [750, 900], [950, 400],
+      [100, 100], [1100, 1100], [50, 1050], [1050, 50]
+    ];
 
-    const pathG = this.add.graphics();
-    pathG.fillStyle(0x9e8e70, 1);
-    pathG.fillRect(cx - pw / 2, 0, pw, WORLD_H);
-    pathG.fillRect(0, cy - pw / 2, WORLD_W, pw);
-    pathG.setDepth(0.5);
-
-    // Lighter decoration density than before (was 800+800) — still fine on large maps
-    for (let i = 0; i < 200; i++) {
-      const px = Phaser.Math.Between(cx - pw / 2, cx + pw / 2);
-      const py = Phaser.Math.Between(0, WORLD_H);
-      pathG.fillStyle(0x8a7a5e, 1);
-      pathG.fillRect(px, py, 3, 3);
-    }
-    for (let i = 0; i < 200; i++) {
-      const px = Phaser.Math.Between(0, WORLD_W);
-      const py = Phaser.Math.Between(cy - pw / 2, cy + pw / 2);
-      pathG.fillStyle(0x8a7a5e, 1);
-      pathG.fillRect(px, py, 3, 3);
-    }
-
-    const wellG = this.add.graphics();
-    wellG.fillStyle(0x5a5a5a, 1);
-    wellG.fillCircle(cx, cy, 36);
-    wellG.fillStyle(0x3a3a3a, 1);
-    wellG.fillCircle(cx, cy, 28);
-    wellG.fillStyle(0x4a8ab5, 0.8);
-    wellG.fillCircle(cx, cy, 24);
-    wellG.setDepth(0.6);
-  }
-
-  private createDecorations(): void {
-    const cx = WORLD_W / 2;
-    const cy = WORLD_H / 2;
-
-    for (let i = 0; i < 80; i++) {
-      const tx = Phaser.Math.Between(40, WORLD_W - 40);
-      const ty = Phaser.Math.Between(40, WORLD_H - 40);
-      if (Math.abs(tx - cx) < 80 || Math.abs(ty - cy) < 80) continue;
-      const s = 32 + Phaser.Math.Between(0, 32);
-      const tree = this.add.image(tx, ty, 'tiles_forest');
-      tree.setDisplaySize(s, s);
-      tree.setAlpha(0.7 + Math.random() * 0.3);
+    for (const [x, y] of treePositions) {
+      const tree = this.trees.create(x, y, 'tree_1');
+      tree.setDisplaySize(48, 54);
       tree.setDepth(1);
+      tree.body.setSize(20, 20);
+      tree.body.setOffset(14, 20);
     }
-
-    for (let i = 0; i < 100; i++) {
-      const fx = Phaser.Math.Between(20, WORLD_W - 20);
-      const fy = Phaser.Math.Between(20, WORLD_H - 20);
-      if (Math.abs(fx - cx) < 50 || Math.abs(fy - cy) < 50) continue;
-      const colors = [0xff6b8a, 0xffd166, 0xa78bfa, 0x60a5fa, 0xf87171];
-      const c = colors[Phaser.Math.Between(0, colors.length - 1)]!;
-      const fg = this.add.graphics();
-      fg.fillStyle(c, 1);
-      fg.fillCircle(fx, fy, 3);
-      fg.setDepth(1);
-    }
-
-    for (let i = 0; i < 40; i++) {
-      const rx = Phaser.Math.Between(40, WORLD_W - 40);
-      const ry = Phaser.Math.Between(40, WORLD_H - 40);
-      if (Math.abs(rx - cx) < 80 || Math.abs(ry - cy) < 80) continue;
-      const shade = 80 + Phaser.Math.Between(0, 40);
-      const rg = this.add.graphics();
-      rg.fillStyle((shade << 16) | (shade << 8) | shade, 1);
-      rg.fillCircle(rx, ry, 6 + Phaser.Math.Between(0, 6));
-      rg.setDepth(1);
-    }
-
-    const lampPositions = [
-      { x: cx + 80, y: cy }, { x: cx - 80, y: cy },
-      { x: cx, y: cy + 80 }, { x: cx, y: cy - 80 },
-      { x: cx + 200, y: cy }, { x: cx - 200, y: cy },
-      { x: cx, y: cy + 200 }, { x: cx, y: cy - 200 },
-    ];
-
-    for (const pos of lampPositions) {
-      const lg = this.add.graphics();
-      lg.fillStyle(0x4a4a4a, 1);
-      lg.fillRect(pos.x - 3, pos.y - 20, 6, 24);
-      lg.fillStyle(0xffee88, 0.9);
-      lg.fillCircle(pos.x, pos.y - 22, 5);
-      lg.fillStyle(0xffee88, 0.15);
-      lg.fillCircle(pos.x, pos.y - 22, 20);
-      lg.setDepth(2);
-    }
-
-    const benchPositions = [
-      { x: cx + 120, y: cy + 60 },
-      { x: cx - 120, y: cy - 60 },
-    ];
-
-    for (const pos of benchPositions) {
-      const bg = this.add.graphics();
-      bg.fillStyle(0x5a3a20, 1);
-      bg.fillRect(pos.x - 16, pos.y - 4, 32, 8);
-      bg.fillRect(pos.x - 16, pos.y - 12, 4, 12);
-      bg.fillRect(pos.x + 12, pos.y - 12, 4, 12);
-      bg.fillRect(pos.x - 16, pos.y - 12, 32, 4);
-      bg.setDepth(2);
-    }
-
-    const postG = this.add.graphics();
-    postG.fillStyle(0x5a3a20, 1);
-    postG.fillRect(cx - 4, cy - 50, 8, 20);
-    postG.fillRect(cx - 4, cy + 30, 8, 20);
-    postG.setDepth(2);
-
-    const fenceG = this.add.graphics();
-    fenceG.fillStyle(0x6b5030, 1);
-    for (let i = 0; i < 6; i++) {
-      fenceG.fillRect(cx - 100 + i * 40, cy - 120, 6, 24);
-    }
-    fenceG.fillRect(cx - 100, cy - 112, 240, 4);
-    fenceG.fillRect(cx - 100, cy - 100, 240, 4);
-    for (let i = 0; i < 6; i++) {
-      fenceG.fillRect(cx - 100 + i * 40, cy + 100, 6, 24);
-    }
-    fenceG.fillRect(cx - 100, cy + 104, 240, 4);
-    fenceG.fillRect(cx - 100, cy + 116, 240, 4);
-    fenceG.setDepth(2);
   }
 
+  // ============================================================
+  //  DORF MIT GEBÄUDEN
+  // ============================================================
+  private spawnVillage(): void {
+    const cx = WORLD_W / 2;
+    const cy = WORLD_H / 2;
+
+    const rathaus = new Building(this, cx - 60, cy - 50, 'Rathaus', {
+      color: 0x8B7355,
+      roofColor: 0x6B4F12,
+      width: 64,
+      height: 56,
+    });
+    rathaus.setCollision();
+    this.physics.add.collider(this.player.sprite, rathaus.getBody());
+    this.buildings.push(rathaus);
+
+    const taverne = new Building(this, cx + 80, cy + 40, 'Taverne', {
+      color: 0x7a5c3a,
+      roofColor: 0x8B4513,
+      width: 56,
+      height: 48,
+    });
+    taverne.setCollision();
+    this.physics.add.collider(this.player.sprite, taverne.getBody());
+    this.buildings.push(taverne);
+
+    const schmiede = new Building(this, cx - 100, cy + 70, 'Schmiede', {
+      color: 0x6b6b6b,
+      roofColor: 0x4a4a4a,
+      width: 48,
+      height: 40,
+    });
+    schmiede.setCollision();
+    this.physics.add.collider(this.player.sprite, schmiede.getBody());
+    this.buildings.push(schmiede);
+
+    const turm = new Building(this, cx + 50, cy - 90, 'Magieturm', {
+      color: 0x4a6b8a,
+      roofColor: 0x2a4a6a,
+      width: 40,
+      height: 64,
+    });
+    turm.setCollision();
+    this.physics.add.collider(this.player.sprite, turm.getBody());
+    this.buildings.push(turm);
+  }
+
+  // ============================================================
+  //  NPCS (unverändert)
+  // ============================================================
   private spawnNPCs(cx: number, cy: number): void {
     const npcData: { id: string; x: number; y: number; label: string; dialogue: NPCDialogue[] }[] = [
       {
@@ -279,9 +237,13 @@ export class TownScene extends Phaser.Scene {
       npc.sprite.setScale(1.5);
       npc.setPlayerRef({ x: this.player.sprite.x, y: this.player.sprite.y });
       this.npcs.push(npc);
+      this.physics.add.collider(npc.sprite, this.trees);
     }
   }
 
+  // ============================================================
+  //  GEGNER (unverändert)
+  // ============================================================
   private spawnEnemies(cx: number, cy: number): void {
     const enemyData: { id: string; x: number; y: number; stats: Partial<EnemyStats> }[] = [
       {
@@ -313,23 +275,13 @@ export class TownScene extends Phaser.Scene {
       if (this.wallLayer) {
         this.physics.add.collider(enemy.sprite, this.wallLayer);
       }
+      this.physics.add.collider(enemy.sprite, this.trees);
     }
   }
 
-  private spawnBuildings(cx: number, cy: number): void {
-    const buildingData = [
-      { x: cx - 130, y: cy - 130, key: 'tiles_buildings', label: 'Rathaus' },
-      { x: cx + 210, y: cy + 110, key: 'tiles_buildings', label: 'Taverne' },
-      { x: cx + 50, y: cy + 150, key: 'tiles_buildings', label: 'Schmiede' },
-      { x: cx - 50, y: cy - 150, key: 'tiles_buildings', label: 'Magieturm' },
-    ];
-    for (const data of buildingData) {
-      const building = new Building(this, data.x, data.y, data.key, data.label);
-      building.setCollision();
-      this.buildings.push(building);
-    }
-  }
-
+  // ============================================================
+  //  INTERAKTIONSZONEN (unverändert)
+  // ============================================================
   private createInteractionZones(): void {
     for (const npc of this.npcs) {
       const zone = new InteractionZone(this, npc.sprite.x, npc.sprite.y, 64, 64, npc.sprite);
@@ -340,6 +292,9 @@ export class TownScene extends Phaser.Scene {
     }
   }
 
+  // ============================================================
+  //  INPUT, BRIDGE, CLEANUP (unverändert)
+  // ============================================================
   private setupInput(): void {
     const keyboard = this.input.keyboard!;
     this.cursors = keyboard.createCursorKeys();
@@ -366,30 +321,46 @@ export class TownScene extends Phaser.Scene {
   }
 
   private setupSkillListeners(): void {
-    gameBridge.on(ReactCommands.CAST_SKILL, (data: { skillId: string }) => {
+    this.onBridge<{ skillId: string }>(ReactCommands.CAST_SKILL, (data) => {
       this.castSkill(data.skillId);
     });
-    gameBridge.on(ReactCommands.USE_ITEM, (data: { itemId: string }) => {
+    this.onBridge<{ itemId: string }>(ReactCommands.USE_ITEM, (data) => {
       this.inventorySystem.useItem(data.itemId);
     });
-    gameBridge.on(ReactCommands.EQUIP_ITEM, (data: { itemId: string }) => {
+    this.onBridge<{ itemId: string }>(ReactCommands.EQUIP_ITEM, (data) => {
       this.equipmentSystem.equip(data.itemId);
     });
-    gameBridge.on(ReactCommands.UNEQUIP_ITEM, (data: { slot: string }) => {
+    this.onBridge<{ slot: string }>(ReactCommands.UNEQUIP_ITEM, (data) => {
       this.equipmentSystem.unequip(data.slot as 'weapon' | 'head' | 'chest' | 'legs' | 'ring' | 'amulet' | 'offhand');
     });
-    gameBridge.on(ReactCommands.SHOP_BUY, (data: { itemId: string }) => {
+    this.onBridge<{ itemId: string }>(ReactCommands.SHOP_BUY, (data) => {
       this.shopSystem.buyItem(data.itemId);
     });
-    gameBridge.on(ReactCommands.DIALOG_OPTION, (data: { optionId: string }) => {
+    this.onBridge<{ optionId: string }>(ReactCommands.DIALOG_OPTION, (data) => {
       this.dialogueSystem.selectOption(data.optionId);
     });
-    gameBridge.on(ReactCommands.DIALOG_CLOSE, () => {
+    this.onBridge(ReactCommands.DIALOG_CLOSE, () => {
       this.dialogueSystem.closeDialogue();
     });
-    gameBridge.on(ReactCommands.SHOP_CLOSE, () => {
+    this.onBridge(ReactCommands.SHOP_CLOSE, () => {
       this.shopSystem.closeShop();
     });
+  }
+
+  private registerShutdownCleanup(): void {
+    const cleanup = () => {
+      for (const [event, handler] of this.bridgeHandlers) {
+        gameBridge.off(event, handler);
+      }
+      this.bridgeHandlers.length = 0;
+      this.wallLayer = null;
+      this.npcs.length = 0;
+      this.enemies.length = 0;
+      this.interactionZones.length = 0;
+      this.buildings.length = 0;
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
   }
 
   private handleSkillInput(): void {
@@ -478,4 +449,4 @@ interface EnemyStats {
   xpReward: number;
   goldRewardMin: number;
   goldRewardMax: number;
-}
+  }
