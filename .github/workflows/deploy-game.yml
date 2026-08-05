@@ -45,4 +45,4 @@ jobs:
           ssh-keyscan -H "${DEPLOY_HOST}" >> "${HOME}/.ssh/known_hosts"
           scp -o StrictHostKeyChecking=accept-new -r apps/web/dist apps/api/dist packages/shared/dist package*.json game-config.json ecosystem.config.cjs \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
-          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc \"export NPM_GLOBAL=\$HOME/.npm-global; export PATH=\$PATH:\$NPM_GLOBAL/bin; npm config set prefix \$NPM_GLOBAL >/dev/null 2>&1; command -v pm2 >/dev/null 2>&1 || npm install -g pm2; cd ${DEPLOY_PATH} && npm ci --production && (pm2 reload ecosystem.config.cjs --update-env 2>/dev/null || pm2 start ecosystem.config.cjs --update-env) && pm2 save\""
+          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc \"export NPM_GLOBAL=\$HOME/.npm-global; export PATH=\$PATH:\$NPM_GLOBAL/bin; mkdir -p \$NPM_GLOBAL/bin; command -v pm2 >/dev/null 2>&1 || npm install -g --prefix \$NPM_GLOBAL pm2; cd ${DEPLOY_PATH} && npm ci --production && (pm2 reload ecosystem.config.cjs --update-env 2>/dev/null || pm2 start ecosystem.config.cjs --update-env) && pm2 save\""
