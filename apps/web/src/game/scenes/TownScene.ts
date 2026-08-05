@@ -14,10 +14,11 @@ import LootSystem from '../systems/LootSystem';
 import QuestSystem from '../systems/QuestSystem';
 import ShopSystem from '../systems/ShopSystem';
 import DialogueSystem, { DialogueData } from '../systems/DialogueSystem';
+import { createWorldMap, DEFAULT_WORLD_SIZE } from '../maps/createWorldMap';
 
-const WORLD_W = 2400;
-const WORLD_H = 2400;
-const TILE_SIZE = 32;
+/** World size in pixels (not tiles). */
+const WORLD_W = DEFAULT_WORLD_SIZE.width; // 2000
+const WORLD_H = DEFAULT_WORLD_SIZE.height; // 2000
 
 export class TownScene extends Phaser.Scene {
   private player!: Player;
@@ -25,6 +26,7 @@ export class TownScene extends Phaser.Scene {
   private enemies: Enemy[] = [];
   private interactionZones: InteractionZone[] = [];
   private buildings: Building[] = [];
+  private wallLayer: Phaser.Tilemaps.TilemapLayer | null = null;
 
   private inventorySystem!: InventorySystem;
   private equipmentSystem!: EquipmentSystem;
@@ -54,8 +56,6 @@ export class TownScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
-
     this.inventorySystem = new InventorySystem(this);
     this.equipmentSystem = new EquipmentSystem(this);
     this.combatSystem = new CombatSystem(this);
@@ -70,17 +70,30 @@ export class TownScene extends Phaser.Scene {
     this.shopSystem.setInventorySystem(this.inventorySystem);
     this.dialogueSystem = new DialogueSystem(this);
 
-    this.createGround();
+    // Efficient large map: TileSprite ground + sparse wall layer (no O(n²) fill)
+    const world = createWorldMap(this, {
+      widthPx: WORLD_W,
+      heightPx: WORLD_H,
+      groundKey: 'tiles_forest',
+      wallTilesetKey: 'tiles_buildings',
+      borderWalls: true,
+    });
+    this.wallLayer = world.wallLayer;
+
     this.createPaths();
     this.createDecorations();
 
-    const spawnX = WORLD_W / 2;
-    const spawnY = WORLD_H / 2;
+    const spawnX = world.widthPx / 2;
+    const spawnY = world.heightPx / 2;
 
     this.player = new Player(this, spawnX, spawnY, 'hero_idle');
     this.player.sprite.setScale(1.5);
 
-    this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
+    if (this.wallLayer) {
+      this.physics.add.collider(this.player.sprite, this.wallLayer);
+    }
+
+    this.cameras.main.setBounds(0, 0, world.widthPx, world.heightPx);
     this.cameras.main.startFollow(this.player.sprite, true, 0.08, 0.08);
     this.cameras.main.setZoom(1.2);
     this.cameras.main.roundPixels = true;
@@ -111,25 +124,6 @@ export class TownScene extends Phaser.Scene {
     }
   }
 
-  private createGround(): void {
-    const ground = this.add.tileSprite(WORLD_W / 2, WORLD_H / 2, WORLD_W, WORLD_H, 'tiles_forest');
-    ground.setScrollFactor(0);
-    ground.setDisplaySize(WORLD_W, WORLD_H);
-
-    const overlay = this.add.graphics();
-    overlay.fillStyle(0x3a6a2a, 0.6);
-    overlay.fillRect(0, 0, WORLD_W, WORLD_H);
-
-    const noise = this.add.graphics();
-    for (let i = 0; i < 3000; i++) {
-      const x = Phaser.Math.Between(0, WORLD_W);
-      const y = Phaser.Math.Between(0, WORLD_H);
-      const shade = Phaser.Math.Between(0, 30);
-      noise.fillStyle(shade, 0.08);
-      noise.fillRect(x, y, 2, 2);
-    }
-  }
-
   private createPaths(): void {
     const cx = WORLD_W / 2;
     const cy = WORLD_H / 2;
@@ -139,14 +133,16 @@ export class TownScene extends Phaser.Scene {
     pathG.fillStyle(0x9e8e70, 1);
     pathG.fillRect(cx - pw / 2, 0, pw, WORLD_H);
     pathG.fillRect(0, cy - pw / 2, WORLD_W, pw);
+    pathG.setDepth(0.5);
 
-    for (let i = 0; i < 800; i++) {
+    // Lighter decoration density than before (was 800+800) — still fine on large maps
+    for (let i = 0; i < 200; i++) {
       const px = Phaser.Math.Between(cx - pw / 2, cx + pw / 2);
       const py = Phaser.Math.Between(0, WORLD_H);
       pathG.fillStyle(0x8a7a5e, 1);
       pathG.fillRect(px, py, 3, 3);
     }
-    for (let i = 0; i < 800; i++) {
+    for (let i = 0; i < 200; i++) {
       const px = Phaser.Math.Between(0, WORLD_W);
       const py = Phaser.Math.Between(cy - pw / 2, cy + pw / 2);
       pathG.fillStyle(0x8a7a5e, 1);
@@ -160,6 +156,7 @@ export class TownScene extends Phaser.Scene {
     wellG.fillCircle(cx, cy, 28);
     wellG.fillStyle(0x4a8ab5, 0.8);
     wellG.fillCircle(cx, cy, 24);
+    wellG.setDepth(0.6);
   }
 
   private createDecorations(): void {
@@ -174,6 +171,7 @@ export class TownScene extends Phaser.Scene {
       const tree = this.add.image(tx, ty, 'tiles_forest');
       tree.setDisplaySize(s, s);
       tree.setAlpha(0.7 + Math.random() * 0.3);
+      tree.setDepth(1);
     }
 
     for (let i = 0; i < 100; i++) {
@@ -181,10 +179,11 @@ export class TownScene extends Phaser.Scene {
       const fy = Phaser.Math.Between(20, WORLD_H - 20);
       if (Math.abs(fx - cx) < 50 || Math.abs(fy - cy) < 50) continue;
       const colors = [0xff6b8a, 0xffd166, 0xa78bfa, 0x60a5fa, 0xf87171];
-      const c = colors[Phaser.Math.Between(0, colors.length - 1)];
+      const c = colors[Phaser.Math.Between(0, colors.length - 1)]!;
       const fg = this.add.graphics();
       fg.fillStyle(c, 1);
       fg.fillCircle(fx, fy, 3);
+      fg.setDepth(1);
     }
 
     for (let i = 0; i < 40; i++) {
@@ -193,8 +192,9 @@ export class TownScene extends Phaser.Scene {
       if (Math.abs(rx - cx) < 80 || Math.abs(ry - cy) < 80) continue;
       const shade = 80 + Phaser.Math.Between(0, 40);
       const rg = this.add.graphics();
-      rg.fillStyle(shade << 16 | shade << 8 | shade, 1);
+      rg.fillStyle((shade << 16) | (shade << 8) | shade, 1);
       rg.fillCircle(rx, ry, 6 + Phaser.Math.Between(0, 6));
+      rg.setDepth(1);
     }
 
     const lampPositions = [
@@ -212,6 +212,7 @@ export class TownScene extends Phaser.Scene {
       lg.fillCircle(pos.x, pos.y - 22, 5);
       lg.fillStyle(0xffee88, 0.15);
       lg.fillCircle(pos.x, pos.y - 22, 20);
+      lg.setDepth(2);
     }
 
     const benchPositions = [
@@ -226,12 +227,14 @@ export class TownScene extends Phaser.Scene {
       bg.fillRect(pos.x - 16, pos.y - 12, 4, 12);
       bg.fillRect(pos.x + 12, pos.y - 12, 4, 12);
       bg.fillRect(pos.x - 16, pos.y - 12, 32, 4);
+      bg.setDepth(2);
     }
 
     const postG = this.add.graphics();
     postG.fillStyle(0x5a3a20, 1);
     postG.fillRect(cx - 4, cy - 50, 8, 20);
     postG.fillRect(cx - 4, cy + 30, 8, 20);
+    postG.setDepth(2);
 
     const fenceG = this.add.graphics();
     fenceG.fillStyle(0x6b5030, 1);
@@ -245,6 +248,7 @@ export class TownScene extends Phaser.Scene {
     }
     fenceG.fillRect(cx - 100, cy + 104, 240, 4);
     fenceG.fillRect(cx - 100, cy + 116, 240, 4);
+    fenceG.setDepth(2);
   }
 
   private spawnNPCs(cx: number, cy: number): void {
@@ -306,6 +310,9 @@ export class TownScene extends Phaser.Scene {
       enemy.sprite.setScale(1.5);
       enemy.setPlayerRef({ x: this.player.sprite.x, y: this.player.sprite.y });
       this.enemies.push(enemy);
+      if (this.wallLayer) {
+        this.physics.add.collider(enemy.sprite, this.wallLayer);
+      }
     }
   }
 
