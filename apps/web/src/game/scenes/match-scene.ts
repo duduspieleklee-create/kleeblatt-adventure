@@ -35,7 +35,6 @@ export class MatchScene extends Phaser.Scene {
 
   /** World built by createWorldMap (pixel size, not tile count). */
   private world!: WorldMapResult;
-  private map!: Phaser.Tilemaps.Tilemap | null;
   private wallLayer!: Phaser.Tilemaps.TilemapLayer | null;
 
   private stats = {
@@ -158,7 +157,6 @@ export class MatchScene extends Phaser.Scene {
       borderWalls: true,
     });
 
-    this.map = this.world.map;
     this.wallLayer = this.world.wallLayer;
 
     // Small decorative markers (not a full tile layer)
@@ -840,6 +838,8 @@ export class MatchScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    this.world?.destroyParallax();
+
     for (const t of this.activeTimers) {
       t.remove(false);
     }
