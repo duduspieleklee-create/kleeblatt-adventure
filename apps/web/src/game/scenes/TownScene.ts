@@ -480,11 +480,11 @@ export class TownScene extends Phaser.Scene {
           } else {
             const dialogueData: DialogueData = {
               npcId: npc.name,
-              lines: npc.dialogue.map((d, i) => ({
+              lines: npc.dialogue.map((d: NPCDialogue, i: number) => ({
                 id: `line_${i}`,
                 speaker: npc.name,
                 text: d.text,
-                options: d.options?.map((o, j) => ({ id: `opt_${j}`, text: o })) || [],
+                options: d.options?.map((o: string, j: number) => ({ id: `opt_${j}`, text: o })) || [],
               })),
               startLine: 'line_0',
             };
