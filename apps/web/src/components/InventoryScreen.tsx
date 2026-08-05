@@ -37,21 +37,26 @@ const InventoryScreen: React.FC = () => {
   );
 
   useEffect(() => {
-    const onInventory = (data: { [key: string]: number }) => {
-      setSlots(data);
+    const onInventory = (data: { stacks: Record<string, number> }) => {
+      setSlots({ ...data.stacks });
     };
     const onStats = (data: { gold?: number }) => {
       const g = data?.gold;
       if (g !== undefined) setGold(g);
     };
-    const onLoot = (data: { item: string; amount: number; gold?: number }) => {
+    const onLoot = (data: { item?: string; amount?: number; gold?: number }) => {
       const g = data?.gold;
-      if (g) setGold(prev => prev + g);
+      if (g) setGold((prev) => prev + g);
     };
 
     gameBridge.on(PhaserEvents.INVENTORY_UPDATED, onInventory);
     gameBridge.on(PhaserEvents.PLAYER_STATS_UPDATED, onStats);
     gameBridge.on(PhaserEvents.LOOT_DROPPED, onLoot);
+    return () => {
+      gameBridge.off(PhaserEvents.INVENTORY_UPDATED, onInventory);
+      gameBridge.off(PhaserEvents.PLAYER_STATS_UPDATED, onStats);
+      gameBridge.off(PhaserEvents.LOOT_DROPPED, onLoot);
+    };
   }, []);
 
   const handleUse = (itemId: string) => {
