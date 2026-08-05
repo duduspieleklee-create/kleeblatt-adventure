@@ -41,6 +41,7 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
+          mkdir -p "${HOME}/.ssh"
           ssh-keyscan -H "${DEPLOY_HOST}" >> "${HOME}/.ssh/known_hosts"
           scp -o StrictHostKeyChecking=accept-new -r apps/web/dist apps/api/dist package*.json game-config.json \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
