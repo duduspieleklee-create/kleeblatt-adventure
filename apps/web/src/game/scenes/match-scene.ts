@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { gameBridge, type GameBridgeEvents } from "@kleeblatt/shared";
+import { createWorldMap, DEFAULT_WORLD_SIZE, type WorldMapResult } from "../maps/createWorldMap";
 
 /** Dev-only logging helper. */
 function devLog(...args: unknown[]) {
@@ -31,8 +32,11 @@ export class MatchScene extends Phaser.Scene {
   };
   private spaceKey!: Phaser.Input.Keyboard.Key;
   private eKey!: Phaser.Input.Keyboard.Key;
-  private map!: Phaser.Tilemaps.Tilemap;
-  private wallLayer!: Phaser.Tilemaps.TilemapLayer;
+
+  /** World built by createWorldMap (pixel size, not tile count). */
+  private world!: WorldMapResult;
+  private map!: Phaser.Tilemaps.Tilemap | null;
+  private wallLayer!: Phaser.Tilemaps.TilemapLayer | null;
 
   private stats = {
     maxHp: 120,
@@ -63,17 +67,14 @@ export class MatchScene extends Phaser.Scene {
   private npcs: Array<{ label: string; x: number; y: number }> = [];
   private activeTimers: Phaser.Time.TimerEvent[] = [];
 
-  // Pre-created particle emitters (avoids per-frame allocation leak)
   private vfxEmitters: Phaser.GameObjects.Particles.ParticleEmitter[] = [];
   private vfxLastSpawn = 0;
   private readonly VFX_THROTTLE_MS = 200;
 
-  // Combat state
   private lastAttackTime = 0;
   private isAttacking = false;
   private attackTimer: Phaser.Time.TimerEvent | null = null;
 
-  // Enemy state
   private enemy!: Phaser.Physics.Arcade.Sprite;
   private enemyHp = 60;
   private enemyMaxHp = 60;
@@ -86,7 +87,6 @@ export class MatchScene extends Phaser.Scene {
   private lastEnemyAttack = 0;
   private enemyDamage = 8;
 
-  // Chest state
   private chests: Array<{
     sprite: Phaser.GameObjects.GameObject;
     label: Phaser.GameObjects.Text;
@@ -97,7 +97,6 @@ export class MatchScene extends Phaser.Scene {
   }> = [];
   private chestPromptText!: Phaser.GameObjects.Text;
 
-  // Damage number display
   private damageNumbers: Phaser.GameObjects.Text[] = [];
 
   constructor() {
@@ -105,11 +104,19 @@ export class MatchScene extends Phaser.Scene {
     this.matchId = "proto-" + Date.now();
   }
 
+  private get worldW(): number {
+    return this.world.widthPx;
+  }
+
+  private get worldH(): number {
+    return this.world.heightPx;
+  }
+
   create(): void {
     try {
       devLog("[MatchScene] create() started");
       this.createMap();
-      devLog("[MatchScene] map created");
+      devLog("[MatchScene] map created", this.worldW, "x", this.worldH);
       this.createVillage();
       devLog("[MatchScene] village created");
       this.createPlayer();
@@ -136,58 +143,34 @@ export class MatchScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Large worlds: ground is a TileSprite (O(1)).
+   * Walls are a sparse blank layer (border + few blockers only).
+   * Never fill every cell — that freezes the loader at 21/21.
+   */
   private createMap(): void {
-    const width = 40;
-    const height = 30;
-    const tileSize = 32;
+    this.world = createWorldMap(this, {
+      widthPx: DEFAULT_WORLD_SIZE.width,
+      heightPx: DEFAULT_WORLD_SIZE.height,
+      tileSize: 32,
+      groundKey: "tiles_forest",
+      wallTilesetKey: "tiles_buildings",
+      borderWalls: true,
+    });
 
-    this.map = this.make.tilemap({ tileWidth: tileSize, tileHeight: tileSize, width, height });
+    this.map = this.world.map;
+    this.wallLayer = this.world.wallLayer;
 
-    const forestTileset = this.map.addTilesetImage("forest", "tiles_forest", tileSize, tileSize, 0, 0);
-    const buildingTileset = this.map.addTilesetImage("buildings", "tiles_buildings", tileSize, tileSize, 0, 0);
-    const smallTileset = this.map.addTilesetImage("ui16", "tiles_16", 16, 16, 0, 0);
-
-    if (forestTileset) {
-      const groundLayer = this.map.createBlankLayer("ground", forestTileset, 0, 0);
-      if (groundLayer) {
-        for (let x = 0; x < width; x++) {
-          for (let y = 0; y < height; y++) {
-            groundLayer.putTileAt(0, x, y, true);
-          }
-        }
-      }
-    }
-
-    if (buildingTileset) {
-      const wallLayer = this.map.createBlankLayer("walls", buildingTileset, 0, 0);
-      if (wallLayer) {
-        this.wallLayer = wallLayer;
-        for (let x = 0; x < width; x++) {
-          this.wallLayer.putTileAt(1, x, 0, true);
-          this.wallLayer.putTileAt(1, x, height - 1, true);
-        }
-        for (let y = 0; y < height; y++) {
-          this.wallLayer.putTileAt(1, 0, y, true);
-          this.wallLayer.putTileAt(1, width - 1, y, true);
-        }
-        this.wallLayer.putTileAt(1, 10, 10, true);
-        this.wallLayer.putTileAt(1, 11, 10, true);
-        this.wallLayer.putTileAt(1, 20, 15, true);
-        this.wallLayer.putTileAt(1, 21, 15, true);
-        this.wallLayer.putTileAt(1, 30, 5, true);
-        this.wallLayer.setCollision(1);
-      }
-    }
-
-    if (smallTileset) {
+    // Small decorative markers (not a full tile layer)
+    if (this.textures.exists("tiles_16")) {
       this.add.image(120, 120, "tiles_16").setDisplaySize(32, 32).setDepth(0);
-      this.add.image(800, 100, "tiles_16").setDisplaySize(32, 32).setDepth(0);
+      this.add.image(this.worldW - 120, 100, "tiles_16").setDisplaySize(32, 32).setDepth(0);
     }
   }
 
   private createVillage(): void {
-    const mapW = this.map.widthInPixels;
-    const mapH = this.map.heightInPixels;
+    const mapW = this.worldW;
+    const mapH = this.worldH;
 
     this.villageZone = {
       x: mapW * 0.2,
@@ -198,20 +181,31 @@ export class MatchScene extends Phaser.Scene {
 
     const zone = this.villageZone;
 
-    this.add.rectangle(zone.x + zone.width / 2, zone.y + zone.height / 2, zone.width, zone.height, 0x2a4a2e, 0.25)
-      .setDepth(0).setScrollFactor(0);
+    // Village tint scrolls with the world (not fixed to camera)
+    this.add
+      .rectangle(zone.x + zone.width / 2, zone.y + zone.height / 2, zone.width, zone.height, 0x2a4a2e, 0.25)
+      .setDepth(0)
+      .setScrollFactor(1);
 
-    this.add.text(zone.x + zone.width / 2, zone.y - 15, "Willkommen-Dorf", {
-      fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-      fontSize: "18px",
-      color: "#88ff88",
-    }).setOrigin(0.5).setDepth(2);
+    this.add
+      .text(zone.x + zone.width / 2, zone.y - 15, "Willkommen-Dorf", {
+        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+        fontSize: "18px",
+        color: "#88ff88",
+      })
+      .setOrigin(0.5)
+      .setDepth(2)
+      .setScrollFactor(1);
 
-    this.add.text(zone.x + zone.width / 2, zone.y + zone.height + 15, "Sicherer Bereich", {
-      fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-      fontSize: "12px",
-      color: "#8fa88f",
-    }).setOrigin(0.5).setDepth(2);
+    this.add
+      .text(zone.x + zone.width / 2, zone.y + zone.height + 15, "Sicherer Bereich", {
+        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+        fontSize: "12px",
+        color: "#8fa88f",
+      })
+      .setOrigin(0.5)
+      .setDepth(2)
+      .setScrollFactor(1);
 
     this.landmarks = [
       { label: "Rathaus", x: zone.x + zone.width * 0.25, y: zone.y + zone.height * 0.25 },
@@ -225,92 +219,102 @@ export class MatchScene extends Phaser.Scene {
     ];
 
     for (const lm of this.landmarks) {
-      this.add.rectangle(lm.x, lm.y, 40, 40, 0x5a3a1a, 0.8).setDepth(1);
-      this.add.text(lm.x, lm.y - 25, lm.label, {
-        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-        fontSize: "11px",
-        color: "#e8f0e8",
-      }).setOrigin(0.5).setDepth(2);
+      this.add.rectangle(lm.x, lm.y, 40, 40, 0x5a3a1a, 0.8).setDepth(1).setScrollFactor(1);
+      this.add
+        .text(lm.x, lm.y - 25, lm.label, {
+          fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+          fontSize: "11px",
+          color: "#e8f0e8",
+        })
+        .setOrigin(0.5)
+        .setDepth(2)
+        .setScrollFactor(1);
     }
 
     for (const npc of this.npcs) {
-      this.add.circle(npc.x, npc.y, 12, 0x88cc44, 0.9).setDepth(1);
-      this.add.text(npc.x, npc.y - 20, npc.label, {
-        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-        fontSize: "10px",
-        color: "#ffcc44",
-      }).setOrigin(0.5).setDepth(2);
+      this.add.circle(npc.x, npc.y, 12, 0x88cc44, 0.9).setDepth(1).setScrollFactor(1);
+      this.add
+        .text(npc.x, npc.y - 20, npc.label, {
+          fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+          fontSize: "10px",
+          color: "#ffcc44",
+        })
+        .setOrigin(0.5)
+        .setDepth(2)
+        .setScrollFactor(1);
     }
   }
 
   private createPlayer(): void {
-    const mapW = this.map.widthInPixels;
-    const mapH = this.map.heightInPixels;
-
-    this.player = this.physics.add.sprite(mapW * 0.5, mapH * 0.5, "hero_idle");
+    this.player = this.physics.add.sprite(this.worldW * 0.5, this.worldH * 0.5, "hero_idle");
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(10);
     this.player.play("hero_idle", true);
 
-    // Chest prompt text (hidden by default)
-    this.chestPromptText = this.add.text(0, 0, "", {
-      fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-      fontSize: "12px",
-      color: "#ffcc44",
-    }).setOrigin(0.5).setDepth(20).setVisible(false);
+    this.chestPromptText = this.add
+      .text(0, 0, "", {
+        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+        fontSize: "12px",
+        color: "#ffcc44",
+      })
+      .setOrigin(0.5)
+      .setDepth(20)
+      .setVisible(false);
   }
 
   private createSkeleton(): void {
-    const mapW = this.map.widthInPixels;
-    const mapH = this.map.heightInPixels;
-
-    this.enemy = this.physics.add.sprite(mapW * 0.75, mapH * 0.75, "skeleton_idle");
+    this.enemy = this.physics.add.sprite(this.worldW * 0.75, this.worldH * 0.75, "skeleton_idle");
     this.enemy.setCollideWorldBounds(true);
     this.enemy.setDepth(10);
     this.enemy.play("skeleton_idle", true);
 
-    // Set patrol target
-    this.enemyPatrolTarget = { x: mapW * 0.7, y: mapH * 0.7 };
+    this.enemyPatrolTarget = { x: this.worldW * 0.7, y: this.worldH * 0.7 };
 
-    // Enemy HP bar
     const barWidth = 64;
     const barHeight = 6;
     const barY = this.enemy.y - 44;
 
-    this.enemyHpBg = this.add.rectangle(this.enemy.x, barY, barWidth, barHeight, 0x333333)
-      .setDepth(11).setScrollFactor(1);
-    this.enemyHpBar = this.add.rectangle(this.enemy.x, barY, barWidth, barHeight, 0xcc3333)
-      .setDepth(11).setScrollFactor(1);
-    this.enemyHpText = this.add.text(this.enemy.x, barY - 8, `${this.enemyHp}/${this.enemyMaxHp}`, {
-      fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-      fontSize: "10px",
-      color: "#ff6666",
-    }).setOrigin(0.5).setDepth(11).setScrollFactor(1);
+    this.enemyHpBg = this.add
+      .rectangle(this.enemy.x, barY, barWidth, barHeight, 0x333333)
+      .setDepth(11)
+      .setScrollFactor(1);
+    this.enemyHpBar = this.add
+      .rectangle(this.enemy.x, barY, barWidth, barHeight, 0xcc3333)
+      .setDepth(11)
+      .setScrollFactor(1);
+    this.enemyHpText = this.add
+      .text(this.enemy.x, barY - 8, `${this.enemyHp}/${this.enemyMaxHp}`, {
+        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+        fontSize: "10px",
+        color: "#ff6666",
+      })
+      .setOrigin(0.5)
+      .setDepth(11)
+      .setScrollFactor(1);
 
     devLog("[MatchScene] enemy HP bar created");
   }
 
   private createChests(): void {
-    const mapW = this.map.widthInPixels;
-    const mapH = this.map.heightInPixels;
-
     const chestPositions = [
-      { x: mapW * 0.2, y: mapH * 0.3 },
-      { x: mapW * 0.8, y: mapH * 0.6 },
-      { x: mapW * 0.5, y: mapH * 0.15 },
+      { x: this.worldW * 0.2, y: this.worldH * 0.3 },
+      { x: this.worldW * 0.8, y: this.worldH * 0.6 },
+      { x: this.worldW * 0.5, y: this.worldH * 0.15 },
     ];
 
     for (let i = 0; i < chestPositions.length; i++) {
       const pos = chestPositions[i]!;
-      const chestSprite = this.add.rectangle(pos.x, pos.y, 32, 24, 0xaa8833)
-        .setDepth(1).setScrollFactor(1);
-      this.add.rectangle(pos.x, pos.y - 10, 32, 6, 0xccaa44)
-        .setDepth(1).setScrollFactor(1);
-      const label = this.add.text(pos.x, pos.y - 22, "Kiste", {
-        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-        fontSize: "10px",
-        color: "#ffcc44",
-      }).setOrigin(0.5).setDepth(2).setScrollFactor(1);
+      const chestSprite = this.add.rectangle(pos.x, pos.y, 32, 24, 0xaa8833).setDepth(1).setScrollFactor(1);
+      this.add.rectangle(pos.x, pos.y - 10, 32, 6, 0xccaa44).setDepth(1).setScrollFactor(1);
+      const label = this.add
+        .text(pos.x, pos.y - 22, "Kiste", {
+          fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+          fontSize: "10px",
+          color: "#ffcc44",
+        })
+        .setOrigin(0.5)
+        .setDepth(2)
+        .setScrollFactor(1);
 
       this.chests.push({
         sprite: chestSprite,
@@ -365,7 +369,7 @@ export class MatchScene extends Phaser.Scene {
 
   private setupCamera(): void {
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+    this.cameras.main.setBounds(0, 0, this.worldW, this.worldH);
     this.cameras.main.setZoom(1);
   }
 
@@ -394,7 +398,7 @@ export class MatchScene extends Phaser.Scene {
     ];
 
     for (const crop of crops) {
-      this.add.image(crop.x, crop.y, crop.key).setDepth(1);
+      this.add.image(crop.x, crop.y, crop.key).setDepth(1).setScrollFactor(1);
     }
   }
 
@@ -406,17 +410,14 @@ export class MatchScene extends Phaser.Scene {
     ];
 
     for (const animal of animals) {
-      this.add.image(animal.x, animal.y, animal.key).setDepth(1);
+      this.add.image(animal.x, animal.y, animal.key).setDepth(1).setScrollFactor(1);
     }
   }
 
   private createVfxTriggers(): void {
-    const mapW = this.map.widthInPixels;
-    const mapH = this.map.heightInPixels;
-
     this.vfxZones = [
-      { x: mapW * 0.4, y: mapH * 0.6, radius: 80, key: "vfx_dust" },
-      { x: mapW * 0.8, y: mapH * 0.2, radius: 60, key: "vfx_smoke" },
+      { x: this.worldW * 0.4, y: this.worldH * 0.6, radius: 80, key: "vfx_dust" },
+      { x: this.worldW * 0.8, y: this.worldH * 0.2, radius: 60, key: "vfx_smoke" },
     ];
   }
 
@@ -462,15 +463,6 @@ export class MatchScene extends Phaser.Scene {
     });
   }
 
-  onEnemyKilled(): void {
-    this.enemiesKilled += 1;
-  }
-
-  onChestOpened(): void {
-    this.chestsOpened += 1;
-    gameBridge.emit("chest:opened", { chestId: "chest-" + this.chestsOpened });
-  }
-
   private emitInitialStats(): void {
     gameBridge.emit("player:hp", { current: this.stats.currentHp, max: this.stats.maxHp });
     gameBridge.emit("player:resource", {
@@ -490,13 +482,15 @@ export class MatchScene extends Phaser.Scene {
     });
   }
 
-  /** Show floating damage number. */
   private showDamageNumber(x: number, y: number, amount: number, color: number): void {
-    const text = this.add.text(x, y, `-${amount}`, {
-      fontFamily: "system-ui, sans-serif",
-      fontSize: "16px",
-      color: '#' + ('000000' + color.toString(16)).slice(-6),
-    }).setOrigin(0.5).setDepth(30);
+    const text = this.add
+      .text(x, y, `-${amount}`, {
+        fontFamily: "system-ui, sans-serif",
+        fontSize: "16px",
+        color: "#" + ("000000" + color.toString(16)).slice(-6),
+      })
+      .setOrigin(0.5)
+      .setDepth(30);
 
     this.tweens.add({
       targets: text,
@@ -512,7 +506,6 @@ export class MatchScene extends Phaser.Scene {
     this.damageNumbers.push(text);
   }
 
-  /** Player attacks — hit enemy if in range. */
   private playerAttack(time: number): void {
     if (time - this.lastAttackTime < ATTACK_COOLDOWN) return;
     if (!this.enemyAlive) return;
@@ -520,7 +513,6 @@ export class MatchScene extends Phaser.Scene {
     this.lastAttackTime = time;
     this.isAttacking = true;
 
-    // Play attack animation briefly
     this.player.anims.stop();
     this.player.play("hero_attack", false);
 
@@ -530,29 +522,24 @@ export class MatchScene extends Phaser.Scene {
     });
     if (this.attackTimer) this.activeTimers.push(this.attackTimer);
 
-    // Check if enemy is in attack range
     const dx = this.enemy.x - this.player.x;
     const dy = this.enemy.y - this.player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist <= ATTACK_RANGE) {
-      // Hit enemy
       const damage = this.stats.atk + Math.floor(Math.random() * 5);
       this.enemyHp = Math.max(0, this.enemyHp - damage);
       this.showDamageNumber(this.enemy.x, this.enemy.y - 20, damage, 0xff3333);
 
-      // Flash enemy
       this.enemy.setTint(0xff0000);
       this.time.delayedCall(150, () => this.enemy.clearTint());
 
-      // Play hurt animation
       this.enemy.anims.stop();
       this.enemy.play("skeleton_hurt", false);
       this.time.delayedCall(400, () => {
         if (this.enemyAlive) this.enemy.play("skeleton_idle", true);
       });
 
-      // Update HP bar
       this.updateEnemyHpBar();
 
       gameBridge.emit("enemy:damaged", {
@@ -561,17 +548,14 @@ export class MatchScene extends Phaser.Scene {
         maxHp: this.enemyMaxHp,
       });
 
-      devLog(`[MatchScene] Player hit enemy for ${damage} (HP: ${this.enemyHp}/${this.enemyMaxHp})`);
-
       if (this.enemyHp <= 0) {
         this.killEnemy();
       }
-    } else {
-      devLog("[MatchScene] Attack missed — enemy out of range");
     }
   }
 
   private updateEnemyHpBar(): void {
+    if (!this.enemyAlive) return;
     const ratio = this.enemyHp / this.enemyMaxHp;
     const barWidth = 64;
     this.enemyHpBar.width = barWidth * Math.max(0, ratio);
@@ -603,7 +587,6 @@ export class MatchScene extends Phaser.Scene {
       y: this.enemy.y,
     });
 
-    // Add XP to player
     this.stats.xp += xpGained;
     if (this.stats.xp >= this.stats.xpToNext) {
       this.stats.xp -= this.stats.xpToNext;
@@ -618,7 +601,6 @@ export class MatchScene extends Phaser.Scene {
         xpToNext: this.stats.xpToNext,
       });
       gameBridge.emit("player:hp", { current: this.stats.currentHp, max: this.stats.maxHp });
-      devLog(`[MatchScene] Level up! Now level ${this.stats.level}`);
     }
 
     gameBridge.emit("player:level", {
@@ -627,19 +609,14 @@ export class MatchScene extends Phaser.Scene {
       xpToNext: this.stats.xpToNext,
     });
 
-    // Respawn enemy after delay
     this.time.delayedCall(5000, () => this.respawnEnemy());
   }
 
   private respawnEnemy(): void {
-    const mapW = this.map.widthInPixels;
-    const mapH = this.map.heightInPixels;
-
-    // Pick a random position away from player
     let rx: number, ry: number, dist: number;
     do {
-      rx = 100 + Math.random() * (mapW - 200);
-      ry = 100 + Math.random() * (mapH - 200);
+      rx = 100 + Math.random() * (this.worldW - 200);
+      ry = 100 + Math.random() * (this.worldH - 200);
       const dx = rx - this.player.x;
       const dy = ry - this.player.y;
       dist = Math.sqrt(dx * dx + dy * dy);
@@ -657,11 +634,8 @@ export class MatchScene extends Phaser.Scene {
     this.enemyHpText.setVisible(true);
     this.updateEnemyHpBar();
     this.enemyPatrolTarget = { x: rx - 40, y: ry };
-
-    devLog("[MatchScene] Enemy respawned at", rx, ry);
   }
 
-  /** Simple enemy AI: chase player when near, patrol otherwise. */
   private updateEnemyAI(_delta: number): void {
     if (!this.enemyAlive) return;
 
@@ -670,17 +644,13 @@ export class MatchScene extends Phaser.Scene {
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist <= ENEMY_CHASE_DIST) {
-      // Chase player
       const nx = dx / dist;
       const ny = dy / dist;
       this.enemy.setVelocity(nx * ENEMY_SPEED, ny * ENEMY_SPEED);
       this.enemy.anims.stop();
       this.enemy.play("skeleton_walk", true);
-
-      // Face player
       this.enemy.flipX = dx < 0;
 
-      // Attack player if close enough
       if (dist < 50) {
         const now = this.time.now;
         if (now - this.lastEnemyAttack > this.enemyAttackCooldown) {
@@ -695,26 +665,20 @@ export class MatchScene extends Phaser.Scene {
             max: this.stats.maxHp,
           });
 
-          devLog(`[MatchScene] Enemy hit player for ${this.enemyDamage} (HP: ${this.stats.currentHp}/${this.stats.maxHp})`);
-
           if (this.stats.currentHp <= 0) {
             this.playerDeath();
           }
         }
       }
     } else {
-      // Patrol toward target
       const pdx = this.enemyPatrolTarget.x - this.enemy.x;
       const pdy = this.enemyPatrolTarget.y - this.enemy.y;
       const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
 
       if (pdist < 10) {
-        // Pick new patrol target
-        const mapW = this.map.widthInPixels;
-        const mapH = this.map.heightInPixels;
         this.enemyPatrolTarget = {
-          x: 100 + Math.random() * (mapW - 200),
-          y: 100 + Math.random() * (mapH - 200),
+          x: 100 + Math.random() * (this.worldW - 200),
+          y: 100 + Math.random() * (this.worldH - 200),
         };
       } else {
         this.enemy.setVelocity((pdx / pdist) * (ENEMY_SPEED * 0.4), (pdy / pdist) * (ENEMY_SPEED * 0.4));
@@ -730,22 +694,18 @@ export class MatchScene extends Phaser.Scene {
     this.player.anims.stop();
     this.player.play("hero_death", false);
     gameBridge.emit("player:death", {});
-    devLog("[MatchScene] Player died");
 
-    // Respawn after delay
     this.time.delayedCall(3000, () => {
       this.stats.currentHp = Math.floor(this.stats.maxHp * 0.5);
-      this.player.x = this.map.widthInPixels * 0.5;
-      this.player.y = this.map.heightInPixels * 0.5;
+      this.player.x = this.worldW * 0.5;
+      this.player.y = this.worldH * 0.5;
       this.player.setTint(0);
       this.player.play("hero_idle", true);
       gameBridge.emit("player:respawn", { hp: this.stats.currentHp });
       gameBridge.emit("player:hp", { current: this.stats.currentHp, max: this.stats.maxHp });
-      devLog("[MatchScene] Player respawned");
     });
   }
 
-  /** Check chest proximity and handle open. */
   private handleChests(): void {
     let nearestChest = -1;
     let nearestDist = Infinity;
@@ -770,7 +730,6 @@ export class MatchScene extends Phaser.Scene {
       this.chestPromptText.setPosition(this.player.x, this.player.y - 50);
       this.chestPromptText.setVisible(true);
 
-      // Handle E key press for opening
       if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
         chest.opened = true;
         if (chest.sprite instanceof Phaser.GameObjects.Rectangle) {
@@ -783,7 +742,6 @@ export class MatchScene extends Phaser.Scene {
         this.chestsOpened += 1;
         gameBridge.emit("chest:opened", { chestId: chest.chestId });
 
-        // Grant loot
         const lootItems = [
           { itemId: `loot_${this.chestsOpened}`, templateId: "iron_sword", name: "Eisenschwert", rarity: "selten" },
           { itemId: `loot_${this.chestsOpened}`, templateId: "health_potion", name: "Heiltrank", rarity: "gemein" },
@@ -793,11 +751,14 @@ export class MatchScene extends Phaser.Scene {
         gameBridge.emit("loot:received", loot);
 
         this.showDamageNumber(this.player.x, this.player.y - 30, 0, 0x44ff44);
-        const lootText = this.add.text(this.player.x, this.player.y - 40, loot.name, {
-          fontFamily: "system-ui, sans-serif",
-          fontSize: "14px",
-          color: "#44ff44",
-        }).setOrigin(0.5).setDepth(30);
+        const lootText = this.add
+          .text(this.player.x, this.player.y - 40, loot.name, {
+            fontFamily: "system-ui, sans-serif",
+            fontSize: "14px",
+            color: "#44ff44",
+          })
+          .setOrigin(0.5)
+          .setDepth(30);
         this.tweens.add({
           targets: lootText,
           y: lootText.y - 30,
@@ -805,8 +766,6 @@ export class MatchScene extends Phaser.Scene {
           duration: 1200,
           onComplete: () => lootText.destroy(),
         });
-
-        devLog(`[MatchScene] Chest ${chest.chestId} opened — loot: ${loot.name}`);
       }
     } else {
       this.chestPromptText.setVisible(false);
@@ -822,7 +781,6 @@ export class MatchScene extends Phaser.Scene {
     this.handleChests();
     this.maybeSpawnVfx(this.player.x, this.player.y, time);
     this.updatePlayerAnimation();
-    this.updateEnemyAnimation();
     this.updateEnemyHpBar();
   }
 
@@ -850,10 +808,6 @@ export class MatchScene extends Phaser.Scene {
       this.player.anims.stop();
       this.player.play("hero_idle", true);
     }
-  }
-
-  private updateEnemyAnimation(): void {
-    if (!this.enemy?.active || !this.enemyAlive) return;
   }
 
   private handleMovement(): void {
