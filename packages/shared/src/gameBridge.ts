@@ -83,7 +83,9 @@ export class TypedEmitter<_Events extends Record<string, unknown> = GameBridgeEv
   private handlers = new Map<string, Set<(payload: any) => void>>();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(type: string, handler: (payload: any) => void): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const set = this.handlers.get(type) ?? new Set<(payload: any) => void>();
     set.add(handler);
     this.handlers.set(type, set);
