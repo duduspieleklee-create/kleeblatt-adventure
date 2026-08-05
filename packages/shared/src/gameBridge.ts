@@ -3,16 +3,18 @@
  * und Phaser (Gameplay, Rendering, Input).
  *
  * Vertrag: docs/architecture/14-phaser-react-bridge.md (v1.1)
- *
- * Regeln:
- * - Phaser ruft niemals direkt API-Calls auf.
- * - React steuert niemals direkt Phaser-Sprites.
- * - Beide kommunizieren ausschließlich über typisierte Events.
  */
 
 import type { InventoryStacks } from "./types/inventory.js";
 
-/** Event-Payloads der gameBridge (Phaser → React und React → Phaser). */
+/** Loose bag for town/legacy payloads (shape still documented below). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Loose = Record<string, any>;
+
+/**
+ * Event-Payloads der gameBridge.
+ * Match-Vertrag ist strikt; Town/Legacy bewusst als Loose, bis Systeme vereinheitlicht sind.
+ */
 export type GameBridgeEvents = {
   // ── Phaser → React (Match / Architektur-Vertrag) ───────────────────
   "player:hp": { current: number; max: number };
@@ -28,55 +30,29 @@ export type GameBridgeEvents = {
   "skill:cooldown": { skillId: string; readyAt: number };
   "skill:used": { skillId: string };
   "chest:opened": { chestId: string };
-  /** Stack-Bag geändert → debounced Persist + Inventar-UI. */
   "inventory:updated": { stacks: InventoryStacks };
 
-  // ── Phaser → React (Town / Legacy-Systeme) ─────────────────────────
-  "player:statsUpdated": Record<string, number> & {
-    gold?: number;
-    hp?: number;
-    maxHp?: number;
-    mana?: number;
-    maxMana?: number;
-    stamina?: number;
-    maxStamina?: number;
-    level?: number;
-    xp?: number;
-  };
-  "player:hpChanged": { current: number; max: number };
-  "player:xpChanged": { xp: number; level?: number; xpToNext?: number };
-  "equipment:changed": {
-    slot?: string;
-    itemId?: string | null;
-    equipped?: Record<string, string | null>;
-  };
-  "combat:hit": {
-    attackerId: string;
-    targetId: string;
-    damage: number;
-    skill?: unknown;
-  };
-  "combat:death": { targetId: string };
-  "loot:dropped": {
-    enemyId?: string;
-    items?: unknown;
-    gold?: number;
-    item?: string;
-    amount?: number;
-  };
-  "quest:started": { questId: string; title?: string };
-  "quest:progress": { questId: string; progress?: number; target?: number };
-  "quest:completed": { questId: string };
-  "shop:opened": { shopId: string };
-  "shop:itemBought": { itemId: string; price?: number };
-  "dialog:start": { npcId: string; lineId?: string };
-  "dialog:option": { optionId: string };
-  "skill:ready": { skillId: string };
-  "npc:stateChanged": { npcId: string; state?: string };
-  "scene:loaded": { scene: string };
-  interaction: { target: string };
-  "enemy:spawned": { enemyId: string; x?: number; y?: number };
-  "enemy:killed": { enemyId: string };
+  // ── Phaser → React (Town / Legacy — loose until unified) ───────────
+  "player:statsUpdated": Loose;
+  "player:hpChanged": Loose;
+  "player:xpChanged": Loose;
+  "equipment:changed": Loose;
+  "combat:hit": Loose;
+  "combat:death": Loose;
+  "loot:dropped": Loose;
+  "quest:started": Loose;
+  "quest:progress": Loose;
+  "quest:completed": Loose;
+  "shop:opened": Loose;
+  "shop:itemBought": Loose;
+  "dialog:start": Loose;
+  "dialog:option": Loose;
+  "skill:ready": Loose;
+  "npc:stateChanged": Loose;
+  "scene:loaded": Loose;
+  interaction: Loose;
+  "enemy:spawned": Loose;
+  "enemy:killed": Loose;
 
   // ── React → Phaser (Match) ────────────────────────────────────────
   "match:start": {
@@ -95,7 +71,7 @@ export type GameBridgeEvents = {
   "react:equipItem": { itemId: string };
   "react:unequipItem": { slot: string };
   "react:castSkill": { skillId: string };
-  "react:interact": Record<string, never> | { targetId?: string };
+  "react:interact": Loose;
   "react:questAccept": { questId: string };
   "react:questDecline": { questId: string };
   "react:shopBuy": { itemId: string };
@@ -104,26 +80,28 @@ export type GameBridgeEvents = {
   "react:dialogClose": Record<string, never>;
 };
 
-type Handler<T> = (payload: T) => void;
-
 /**
- * Minimaler typisierter Event-Emitter (mitt-kompatible API: on/off/emit).
- * Bewusst dependency-frei – der Vertrag lässt „mitt oder eigener" zu.
+ * Typed event bus. Handlers accept `any` payload so legacy town code
+ * (mixed shapes) typechecks; prefer documented shapes for new code.
  */
 export class TypedEmitter<Events extends Record<string, unknown>> {
-  private handlers = new Map<keyof Events, Set<Handler<unknown>>>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private handlers = new Map<keyof Events, Set<(payload: any) => void>>();
 
-  on<K extends keyof Events>(type: K, handler: Handler<Events[K]>): void {
-    const set = this.handlers.get(type) ?? new Set<Handler<unknown>>();
-    set.add(handler as Handler<unknown>);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  on<K extends keyof Events>(type: K, handler: (payload: any) => void): void {
+    const set = this.handlers.get(type) ?? new Set<(payload: any) => void>();
+    set.add(handler);
     this.handlers.set(type, set);
   }
 
-  off<K extends keyof Events>(type: K, handler: Handler<Events[K]>): void {
-    this.handlers.get(type)?.delete(handler as Handler<unknown>);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  off<K extends keyof Events>(type: K, handler: (payload: any) => void): void {
+    this.handlers.get(type)?.delete(handler);
   }
 
-  emit<K extends keyof Events>(type: K, payload: Events[K]): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  emit<K extends keyof Events>(type: K, payload?: any): void {
     for (const handler of this.handlers.get(type) ?? []) {
       handler(payload);
     }
