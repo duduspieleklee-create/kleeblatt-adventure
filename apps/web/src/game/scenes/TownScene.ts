@@ -6,16 +6,18 @@ import NPC, { NPCDialogue } from '../entities/NPC';
 import Enemy from '../entities/Enemy';
 import InteractionZone from '../entities/InteractionZone';
 import Building from '../entities/Building';
-import InventorySystem from '../../systems/InventorySystem';
-import EquipmentSystem from '../../systems/EquipmentSystem';
-import CombatSystem from '../../systems/CombatSystem';
-import SkillSystem from '../../systems/SkillSystem';
-import LootSystem from '../../systems/LootSystem';
-import QuestSystem from '../../systems/QuestSystem';
-import ShopSystem from '../../systems/ShopSystem';
-import DialogueSystem, { DialogueData } from '../../systems/DialogueSystem';
+import InventorySystem from '../systems/InventorySystem';
+import EquipmentSystem from '../systems/EquipmentSystem';
+import CombatSystem from '../systems/CombatSystem';
+import SkillSystem from '../systems/SkillSystem';
+import LootSystem from '../systems/LootSystem';
+import QuestSystem from '../systems/QuestSystem';
+import ShopSystem from '../systems/ShopSystem';
+import DialogueSystem, { DialogueData } from '../systems/DialogueSystem';
 import { createWorldMap } from '../maps/createWorldMap';
-import { CAMERA_ZOOM, CAMERA_DEADZONE } from '../../../constants';
+
+const CAMERA_ZOOM = 1.5;
+const CAMERA_DEADZONE = { width: 0.9, height: 0.9 };
 
 const WORLD_W = 1200;
 const WORLD_H = 1200;
