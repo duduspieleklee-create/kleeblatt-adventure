@@ -10,6 +10,8 @@
  * - Beide kommunizieren ausschließlich über typisierte Events.
  */
 
+import type { InventoryStacks } from "./types/inventory.js";
+
 /** Event-Payloads der gameBridge (Phaser → React und React → Phaser). */
 export type GameBridgeEvents = {
   // ── Phaser → React ────────────────────────────────────────────────
@@ -39,6 +41,8 @@ export type GameBridgeEvents = {
   "skill:used": { skillId: string };
   /** Kiste geöffnet → Kiste aus Liste entfernen. */
   "chest:opened": { chestId: string };
+  /** Stack-Bag geändert (Phaser → React) → debounced Persist. */
+  "inventory:updated": { stacks: InventoryStacks };
 
   // ── React → Phaser ────────────────────────────────────────────────
   /** Spieler klickt "Abenteuer starten" → MatchScene starten. */
@@ -55,6 +59,8 @@ export type GameBridgeEvents = {
   pause: Record<string, never>;
   /** Spieler resumed. */
   resume: Record<string, never>;
+  /** Server/local stacks in Phaser-Bag laden. */
+  "inventory:hydrate": { stacks: InventoryStacks };
 };
 
 type Handler<T> = (payload: T) => void;
