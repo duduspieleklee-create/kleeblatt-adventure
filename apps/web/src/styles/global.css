@@ -355,12 +355,15 @@ button.primary:disabled {
   background: #101810;
   overflow: hidden;
   border: none;
+  min-width: 320px;
+  min-height: 480px;
 }
 
 .game-container canvas {
   display: block !important;
   width: 100% !important;
   height: 100% !important;
+  object-fit: contain;
 }
 
 /* ─── App Shell (full-viewport game layout) ─────────────── */

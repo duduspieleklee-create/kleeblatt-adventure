@@ -95,7 +95,7 @@ export class TownScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, world.widthPx, world.heightPx);
     this.cameras.main.startFollow(this.player.sprite, true, 0.08, 0.08);
-    this.cameras.main.setZoom(1.2);
+    this.cameras.main.setZoom(0.85);
     this.cameras.main.roundPixels = true;
 
     this.spawnNPCs(spawnX, spawnY);
@@ -317,15 +317,26 @@ export class TownScene extends Phaser.Scene {
   }
 
   private spawnBuildings(cx: number, cy: number): void {
-    const buildingData = [
-      { x: cx - 130, y: cy - 130, key: 'tiles_buildings', label: 'Rathaus' },
-      { x: cx + 210, y: cy + 110, key: 'tiles_buildings', label: 'Taverne' },
-      { x: cx + 50, y: cy + 150, key: 'tiles_buildings', label: 'Schmiede' },
-      { x: cx - 50, y: cy - 150, key: 'tiles_buildings', label: 'Magieturm' },
+    const buildingData: Array<{ x: number; y: number; label: string; color: number; roofColor: number }> = [
+      { x: cx - 130, y: cy - 130, label: 'Rathaus', color: 0x8B7355, roofColor: 0x6B4F12 },
+      { x: cx + 210, y: cy + 110, label: 'Taverne', color: 0x7a5c3a, roofColor: 0x8B4513 },
+      { x: cx + 50, y: cy + 150, label: 'Schmiede', color: 0x6b6b6b, roofColor: 0x4a4a4a },
+      { x: cx - 50, y: cy - 150, label: 'Magieturm', color: 0x4a6b8a, roofColor: 0x2a4a6a },
     ];
+
     for (const data of buildingData) {
-      const building = new Building(this, data.x, data.y, data.key, data.label);
+      const building = new Building(this, data.x, data.y, 'tiles_buildings', data.label);
       building.setCollision();
+
+      const g = this.add.graphics();
+      g.fillStyle(data.color, 1);
+      g.fillRect(data.x - 28, data.y - 24, 56, 48);
+      g.fillStyle(data.roofColor, 1);
+      g.fillTriangle(data.x - 32, data.y - 24, data.x + 32, data.y - 24, data.x, data.y - 48);
+      g.fillStyle(0x3a2a0a, 1);
+      g.fillRect(data.x - 4, data.y + 8, 8, 16);
+      g.setDepth(1);
+
       this.buildings.push(building);
     }
   }
