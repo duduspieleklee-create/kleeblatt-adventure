@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "kleeblatt-api",
-      script: "api/dist/index.js",
+      script: "apps/api/dist/index.js",
       instances: 1,
       autorestart: true,
       watch: false,
