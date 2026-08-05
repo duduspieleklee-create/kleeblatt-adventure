@@ -41,7 +41,7 @@ export class BootScene extends Phaser.Scene {
   private detailText!: Phaser.GameObjects.Text;
   private progressBox!: Phaser.GameObjects.Graphics;
   private progressBar!: Phaser.GameObjects.Graphics;
-  private loadErrors: string[] = [];
+  private _loadErrors: string[] = [];
   private loadTotal = 0;
   private loadDone = 0;
 
