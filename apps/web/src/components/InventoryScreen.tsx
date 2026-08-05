@@ -1,59 +1,56 @@
-import React, { useState, useEffect } from 'react';
-import { gameBridge } from '../lib/gameBridge';
-
-interface InventoryItem {
-  id: string;
-  name: string;
-  type: 'weapon' | 'armor' | 'consumable' | 'material' | 'quest';
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-  quantity: number;
-  equipped: boolean;
-}
+import React, { useCallback, useEffect, useState } from "react";
+import type { InventoryItem } from "@kleeblatt/shared";
+import { equipItem, fetchInventory, unequipItem } from "../lib/api";
 
 const InventoryScreen: React.FC = () => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Listen for inventory updates from the game
-    const unsubscribe = gameBridge.on('inventory:update', (data: any) => {
-      setInventory(data.items || []);
-      setLoading(false);
-    });
-
-    // Listen for errors
-    const unsubscribeError = gameBridge.on('inventory:error', (err: any) => {
-      setError(err.message || 'Failed to load inventory');
-      setLoading(false);
-    });
-
-    // Request initial inventory data
-    gameBridge.emit('inventory:request');
-
-    return () => {
-      unsubscribe();
-      unsubscribeError();
-    };
+  const loadInventory = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const result = await fetchInventory();
+    if (result.ok) {
+      setInventory(result.data);
+    } else {
+      setError(result.message);
+    }
+    setLoading(false);
   }, []);
 
-  const handleItemUse = (itemId: string) => {
-    gameBridge.emit('inventory:use', { itemId });
+  useEffect(() => {
+    void loadInventory();
+  }, [loadInventory]);
+
+  const handleItemEquip = async (itemId: string) => {
+    setBusyId(itemId);
+    const result = await equipItem(itemId);
+    if (result.ok) {
+      setInventory(result.data.items);
+    } else {
+      setError(result.message);
+    }
+    setBusyId(null);
   };
 
-  const handleItemEquip = (itemId: string) => {
-    gameBridge.emit('inventory:equip', { itemId });
-  };
-
-  const handleItemUnequip = (itemId: string) => {
-    gameBridge.emit('inventory:unequip', { itemId });
+  const handleItemUnequip = async (itemId: string) => {
+    setBusyId(itemId);
+    const result = await unequipItem(itemId);
+    if (result.ok) {
+      setInventory(result.data.items);
+    } else {
+      setError(result.message);
+    }
+    setBusyId(null);
   };
 
   if (loading) {
     return (
       <div className="inventory-screen">
-        <h2>Inventory</h2>
-        <p>Loading...</p>
+        <h2>Inventar</h2>
+        <p>Lade Inventar...</p>
       </div>
     );
   }
@@ -61,40 +58,45 @@ const InventoryScreen: React.FC = () => {
   if (error) {
     return (
       <div className="inventory-screen">
-        <h2>Inventory</h2>
-        <p>Error: {error}</p>
+        <h2>Inventar</h2>
+        <p className="inventory-error">Fehler: {error}</p>
+        <button type="button" onClick={() => void loadInventory()}>
+          Erneut versuchen
+        </button>
       </div>
     );
   }
 
   return (
     <div className="inventory-screen">
-      <h2>Inventory</h2>
+      <h2>Inventar</h2>
       <div className="inventory-grid">
         {inventory.length === 0 ? (
-          <p>No items in inventory</p>
+          <p>Keine Items im Inventar</p>
         ) : (
           inventory.map((item) => (
-            <div key={item.id} className={`inventory-item ${item.rarity}`}>
+            <div key={item.itemId} className={`inventory-item ${item.rarity}`}>
               <div className="item-header">
                 <h3>{item.name}</h3>
-                <span className="item-quantity">x{item.quantity}</span>
+                {item.equipped && <span className="item-equipped">ausgerüstet</span>}
+              </div>
+              <div className="item-details">
+                {item.slot ? <span>Slot: {item.slot}</span> : <span>Verbrauchsgut</span>}
+                {item.stats && Object.keys(item.stats).length > 0 && (
+                  <span className="item-stats">{JSON.stringify(item.stats)}</span>
+                )}
               </div>
               <div className="item-actions">
-                {item.type !== 'consumable' && (
-                  <button 
-                    onClick={() => item.equipped ? handleItemUnequip(item.id) : handleItemEquip(item.id)}
+                {item.slot && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      item.equipped ? void handleItemUnequip(item.itemId) : void handleItemEquip(item.itemId)
+                    }
                     className="equip-button"
+                    disabled={busyId === item.itemId}
                   >
-                    {item.equipped ? 'Unequip' : 'Equip'}
-                  </button>
-                )}
-                {item.type === 'consumable' && (
-                  <button 
-                    onClick={() => handleItemUse(item.id)}
-                    className="use-button"
-                  >
-                    Use
+                    {item.equipped ? "Ablegen" : "Anlegen"}
                   </button>
                 )}
               </div>
