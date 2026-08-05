@@ -14,7 +14,7 @@ import LootSystem from '../systems/LootSystem';
 import QuestSystem from '../systems/QuestSystem';
 import ShopSystem from '../systems/ShopSystem';
 import DialogueSystem, { DialogueData } from '../systems/DialogueSystem';
-import { createWorldMap, DEFAULT_WORLD_SIZE } from '../maps/createWorldMap';
+import { createWorldMap } from '../maps/createWorldMap';
 
 /** World size in pixels (not tiles). */
 const WORLD_W = 1200;
