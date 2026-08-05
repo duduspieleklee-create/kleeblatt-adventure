@@ -1,4 +1,4 @@
-import { gameBridge } from "@kleeblatt/shared";
+import { gameBridge } from "../../lib/gameBridge";
 import { PhaserEvents } from "../core/GameEvents";
 import Player from "../entities/Player";
 import itemsData from "../data/items.json" with { type: "json" };
@@ -19,8 +19,7 @@ export default class InventorySystem {
   private slots: Record<string, number> = {};
   private readonly onHydrate = (payload: { stacks: Record<string, number> }) => {
     this.slots = { ...payload.stacks };
-    gameBridge.emit(PhaserEvents.INVENTORY_UPDATED, { ...this.slots });
-    gameBridge.emit("inventory:updated", { stacks: { ...this.slots } });
+    this.notify();
   };
 
   constructor(scene: Phaser.Scene) {
@@ -36,8 +35,11 @@ export default class InventorySystem {
   }
 
   private notify(): void {
-    gameBridge.emit(PhaserEvents.INVENTORY_UPDATED, { ...this.slots });
-    // Persistence layer listens to this typed event
+    // Legacy UI event (string key used by some components)
+    gameBridge.emit(PhaserEvents.INVENTORY_UPDATED as "inventory:updated", {
+      stacks: { ...this.slots },
+    });
+    // Persistence contract
     gameBridge.emit("inventory:updated", { stacks: { ...this.slots } });
   }
 
@@ -94,11 +96,11 @@ export default class InventorySystem {
         break;
       case "mana":
         player.stats.mana = Math.min(player.stats.maxMana, player.stats.mana + value);
-        gameBridge.emit(PhaserEvents.PLAYER_STATS_UPDATED, { ...player.stats });
+        gameBridge.emit(PhaserEvents.PLAYER_STATS_UPDATED as never, { ...player.stats } as never);
         break;
       case "stamina":
         player.stats.stamina = Math.min(player.stats.maxStamina, player.stats.stamina + value);
-        gameBridge.emit(PhaserEvents.PLAYER_STATS_UPDATED, { ...player.stats });
+        gameBridge.emit(PhaserEvents.PLAYER_STATS_UPDATED as never, { ...player.stats } as never);
         break;
     }
 
