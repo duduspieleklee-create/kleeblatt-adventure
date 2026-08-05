@@ -51,4 +51,4 @@ jobs:
           scp -o StrictHostKeyChecking=accept-new -r apps/web/dist apps/api/dist packages/shared/dist \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
           # Start/restart API
-          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc 'cd ${DEPLOY_PATH} && (npx pm2 reload ecosystem.config.cjs --update-env 2>/dev/null || npx pm2 start ecosystem.config.cjs --update-env) && npx pm2 save'"
+          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc 'cd ${DEPLOY_PATH} && echo \"=== remote apps/api/ ===\" && ls -la apps/api/ && echo \"=== remote apps/api/dist/ ===\" && ls -la apps/api/dist/ && (npx pm2 reload ecosystem.config.cjs --update-env 2>/dev/null || npx pm2 start ecosystem.config.cjs --update-env) && npx pm2 save'"
