@@ -1,4 +1,9 @@
+// ============================================================
+//  KORREKTE IMPORTS FÜR `src/scenes/boot-scene.ts`
+// ============================================================
+
 import Phaser from "phaser";
+// KEINE Importe aus lib/ oder core/ – die BootScene ist eigenständig.
 
 const CHAR_FRAME = { frameWidth: 96, frameHeight: 64 } as const;
 
