@@ -12,9 +12,10 @@ on:
       - ".github/workflows/deploy-game.yml"
   workflow_dispatch:
 
+# Never cancel a running production deploy mid-rsync/restart
 concurrency:
   group: deploy-game-production
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -101,12 +102,11 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           API_REMOTE_PATH: ${{ secrets.DEPLOY_API_PATH }}
         run: |
-          # Ensure the remote path exists and is writable by the deploy user.
-          # Requires that the deploy user can run sudo without password for these ops.
           PORT="${DEPLOY_PORT:-22}"
           HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
           API_PATH="${API_REMOTE_PATH:-/opt/kleeblatt-adventure}"
-          ssh -p "$PORT" -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${HOST}" "sudo mkdir -p ${API_PATH} && sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ${API_PATH}"
+          ssh -p "$PORT" -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${HOST}" \
+            "sudo mkdir -p ${API_PATH}/apps/api/dist ${API_PATH}/packages/shared/dist && sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ${API_PATH}"
 
       - name: Rsync API app to server
         env:
@@ -118,20 +118,34 @@ jobs:
           PORT="${DEPLOY_PORT:-22}"
           HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
           API_PATH="${API_REMOTE_PATH:-/opt/kleeblatt-adventure}"
-          # Only sync the files needed for the API runtime (reduce touching unrelated files that may be owned by other users)
+
+          # Root package files (no --delete: never wipe .env / node_modules / packages)
+          rsync -avz --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
+            -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
+            package.json package-lock.json \
+            "${DEPLOY_USER}@${HOST}:${API_PATH}/"
+
+          # API package (source + package.json); exclude node_modules
           rsync -avz --delete --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
             -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
-            --exclude node_modules --exclude .git --exclude .turbo --exclude apps/web --exclude .kilo \
-            package.json package-lock.json apps/api/ "${DEPLOY_USER}@${HOST}:${API_PATH}/"
-          # Deploy built dist artifacts
-          rsync -avz --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
+            --exclude node_modules --exclude .turbo --exclude dist \
+            apps/api/ "${DEPLOY_USER}@${HOST}:${API_PATH}/apps/api/"
+
+          # Built API + shared dist
+          rsync -avz --delete --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
             -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
             apps/api/dist/ "${DEPLOY_USER}@${HOST}:${API_PATH}/apps/api/dist/"
-          rsync -avz --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
+          rsync -avz --delete --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
             -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
             packages/shared/dist/ "${DEPLOY_USER}@${HOST}:${API_PATH}/packages/shared/dist/"
 
-      - name: Write production .env from GitHub secrets & restart API
+          # shared package.json so workspace resolve works
+          rsync -avz --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
+            -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
+            packages/shared/package.json \
+            "${DEPLOY_USER}@${HOST}:${API_PATH}/packages/shared/package.json"
+
+      - name: Merge production .env & restart API
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -140,6 +154,8 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
         run: |
           PORT="${DEPLOY_PORT:-22}"
           HOST="$(echo "$DEPLOY_HOST" | sed -e 's|^https\?://||' -e 's|/$||' -e 's/[[:space:]]//g')"
@@ -150,6 +166,7 @@ jobs:
             exit 1
           fi
 
+          # Overlay file: only keys we manage from CI (never wipe DB/Redis if secret empty)
           {
             echo "NODE_ENV=production"
             echo "API_URL=https://game.kleeblatt.space"
@@ -161,11 +178,76 @@ jobs:
             echo "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
             echo "GOOGLE_CALLBACK_URL=https://game.kleeblatt.space/auth/google/callback"
             echo "AUTH_DEV_BYPASS=false"
-          } > /tmp/kleeblatt.env
+            if [ -n "$DATABASE_URL" ]; then
+              echo "DATABASE_URL=${DATABASE_URL}"
+            fi
+            if [ -n "$REDIS_URL" ]; then
+              echo "REDIS_URL=${REDIS_URL}"
+            fi
+          } > /tmp/kleeblatt.env.overlay
 
           scp -P "$PORT" -o StrictHostKeyChecking=yes \
-            /tmp/kleeblatt.env \
-            "${DEPLOY_USER}@${HOST}:/tmp/kleeblatt.env"
-          ssh -p "$PORT" -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${HOST}" \
-            "sudo mv /tmp/kleeblatt.env ${API_PATH}/.env && sudo chmod 640 ${API_PATH}/.env && sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ${API_PATH} && cd ${API_PATH} && npm install --omit=dev && sudo systemctl restart kleeblatt-api && sleep 1 && curl -sf http://127.0.0.1:4000/health"
-          rm -f /tmp/kleeblatt.env
+            /tmp/kleeblatt.env.overlay \
+            "${DEPLOY_USER}@${HOST}:/tmp/kleeblatt.env.overlay"
+
+          # On server: merge overlay into existing .env (preserve DATABASE_URL etc.)
+          ssh -p "$PORT" -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${HOST}" bash -s -- "$API_PATH" <<'REMOTE'
+          set -euo pipefail
+          API_PATH="$1"
+          OVERLAY=/tmp/kleeblatt.env.overlay
+          ENV_FILE="${API_PATH}/.env"
+          MERGED=/tmp/kleeblatt.env.merged
+
+          sudo mkdir -p "$API_PATH"
+          sudo touch "$ENV_FILE"
+          sudo chmod 640 "$ENV_FILE" || true
+
+          # Start from existing env (keeps DATABASE_URL / REDIS_URL / extras)
+          sudo cat "$ENV_FILE" > "$MERGED" 2>/dev/null || true
+          touch "$MERGED"
+
+          # Apply overlay keys (upsert)
+          while IFS= read -r line || [ -n "$line" ]; do
+            case "$line" in
+              ''|\#*) continue ;;
+            esac
+            key="${line%%=*}"
+            [ -n "$key" ] || continue
+            if grep -q "^${key}=" "$MERGED" 2>/dev/null; then
+              grep -v "^${key}=" "$MERGED" > "${MERGED}.tmp" || true
+              mv "${MERGED}.tmp" "$MERGED"
+            fi
+            printf '%s\n' "$line" >> "$MERGED"
+          done < "$OVERLAY"
+
+          sudo mv "$MERGED" "$ENV_FILE"
+          sudo chmod 640 "$ENV_FILE"
+          sudo chown -R "${USER}:${USER}" "$API_PATH"
+          rm -f "$OVERLAY"
+
+          cd "$API_PATH"
+          npm install --omit=dev --no-audit --no-fund
+
+          sudo systemctl restart kleeblatt-api
+
+          # Health retry (process may need a few seconds after restart)
+          ok=0
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -sf http://127.0.0.1:4000/health >/dev/null; then
+              echo "API health OK (attempt $i)"
+              ok=1
+              break
+            fi
+            echo "API health wait $i/10..."
+            sleep 2
+          done
+          if [ "$ok" != 1 ]; then
+            echo "API health check failed after restart" >&2
+            sudo systemctl status kleeblatt-api --no-pager || true
+            sudo journalctl -u kleeblatt-api -n 40 --no-pager || true
+            exit 1
+          fi
+          curl -s http://127.0.0.1:4000/health || true
+          REMOTE
+
+          rm -f /tmp/kleeblatt.env.overlay
