@@ -92,24 +92,7 @@ export class BootScene extends Phaser.Scene {
     // 5. VFX
     this.load.spritesheet('vfx_dust', 'assets/vfx/dust.png', { frameWidth: 16, frameHeight: 16 });
 
-    // 6. Fallback-Texturen (falls was fehlt)
-    const fallbacks = [
-      { key: 'ground_tile', color: 0x3faf4a, size: 32 },
-      { key: 'wall_tile', color: 0x8a8f94, size: 32 },
-      { key: 'tree', color: 0x2f6f2f, size: 32 },
-    ];
-    for (const fb of fallbacks) {
-      if (!this.textures.exists(fb.key)) {
-        const g = this.make.graphics({ x: 0, y: 0 });
-        g.fillStyle(fb.color, 1);
-        g.fillRect(0, 0, fb.size, fb.size);
-        g.generateTexture(fb.key, fb.size, fb.size);
-        g.destroy();
-        devWarn(`[BootScene] fallback generated for ${fb.key}`);
-      }
-    }
-
-    // 7. Progress-Events
+    // 6. Progress-Events
     this.load.on("progress", (value: number) => {
       this.loadDone = Math.round(value * this.loadTotal);
       this.progressBar.clear();
@@ -123,6 +106,9 @@ export class BootScene extends Phaser.Scene {
     });
   }
 
+  // ============================================================
+  //  DAS IST DIE CREATE()-METHODE – HIER KOMMT DER CODE REIN!
+  // ============================================================
   create(): void {
     try {
       // Einzelne Tiles aus den Atlanten schneiden
@@ -131,7 +117,24 @@ export class BootScene extends Phaser.Scene {
       cropTileTexture(this, 'tiles_nature', 'tree_1', 0, 0, 16);
       cropTileTexture(this, 'tiles_nature', 'bush_1', 1, 0, 16);
 
-      // Animationen
+      // Fallback-Texturen für fehlende Assets
+      const fallbacks = [
+        { key: 'ground_tile', color: 0x3faf4a, size: 32 },
+        { key: 'wall_tile', color: 0x8a8f94, size: 32 },
+        { key: 'tree', color: 0x2f6f2f, size: 32 },
+      ];
+      for (const fb of fallbacks) {
+        if (!this.textures.exists(fb.key)) {
+          const g = this.make.graphics({ x: 0, y: 0 });
+          g.fillStyle(fb.color, 1);
+          g.fillRect(0, 0, fb.size, fb.size);
+          g.generateTexture(fb.key, fb.size, fb.size);
+          g.destroy();
+          devWarn(`[BootScene] fallback generated for ${fb.key}`);
+        }
+      }
+
+      // Animationen erstellen
       this.anims.create({
         key: "hero_idle",
         frames: this.anims.generateFrameNumbers("hero_idle", { start: 0, end: 8 }),
@@ -164,4 +167,4 @@ export class BootScene extends Phaser.Scene {
       this.add.text(20, 20, `Fehler: ${e}`, { color: '#ff4444', fontSize: '14px' });
     }
   }
-        }
+                        }
