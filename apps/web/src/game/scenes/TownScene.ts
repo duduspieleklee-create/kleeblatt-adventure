@@ -17,8 +17,8 @@ import DialogueSystem, { DialogueData } from '../systems/DialogueSystem';
 import { createWorldMap, DEFAULT_WORLD_SIZE } from '../maps/createWorldMap';
 
 /** World size in pixels (not tiles). */
-const WORLD_W = DEFAULT_WORLD_SIZE.width; // 2000
-const WORLD_H = DEFAULT_WORLD_SIZE.height; // 2000
+const WORLD_W = 1200;
+const WORLD_H = 1200;
 
 export class TownScene extends Phaser.Scene {
   private player!: Player;
