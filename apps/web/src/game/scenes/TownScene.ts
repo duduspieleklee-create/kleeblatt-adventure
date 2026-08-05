@@ -164,8 +164,8 @@ export class TownScene extends Phaser.Scene {
     const cy = WORLD_H / 2;
 
     for (let i = 0; i < 80; i++) {
-      let tx = Phaser.Math.Between(40, WORLD_W - 40);
-      let ty = Phaser.Math.Between(40, WORLD_H - 40);
+      const tx = Phaser.Math.Between(40, WORLD_W - 40);
+      const ty = Phaser.Math.Between(40, WORLD_H - 40);
       if (Math.abs(tx - cx) < 80 || Math.abs(ty - cy) < 80) continue;
       const s = 32 + Phaser.Math.Between(0, 32);
       const tree = this.add.image(tx, ty, 'tiles_forest');

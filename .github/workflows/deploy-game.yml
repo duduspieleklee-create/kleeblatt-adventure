@@ -41,6 +41,7 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          scp -r apps/web/dist apps/api/dist package*.json game-config.json \
+          ssh-keyscan -H "${DEPLOY_HOST}" >> "${HOME}/.ssh/known_hosts"
+          scp -o StrictHostKeyChecking=accept-new -r apps/web/dist apps/api/dist package*.json game-config.json \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
-          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" "cd ${DEPLOY_PATH} && npm ci --production && pm2 restart all"
+          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "cd ${DEPLOY_PATH} && npm ci --production && pm2 restart all"
