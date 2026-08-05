@@ -38,6 +38,14 @@ export { gameBridge, TypedEmitter } from "./gameBridge.js";
 export type { XpCurveLevel, XpState, ApplyXpResult } from "./rules/xp.js";
 export { applyXp, DEFAULT_XP_CURVE } from "./rules/xp.js";
 
+export type { FinalStats } from "./stats.js";
+export {
+  HERO_CLASS_BASE_STATS,
+  HERO_LEVEL_BONUSES,
+  computeFinalStats,
+  computeHeroFinalStats,
+} from "./stats.js";
+
 export { API_DEFAULT_PORT, WEB_DEFAULT_PORT, PROTOTYPE_MAP_ID } from "./constants/index.js";
 
 /** HttpOnly session cookie name (game-config.json → auth.session.cookieName) */

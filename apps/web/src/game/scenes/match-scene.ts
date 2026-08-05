@@ -501,6 +501,9 @@ export class MatchScene extends Phaser.Scene {
   private onMatchStart(payload: GameBridgeEvents["match:start"]): void {
     this.stats.level = payload.level;
     Object.assign(this.stats, payload.equippedStats);
+    this.stats.currentHp = this.stats.maxHp;
+    this.stats.currentMana = this.stats.maxMana;
+    this.stats.currentStamina = this.stats.maxStamina;
     this.matchId = "proto-" + Date.now();
     this.matchStarted = true;
     gameBridge.emit("match:started", { matchId: this.matchId });
@@ -509,6 +512,7 @@ export class MatchScene extends Phaser.Scene {
 
   private onLoadoutUpdate(payload: GameBridgeEvents["loadout:update"]): void {
     Object.assign(this.stats, payload.equippedStats);
+    this.stats.currentHp = Math.min(this.stats.currentHp, this.stats.maxHp);
     this.emitInitialStats();
   }
 
