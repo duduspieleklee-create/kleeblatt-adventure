@@ -45,4 +45,4 @@ jobs:
           ssh-keyscan -H "${DEPLOY_HOST}" >> "${HOME}/.ssh/known_hosts"
           scp -o StrictHostKeyChecking=accept-new -r apps/web/dist apps/api/dist apps/api/package.json apps/web/package.json packages/shared/dist packages/shared/package.json package*.json game-config.json ecosystem.config.cjs \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
-          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc \"cd ${DEPLOY_PATH} && npm ci --production && (npx pm2 reload ecosystem.config.cjs --update-env 2>/dev/null || npx pm2 start ecosystem.config.cjs --update-env) && npx pm2 save\""
+          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc \"cd ${DEPLOY_PATH} && npm install --omit=dev && (npx pm2 reload ecosystem.config.cjs --update-env 2>/dev/null || npx pm2 start ecosystem.config.cjs --update-env) && npx pm2 save\""
