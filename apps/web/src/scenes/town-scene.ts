@@ -1,3 +1,3 @@
-// Bridge file to maintain legacy import path `src/scenes/town-scene.ts`
-// Re-exports the canonical TownScene from src/game/scenes/TownScene
-export { TownScene } from '../game/scenes/TownScene';
+// Legacy bridge: re-export TowerScene for old imports that expect "scenes/town-scene"
+export { TowerScene } from './tower-scene';
+export { TowerScene as TownScene } from './tower-scene';
