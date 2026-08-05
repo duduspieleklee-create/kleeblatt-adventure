@@ -2,9 +2,7 @@ import Phaser from "phaser";
 import { BootScene } from "./scenes/boot-scene";
 import { MatchScene } from "./scenes/match-scene";
 import { TownScene } from "./scenes/TownScene";
-
-/** Viewport der Match-Shell (16:9). Map-Größe kommt aus game-config.json (match.mapSize). */
-export const GAME_VIEWPORT = { width: 960, height: 540 } as const;
+import { GAME_VIEWPORT } from "./constants";
 
 /**
  * Erstellt das Phaser-Spiel in `container` (React-Page mit Phaser-Container).
@@ -17,6 +15,7 @@ export function createGame(container: HTMLElement): Phaser.Game {
     width: GAME_VIEWPORT.width,
     height: GAME_VIEWPORT.height,
     backgroundColor: "#101810",
+    pixelArt: true,
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,

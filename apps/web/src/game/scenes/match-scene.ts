@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { gameBridge, type GameBridgeEvents } from "@kleeblatt/shared";
 import { createWorldMap, DEFAULT_WORLD_SIZE, type WorldMapResult } from "../maps/createWorldMap";
+import { CAMERA_ZOOM, CAMERA_DEADZONE } from "../constants";
 
 /** Dev-only logging helper. */
 function devLog(...args: unknown[]) {
@@ -53,6 +54,7 @@ export class MatchScene extends Phaser.Scene {
 
   private matchId: string;
   private matchStarted = false;
+  private shutdownDone = false;
   private enemiesKilled = 0;
   private chestsOpened = 0;
   private readonly pauseHandler = () => this.scene.pause("match");
@@ -131,6 +133,8 @@ export class MatchScene extends Phaser.Scene {
       this.setupCamera();
       this.setupCollisions();
       this.setupGameBridge();
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.onSceneShutdown());
+      this.events.once(Phaser.Scenes.Events.DESTROY, () => this.onSceneShutdown());
 
       devLog("[MatchScene] auto-starting match");
       this.matchStarted = true;
@@ -152,17 +156,17 @@ export class MatchScene extends Phaser.Scene {
       widthPx: DEFAULT_WORLD_SIZE.width,
       heightPx: DEFAULT_WORLD_SIZE.height,
       tileSize: 32,
-      groundKey: "tiles_forest",
-      wallTilesetKey: "tiles_buildings",
+      groundKey: "ground_tile",
+      wallTilesetKey: "wall_tile",
       borderWalls: true,
     });
 
     this.wallLayer = this.world.wallLayer;
 
     // Small decorative markers (not a full tile layer)
-    if (this.textures.exists("tiles_16")) {
-      this.add.image(120, 120, "tiles_16").setDisplaySize(32, 32).setDepth(0);
-      this.add.image(this.worldW - 120, 100, "tiles_16").setDisplaySize(32, 32).setDepth(0);
+    if (this.textures.exists("wall_tile")) {
+      this.add.image(120, 120, "wall_tile").setDepth(0);
+      this.add.image(this.worldW - 120, 100, "wall_tile").setDepth(0);
     }
   }
 
@@ -368,7 +372,9 @@ export class MatchScene extends Phaser.Scene {
   private setupCamera(): void {
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setBounds(0, 0, this.worldW, this.worldH);
-    this.cameras.main.setZoom(1);
+    this.cameras.main.setZoom(CAMERA_ZOOM);
+    this.cameras.main.setDeadzone(CAMERA_DEADZONE.width, CAMERA_DEADZONE.height);
+    this.cameras.main.roundPixels = true;
   }
 
   private setupCollisions(): void {
@@ -837,7 +843,10 @@ export class MatchScene extends Phaser.Scene {
     }
   }
 
-  shutdown(): void {
+  private onSceneShutdown(): void {
+    if (this.shutdownDone) return;
+    this.shutdownDone = true;
+
     this.world?.destroyParallax();
 
     for (const t of this.activeTimers) {

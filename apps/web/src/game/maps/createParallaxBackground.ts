@@ -36,7 +36,7 @@ export interface ParallaxBackgroundResult {
  */
 export const DEFAULT_PARALLAX_LAYERS: ParallaxLayerConfig[] = [
   {
-    key: "tiles_16",
+    key: "sky_tile",
     scrollFactor: 0.12,
     depth: -30,
     tint: 0x6a8ab0,
@@ -44,7 +44,7 @@ export const DEFAULT_PARALLAX_LAYERS: ParallaxLayerConfig[] = [
     tileScale: 4,
   },
   {
-    key: "tiles_forest",
+    key: "ground_tile",
     scrollFactor: 0.35,
     depth: -20,
     tint: 0x3a5a4a,
@@ -52,7 +52,7 @@ export const DEFAULT_PARALLAX_LAYERS: ParallaxLayerConfig[] = [
     tileScale: 2,
   },
   {
-    key: "tiles_forest",
+    key: "ground_tile",
     scrollFactor: 0.55,
     depth: -10,
     tint: 0x2a4a32,

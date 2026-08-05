@@ -2,6 +2,7 @@ import InventoryScreen from "../components/InventoryScreen";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { gameBridge } from "@kleeblatt/shared";
 import { createGame } from "../game/createGame";
+import { MIN_VIEWPORT } from "../game/constants";
 import type { HeroClass } from "@kleeblatt/shared";
 import { GameHud } from "../components/GameHud";
 import { submitMatchResult } from "../lib/api";
@@ -19,9 +20,45 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
   const containerRef = useRef<HTMLDivElement>(null);
   const [matchActive, setMatchActive] = useState(true);
   const [showInventory, setShowInventory] = useState(false);
+  const [needsRotation, setNeedsRotation] = useState(false);
 
   // Load stacks from API/localStorage, hydrate Phaser, debounce-save on inventory:updated
   useInventoryPersistence(true);
+
+  // Querformat-Guard: Das Spiel hat eine Mindestgröße (640×360). In Portrait
+  // oder bei kleineren Viewports erscheint ein "Bitte Gerät drehen"-Overlay.
+  useEffect(() => {
+    const check = () => {
+      const portrait = window.matchMedia("(orientation: portrait)").matches;
+      const tooSmall =
+        window.innerWidth < MIN_VIEWPORT.width || window.innerHeight < MIN_VIEWPORT.height;
+      setNeedsRotation(portrait || tooSmall);
+    };
+    check();
+    const mq = window.matchMedia("(orientation: portrait)");
+    mq.addEventListener("change", check);
+    window.addEventListener("resize", check);
+    return () => {
+      mq.removeEventListener("change", check);
+      window.removeEventListener("resize", check);
+    };
+  }, []);
+
+  // Querformat-Sperre beim ersten Nutzerkontakt (Browser-Geste, kann fehlschlagen).
+  useEffect(() => {
+    const lock = () => {
+      try {
+        const orient = screen.orientation as ScreenOrientation & {
+          lock?: (orientation: string) => Promise<void>;
+        };
+        orient?.lock?.("landscape")?.catch(() => {});
+      } catch {
+        // Orientierungs-Sperre ist nicht überall erlaubt – Overlay reicht.
+      }
+    };
+    window.addEventListener("pointerdown", lock, { once: true });
+    return () => window.removeEventListener("pointerdown", lock);
+  }, []);
 
   const toggleInventory = () => {
     setShowInventory(!showInventory);
@@ -89,6 +126,16 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
 
   return (
     <div className="game-container">
+      {needsRotation && (
+        <div className="rotate-overlay">
+          <div className="rotate-icon" aria-hidden="true">&#8635;</div>
+          <p className="rotate-title">Bitte Gerät drehen</p>
+          <p className="rotate-subtitle">
+            Kleeblattadventure läuft im Querformat. Drehe dein Gerät oder nutze ein Gerät
+            mit mindestens {MIN_VIEWPORT.width}&times;{MIN_VIEWPORT.height}.
+          </p>
+        </div>
+      )}
       {showInventory ? (
         <div className="inventory-overlay">
           <button type="button" onClick={toggleInventory} className="close-button">

@@ -11,6 +11,34 @@ function devWarn(...args: unknown[]) {
   if (import.meta.env.DEV) console.warn(...args);
 }
 
+/**
+ * Schneidet eine einzelne Tile aus einem Tileset-Atlas in eine eigene Textur.
+ * Nötig, weil die SunnySide-Atlasdateien viele Tiles enthalten – sie dürfen
+ * NICHT als einzelnes Sprite/als TileSprite-Ground benutzt werden, sonst
+ * erscheinen alle Tiles durcheinander ("schwebende Assets").
+ */
+function cropTileTexture(
+  scene: Phaser.Scene,
+  atlasKey: string,
+  outKey: string,
+  tileX: number,
+  tileY: number,
+  tileSize: number,
+): void {
+  if (scene.textures.exists(outKey)) return;
+  const src = scene.textures.get(atlasKey).getSourceImage() as HTMLImageElement;
+  if (!src || !(src instanceof HTMLImageElement)) return;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = tileSize;
+  canvas.height = tileSize;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.drawImage(src, tileX * tileSize, tileY * tileSize, tileSize, tileSize, 0, 0, tileSize, tileSize);
+  scene.textures.addCanvas(outKey, canvas);
+  devLog(`[BootScene] cropped ${outKey} from ${atlasKey} tile(${tileX},${tileY})`);
+}
+
 export class BootScene extends Phaser.Scene {
   private loadingText!: Phaser.GameObjects.Text;
   private detailText!: Phaser.GameObjects.Text;
@@ -159,6 +187,42 @@ export class BootScene extends Phaser.Scene {
           g.destroy();
           devWarn(`[BootScene] fallback generated for ${t.key}`);
         }
+      }
+
+      // Einzelne Tiles aus den Atlasdateien schneiden (Map nutzt NUR diese
+      // Einzeltexturen – nie den ganzen Atlas als Sprite).
+      cropTileTexture(this, "tiles_forest", "ground_tile", 1, 1, 32);
+      cropTileTexture(this, "tiles_buildings", "wall_tile", 1, 4, 32);
+      cropTileTexture(this, "tiles_16", "sky_tile", 4, 1, 16);
+
+      const singleFallbacks: Array<{ key: string; color: number; size: number }> = [
+        { key: "ground_tile", color: 0x3faf4a, size: 32 },
+        { key: "wall_tile", color: 0x8a8f94, size: 32 },
+        { key: "sky_tile", color: 0x0099db, size: 16 },
+      ];
+      for (const t of singleFallbacks) {
+        if (!this.textures.exists(t.key)) {
+          const g = this.make.graphics({ x: 0, y: 0 });
+          g.fillStyle(t.color, 1);
+          g.fillRect(0, 0, t.size, t.size);
+          g.generateTexture(t.key, t.size, t.size);
+          g.destroy();
+          devWarn(`[BootScene] fallback generated for ${t.key}`);
+        }
+      }
+
+      // Einzelne Deko-Textur für Bäume (ersetzt den "ganzer Atlas als Sprite"-Bug)
+      if (!this.textures.exists("tree")) {
+        const g = this.make.graphics({ x: 0, y: 0 });
+        g.fillStyle(0x5a3a20, 1);
+        g.fillRect(12, 22, 8, 12);
+        g.fillStyle(0x2f6f2f, 1);
+        g.fillCircle(16, 14, 12);
+        g.fillStyle(0x3a8f3a, 1);
+        g.fillCircle(11, 10, 7);
+        g.fillCircle(21, 10, 7);
+        g.generateTexture("tree", 32, 36);
+        g.destroy();
       }
 
       // Generate fallback for missing elements

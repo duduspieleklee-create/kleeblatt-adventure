@@ -15,6 +15,7 @@ import QuestSystem from '../systems/QuestSystem';
 import ShopSystem from '../systems/ShopSystem';
 import DialogueSystem, { DialogueData } from '../systems/DialogueSystem';
 import { createWorldMap } from '../maps/createWorldMap';
+import { CAMERA_ZOOM, CAMERA_DEADZONE } from '../constants';
 
 /** World size in pixels (not tiles). */
 const WORLD_W = 1200;
@@ -51,11 +52,23 @@ export class TownScene extends Phaser.Scene {
     J: Phaser.Input.Keyboard.Key;
   };
 
+  /** Registrierte gameBridge-Handler, damit sie bei Scene-Shutdown sauber entfernt werden. */
+  private bridgeHandlers: Array<[string, (payload: unknown) => void]> = [];
+
   constructor() {
     super('town');
   }
 
+  private onBridge<T>(event: string, handler: (payload: T) => void): void {
+    const wrapped = handler as (payload: unknown) => void;
+    gameBridge.on(event, wrapped);
+    this.bridgeHandlers.push([event, wrapped]);
+  }
+
   create(): void {
+    // Cleanup früh registrieren, damit ein Fehler mitten im create() nichts leakt.
+    this.registerShutdownCleanup();
+
     this.inventorySystem = new InventorySystem(this);
     this.equipmentSystem = new EquipmentSystem(this);
     this.combatSystem = new CombatSystem(this);
@@ -74,8 +87,8 @@ export class TownScene extends Phaser.Scene {
     const world = createWorldMap(this, {
       widthPx: WORLD_W,
       heightPx: WORLD_H,
-      groundKey: 'tiles_forest',
-      wallTilesetKey: 'tiles_buildings',
+      groundKey: 'ground_tile',
+      wallTilesetKey: 'wall_tile',
       borderWalls: true,
     });
     this.wallLayer = world.wallLayer;
@@ -93,9 +106,12 @@ export class TownScene extends Phaser.Scene {
       this.physics.add.collider(this.player.sprite, this.wallLayer);
     }
 
+    // Standard-Kameradistanz für Top-Down-RPGs: Zoom 2.0 zeigt ~15×8,4 Tiles.
+    // Deadzone verhindert, dass die Kamera bei kleinsten Bewegungen nachzieht.
     this.cameras.main.setBounds(0, 0, world.widthPx, world.heightPx);
     this.cameras.main.startFollow(this.player.sprite, true, 0.08, 0.08);
-    this.cameras.main.setZoom(0.85);
+    this.cameras.main.setZoom(CAMERA_ZOOM);
+    this.cameras.main.setDeadzone(CAMERA_DEADZONE.width, CAMERA_DEADZONE.height);
     this.cameras.main.roundPixels = true;
 
     this.spawnNPCs(spawnX, spawnY);
@@ -164,13 +180,13 @@ export class TownScene extends Phaser.Scene {
     const cy = WORLD_H / 2;
 
     for (let i = 0; i < 80; i++) {
-      let tx = Phaser.Math.Between(40, WORLD_W - 40);
-      let ty = Phaser.Math.Between(40, WORLD_H - 40);
+      const tx = Phaser.Math.Between(40, WORLD_W - 40);
+      const ty = Phaser.Math.Between(40, WORLD_H - 40);
       if (Math.abs(tx - cx) < 80 || Math.abs(ty - cy) < 80) continue;
       const s = 32 + Phaser.Math.Between(0, 32);
-      const tree = this.add.image(tx, ty, 'tiles_forest');
-      tree.setDisplaySize(s, s);
-      tree.setAlpha(0.7 + Math.random() * 0.3);
+      const tree = this.add.image(tx, ty, 'tree');
+      tree.setDisplaySize(s, s * 1.125);
+      tree.setAlpha(0.85 + Math.random() * 0.15);
       tree.setDepth(1);
     }
 
@@ -325,18 +341,15 @@ export class TownScene extends Phaser.Scene {
     ];
 
     for (const data of buildingData) {
-      const building = new Building(this, data.x, data.y, 'tiles_buildings', data.label);
+      const building = new Building(this, data.x, data.y, 'tiles_buildings', data.label, {
+        color: data.color,
+        roofColor: data.roofColor,
+      });
       building.setCollision();
-
-      const g = this.add.graphics();
-      g.fillStyle(data.color, 1);
-      g.fillRect(data.x - 28, data.y - 24, 56, 48);
-      g.fillStyle(data.roofColor, 1);
-      g.fillTriangle(data.x - 32, data.y - 24, data.x + 32, data.y - 24, data.x, data.y - 48);
-      g.fillStyle(0x3a2a0a, 1);
-      g.fillRect(data.x - 4, data.y + 8, 8, 16);
-      g.setDepth(1);
-
+      this.physics.add.collider(this.player.sprite, building.getBody());
+      for (const enemy of this.enemies) {
+        this.physics.add.collider(enemy.sprite, building.getBody());
+      }
       this.buildings.push(building);
     }
   }
@@ -377,30 +390,51 @@ export class TownScene extends Phaser.Scene {
   }
 
   private setupSkillListeners(): void {
-    gameBridge.on(ReactCommands.CAST_SKILL, (data: { skillId: string }) => {
+    this.onBridge<{ skillId: string }>(ReactCommands.CAST_SKILL, (data) => {
       this.castSkill(data.skillId);
     });
-    gameBridge.on(ReactCommands.USE_ITEM, (data: { itemId: string }) => {
+    this.onBridge<{ itemId: string }>(ReactCommands.USE_ITEM, (data) => {
       this.inventorySystem.useItem(data.itemId);
     });
-    gameBridge.on(ReactCommands.EQUIP_ITEM, (data: { itemId: string }) => {
+    this.onBridge<{ itemId: string }>(ReactCommands.EQUIP_ITEM, (data) => {
       this.equipmentSystem.equip(data.itemId);
     });
-    gameBridge.on(ReactCommands.UNEQUIP_ITEM, (data: { slot: string }) => {
+    this.onBridge<{ slot: string }>(ReactCommands.UNEQUIP_ITEM, (data) => {
       this.equipmentSystem.unequip(data.slot as 'weapon' | 'head' | 'chest' | 'legs' | 'ring' | 'amulet' | 'offhand');
     });
-    gameBridge.on(ReactCommands.SHOP_BUY, (data: { itemId: string }) => {
+    this.onBridge<{ itemId: string }>(ReactCommands.SHOP_BUY, (data) => {
       this.shopSystem.buyItem(data.itemId);
     });
-    gameBridge.on(ReactCommands.DIALOG_OPTION, (data: { optionId: string }) => {
+    this.onBridge<{ optionId: string }>(ReactCommands.DIALOG_OPTION, (data) => {
       this.dialogueSystem.selectOption(data.optionId);
     });
-    gameBridge.on(ReactCommands.DIALOG_CLOSE, () => {
+    this.onBridge(ReactCommands.DIALOG_CLOSE, () => {
       this.dialogueSystem.closeDialogue();
     });
-    gameBridge.on(ReactCommands.SHOP_CLOSE, () => {
+    this.onBridge(ReactCommands.SHOP_CLOSE, () => {
       this.shopSystem.closeShop();
     });
+  }
+
+  /**
+   * gameBridge ist ein Modul-Singleton – Handler würden bei Scene-Neustart
+   * doppelt registriert. Deshalb werden sie bei SHUTDOWN UND DESTROY entfernt
+   * (game.destroy(true) feuert nur DESTROY, nicht SHUTDOWN).
+   */
+  private registerShutdownCleanup(): void {
+    const cleanup = () => {
+      for (const [event, handler] of this.bridgeHandlers) {
+        gameBridge.off(event, handler);
+      }
+      this.bridgeHandlers.length = 0;
+      this.wallLayer = null;
+      this.npcs.length = 0;
+      this.enemies.length = 0;
+      this.interactionZones.length = 0;
+      this.buildings.length = 0;
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
   }
 
   private handleSkillInput(): void {

@@ -61,8 +61,8 @@ export interface WorldMapResult {
  */
 export function createWorldMap(scene: Phaser.Scene, config: WorldMapConfig): WorldMapResult {
   const tileSize = config.tileSize ?? DEFAULT_TILE_SIZE;
-  const groundKey = config.groundKey ?? "tiles_forest";
-  const wallTilesetKey = config.wallTilesetKey ?? "tiles_buildings";
+  const groundKey = config.groundKey ?? "ground_tile";
+  const wallTilesetKey = config.wallTilesetKey ?? "wall_tile";
   const borderWalls = config.borderWalls ?? true;
   const useParallax = config.parallax ?? true;
 
@@ -97,13 +97,12 @@ export function createWorldMap(scene: Phaser.Scene, config: WorldMapConfig): Wor
     }
   }
 
-  // --- Ground: one TileSprite, scrolls with the world (scrollFactor 1) ---
+  // --- Ground: one TileSprite aus der gecroppten Gras-Tile, scrollt mit der Welt ---
   const ground = scene.add
     .tileSprite(widthPx / 2, heightPx / 2, widthPx, heightPx, groundKey)
     .setDepth(0)
     .setOrigin(0.5, 0.5);
   ground.setScrollFactor(1, 1);
-  ground.setTint(0xc8e0c0);
 
   let map: Phaser.Tilemaps.Tilemap | null = null;
   let wallLayer: Phaser.Tilemaps.TilemapLayer | null = null;
@@ -123,12 +122,12 @@ export function createWorldMap(scene: Phaser.Scene, config: WorldMapConfig): Wor
 
       if (wallLayer) {
         for (let x = 0; x < cols; x++) {
-          wallLayer.putTileAt(1, x, 0, false);
-          wallLayer.putTileAt(1, x, rows - 1, false);
+          wallLayer.putTileAt(0, x, 0, false);
+          wallLayer.putTileAt(0, x, rows - 1, false);
         }
         for (let y = 0; y < rows; y++) {
-          wallLayer.putTileAt(1, 0, y, false);
-          wallLayer.putTileAt(1, cols - 1, y, false);
+          wallLayer.putTileAt(0, 0, y, false);
+          wallLayer.putTileAt(0, cols - 1, y, false);
         }
 
         const blockers: Array<[number, number]> = [
@@ -140,11 +139,11 @@ export function createWorldMap(scene: Phaser.Scene, config: WorldMapConfig): Wor
         ];
         for (const [bx, by] of blockers) {
           if (bx > 0 && bx < cols - 1 && by > 0 && by < rows - 1) {
-            wallLayer.putTileAt(1, bx, by, false);
+            wallLayer.putTileAt(0, bx, by, false);
           }
         }
 
-        wallLayer.setCollision(1);
+        wallLayer.setCollision(0);
         wallLayer.setDepth(1);
       }
     }
