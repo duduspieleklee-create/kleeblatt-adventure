@@ -341,7 +341,7 @@ export class TownScene extends Phaser.Scene {
     ];
 
     for (const data of buildingData) {
-      const building = new Building(this, data.x, data.y, 'tiles_buildings', data.label, {
+      const building = new Building(this, data.x, data.y, data.label, {
         color: data.color,
         roofColor: data.roofColor,
       });
