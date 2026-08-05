@@ -14,12 +14,64 @@ function devError(...args: unknown[]) {
 const ATTACK_RANGE = 80;
 /** Attack cooldown ms. */
 const ATTACK_COOLDOWN = 600;
-/** Enemy chase distance threshold. */
-const ENEMY_CHASE_DIST = 240;
-/** Enemy patrol speed. */
-const ENEMY_SPEED = 60;
 /** Chest open proximity. */
 const CHEST_OPEN_DIST = 64;
+
+// Enemy FSM States
+type EnemyState = 'idle' | 'chase' | 'attack' | 'leash' | 'dead';
+
+// Enemy stats definitions
+interface EnemyStats {
+  id: 'bruiser' | 'runner' | 'spitter';
+  maxHp: number;
+  speed: number;
+  detectRange: number;
+  attackRange: number;
+  preferRangeMin?: number;
+  preferRangeMax?: number;
+  attackCooldownMs: number;
+  damage: number;
+  xp: number;
+  leashRange: number;
+}
+
+const ENEMY_STATS: Record<'bruiser' | 'runner' | 'spitter', EnemyStats> = {
+  bruiser: {
+    id: 'bruiser',
+    maxHp: 80,
+    speed: 60,
+    detectRange: 180,
+    attackRange: 36,
+    attackCooldownMs: 1200,
+    damage: 12,
+    xp: 15,
+    leashRange: 400,
+  },
+  runner: {
+    id: 'runner',
+    maxHp: 35,
+    speed: 110,
+    detectRange: 220,
+    attackRange: 28,
+    attackCooldownMs: 800,
+    damage: 8,
+    xp: 12,
+    leashRange: 350,
+  },
+  spitter: {
+    id: 'spitter',
+    maxHp: 45,
+    speed: 50,
+    detectRange: 240,
+    attackRange: 160,
+    preferRangeMin: 100,
+    preferRangeMax: 180,
+    attackCooldownMs: 1500,
+    damage: 10,
+    xp: 18,
+    leashRange: 420,
+  },
+};
 
 export class MatchScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -75,16 +127,17 @@ export class MatchScene extends Phaser.Scene {
   private attackTimer: Phaser.Time.TimerEvent | null = null;
 
   private enemy!: Phaser.Physics.Arcade.Sprite;
+  private enemyType: 'bruiser' | 'runner' | 'spitter' = 'bruiser';
+  private enemyStats!: EnemyStats;
   private enemyHp = 60;
   private enemyMaxHp = 60;
   private enemyAlive = true;
   private enemyHpBar!: Phaser.GameObjects.Rectangle;
   private enemyHpBg!: Phaser.GameObjects.Rectangle;
   private enemyHpText!: Phaser.GameObjects.Text;
-  private enemyPatrolTarget = { x: 0, y: 0 };
-  private enemyAttackCooldown = 1000;
-  private lastEnemyAttack = 0;
-  private enemyDamage = 8;
+  private enemyState: EnemyState = 'idle';
+  private enemySpawnPosition = { x: 0, y: 0 };
+  private enemyAttackReadyAt = 0;
 
   private chests: Array<{
     sprite: Phaser.GameObjects.GameObject;
@@ -260,13 +313,16 @@ export class MatchScene extends Phaser.Scene {
       .setVisible(false);
   }
 
-  private createSkeleton(): void {
+  private createSkeleton(enemyType: 'bruiser' | 'runner' | 'spitter' = 'bruiser'): void {
+    this.enemyType = enemyType;
+    this.enemyStats = ENEMY_STATS[enemyType];
+    this.enemyHp = this.enemyStats.maxHp;
+    this.enemyMaxHp = this.enemyStats.maxHp;
+
     this.enemy = this.physics.add.sprite(this.worldW * 0.75, this.worldH * 0.75, "skeleton_idle");
     this.enemy.setCollideWorldBounds(true);
     this.enemy.setDepth(10);
     this.enemy.play("skeleton_idle", true);
-
-    this.enemyPatrolTarget = { x: this.worldW * 0.7, y: this.worldH * 0.7 };
 
     const barWidth = 64;
     const barHeight = 6;
@@ -291,6 +347,11 @@ export class MatchScene extends Phaser.Scene {
       .setScrollFactor(1);
 
     devLog("[MatchScene] enemy HP bar created");
+
+    this.enemyAlive = true;
+    this.enemySpawnPosition = { x: this.worldW * 0.75, y: this.worldH * 0.75 };
+    this.enemyState = 'idle';
+    this.enemyAttackReadyAt = 0;
   }
 
   private createChests(): void {
@@ -631,60 +692,162 @@ export class MatchScene extends Phaser.Scene {
     this.enemyHpBg.setVisible(true);
     this.enemyHpText.setVisible(true);
     this.updateEnemyHpBar();
-    this.enemyPatrolTarget = { x: rx - 40, y: ry };
+    this.enemySpawnPosition = { x: rx, y: ry };
+    this.enemyState = 'idle';
+    this.enemyAttackReadyAt = 0;
   }
 
+  /** Enemy AI: FSM (idle → chase → attack → leash → dead). */
   private updateEnemyAI(_delta: number): void {
-    if (!this.enemyAlive) return;
+    if (!this.enemyAlive) {
+      this.enemyState = 'dead';
+      return;
+    }
 
     const dx = this.player.x - this.enemy.x;
     const dy = this.player.y - this.enemy.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
+    const now = this.time.now;
 
-    if (dist <= ENEMY_CHASE_DIST) {
-      const nx = dx / dist;
-      const ny = dy / dist;
-      this.enemy.setVelocity(nx * ENEMY_SPEED, ny * ENEMY_SPEED);
+    switch (this.enemyState) {
+      case 'idle':
+        this.updateEnemyIdle(dist, dx, dy);
+        break;
+      case 'chase':
+        this.updateEnemyChase(dist, dx, dy, now);
+        break;
+      case 'attack':
+        this.updateEnemyAttack(dist, dx, dy, now);
+        break;
+      case 'leash':
+        this.updateEnemyLeash(dist, dx, dy);
+        break;
+      case 'dead':
+        // Dead enemies do nothing
+        break;
+    }
+  }
+
+  private updateEnemyIdle(dist: number, _dx: number, _dy: number): void {
+    // Detect player within aggro range
+    if (dist <= this.enemyStats.detectRange) {
+      this.enemyState = 'chase';
       this.enemy.anims.stop();
-      this.enemy.play("skeleton_walk", true);
-      this.enemy.flipX = dx < 0;
+      this.enemy.play('skeleton_walk', true);
+    } else if (Math.random() < 0.01) {
+      // Occasional idle animation refresh
+      this.enemy.anims.stop();
+      this.enemy.play('skeleton_idle', true);
+    }
+  }
 
-      if (dist < 50) {
-        const now = this.time.now;
-        if (now - this.lastEnemyAttack > this.enemyAttackCooldown) {
-          this.lastEnemyAttack = now;
-          this.stats.currentHp = Math.max(0, this.stats.currentHp - this.enemyDamage);
-          this.showDamageNumber(this.player.x, this.player.y - 20, this.enemyDamage, 0xffaa00);
-          this.player.setTint(0xff0000);
-          this.time.delayedCall(200, () => this.player.clearTint());
+  private updateEnemyChase(dist: number, dx: number, dy: number, now: number): void {
+    // Player escaped aggro range → return to idle
+    if (dist > this.enemyStats.detectRange * 1.15) {
+      this.enemyState = 'idle';
+      this.enemy.anims.stop();
+      this.enemy.play('skeleton_idle', true);
+      return;
+    }
 
-          gameBridge.emit("player:hp", {
-            current: this.stats.currentHp,
-            max: this.stats.maxHp,
-          });
+    // Too far from spawn → leash back
+    const dxSpawn = this.enemy.x - this.enemySpawnPosition.x;
+    const dySpawn = this.enemy.y - this.enemySpawnPosition.y;
+    const distFromSpawn = Math.sqrt(dxSpawn * dxSpawn + dySpawn * dySpawn);
+    if (distFromSpawn > this.enemyStats.leashRange) {
+      this.enemyState = 'leash';
+      this.enemy.anims.stop();
+      this.enemy.play('skeleton_walk', true);
+      return;
+    }
 
-          if (this.stats.currentHp <= 0) {
-            this.playerDeath();
-          }
-        }
+    // Movement direction depends on enemy type
+    let vx = 0;
+    let vy = 0;
+    if (this.enemyType === 'spitter') {
+      // Spitter keeps preferred distance
+      const minRange = this.enemyStats.preferRangeMin ?? 0;
+      const maxRange = this.enemyStats.preferRangeMax ?? this.enemyStats.attackRange;
+      if (dist < minRange) {
+        vx = -dx / dist;
+        vy = -dy / dist;
+      } else if (dist > maxRange) {
+        vx = dx / dist;
+        vy = dy / dist;
       }
     } else {
-      const pdx = this.enemyPatrolTarget.x - this.enemy.x;
-      const pdy = this.enemyPatrolTarget.y - this.enemy.y;
-      const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+      // Bruiser/runner chase directly
+      vx = dx / dist;
+      vy = dy / dist;
+    }
 
-      if (pdist < 10) {
-        this.enemyPatrolTarget = {
-          x: 100 + Math.random() * (this.worldW - 200),
-          y: 100 + Math.random() * (this.worldH - 200),
-        };
-      } else {
-        this.enemy.setVelocity((pdx / pdist) * (ENEMY_SPEED * 0.4), (pdy / pdist) * (ENEMY_SPEED * 0.4));
-        this.enemy.flipX = pdx < 0;
-      }
+    if (vx !== 0 || vy !== 0) {
+      this.enemy.setVelocity(vx * this.enemyStats.speed, vy * this.enemyStats.speed);
+    } else {
+      this.enemy.setVelocity(0, 0);
+    }
+    this.enemy.flipX = dx < 0;
 
+    // Enter attack state when in range and cooldown ready
+    if (dist <= this.enemyStats.attackRange && now > this.enemyAttackReadyAt) {
+      this.enemyState = 'attack';
       this.enemy.anims.stop();
-      this.enemy.play("skeleton_idle", true);
+      this.enemy.play('skeleton_attack', true);
+      this.enemyAttackReadyAt = now + this.enemyStats.attackCooldownMs;
+    }
+  }
+
+  private updateEnemyAttack(dist: number, _dx: number, _dy: number, now: number): void {
+    if (dist <= this.enemyStats.attackRange && now > this.enemyAttackReadyAt) {
+      this.enemyAttackReadyAt = now + this.enemyStats.attackCooldownMs;
+
+      // Apply damage to player
+      this.stats.currentHp = Math.max(0, this.stats.currentHp - this.enemyStats.damage);
+      this.showDamageNumber(this.player.x, this.player.y - 20, this.enemyStats.damage, 0xffaa00);
+      this.player.setTint(0xff0000);
+      this.time.delayedCall(200, () => this.player.clearTint());
+
+      gameBridge.emit('player:hp', {
+        current: this.stats.currentHp,
+        max: this.stats.maxHp,
+      });
+
+      devLog(
+        `[MatchScene] Enemy (${this.enemyType}) hit player for ${this.enemyStats.damage} (HP: ${this.stats.currentHp}/${this.stats.maxHp})`
+      );
+
+      if (this.stats.currentHp <= 0) {
+        this.playerDeath();
+      }
+    } else {
+      // Out of range → resume chase
+      this.enemyState = 'chase';
+      this.enemy.anims.stop();
+      this.enemy.play('skeleton_walk', true);
+    }
+  }
+
+  private updateEnemyLeash(_dist: number, _dx: number, _dy: number): void {
+    const dxToSpawn = this.enemySpawnPosition.x - this.enemy.x;
+    const dyToSpawn = this.enemySpawnPosition.y - this.enemy.y;
+    const distToSpawn = Math.sqrt(dxToSpawn * dxToSpawn + dyToSpawn * dyToSpawn);
+
+    if (distToSpawn < 10) {
+      // Back at spawn → idle + full heal
+      this.enemyState = 'idle';
+      this.enemy.anims.stop();
+      this.enemy.play('skeleton_idle', true);
+      if (this.enemyHp < this.enemyMaxHp) {
+        this.enemyHp = this.enemyMaxHp;
+        this.updateEnemyHpBar();
+      }
+    } else {
+      const nx = dxToSpawn / distToSpawn;
+      const ny = dyToSpawn / distToSpawn;
+      this.enemy.setVelocity(nx * this.enemyStats.speed * 0.7, ny * this.enemyStats.speed * 0.7);
+      this.enemy.flipX = dxToSpawn < 0;
+      this.enemy.anims.stop();
+      this.enemy.play('skeleton_walk', true);
     }
   }
 
