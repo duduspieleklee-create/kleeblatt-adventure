@@ -163,7 +163,7 @@ jobs:
           } > "$BUNDLE_DIR/meta/release.env"
 
           TAR="/tmp/kleeblatt-release-${SHORT}.tar.gz"
-          tar -C "$BUNDLE_DIR" -czf "$TAR" .
+          tar -C "$BUNDLE_DIR" --transform 's|^\./||' -czf "$TAR" .
           echo "tar=$TAR" >> "$GITHUB_OUTPUT"
           echo "short=$SHORT" >> "$GITHUB_OUTPUT"
           ls -lh "$TAR"
