@@ -18,12 +18,24 @@ interface MatchPageProps {
 
 export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }: MatchPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const onMatchResultRef = useRef(onMatchResult);
+  const heroClassRef = useRef(heroClass);
+  const heroLevelRef = useRef(heroLevel);
+  const equippedStatsRef = useRef(equippedStats);
   const [matchActive, setMatchActive] = useState(true);
   const [showInventory, setShowInventory] = useState(false);
   const [needsRotation, setNeedsRotation] = useState(false);
 
   // Load stacks from API/localStorage, hydrate Phaser, debounce-save on inventory:updated
   useInventoryPersistence(true);
+
+  // Stabilize refs so game-creation effect only runs once
+  useEffect(() => {
+    onMatchResultRef.current = onMatchResult;
+  }, [onMatchResult]);
+  useEffect(() => { heroClassRef.current = heroClass; }, [heroClass]);
+  useEffect(() => { heroLevelRef.current = heroLevel; }, [heroLevel]);
+  useEffect(() => { equippedStatsRef.current = equippedStats; }, [equippedStats]);
 
   // Querformat-Guard: Das Spiel hat eine Mindestgröße (640×360). In Portrait
   // oder bei kleineren Viewports erscheint ein "Bitte Gerät drehen"-Overlay.
@@ -74,6 +86,11 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
     game.events.on("ready", () => {
       console.info("[MatchPage] Phaser game ready");
       setMatchActive(true);
+      gameBridge.emit("match:start", {
+        heroClass: heroClassRef.current ?? "warrior",
+        level: heroLevelRef.current ?? 1,
+        equippedStats: equippedStatsRef.current ?? {},
+      });
     });
 
     game.events.on("shutdown", () => {
@@ -91,7 +108,7 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
         chestsOpened: payload.chestsOpened,
       }).then((res) => {
         if (res.ok) {
-          onMatchResult?.({
+          onMatchResultRef.current?.({
             xpGained: res.data.xpGained,
             leveledUp: res.data.leveledUp,
             newLevel: res.data.newLevel,
@@ -106,23 +123,11 @@ export function MatchPage({ heroClass, heroLevel, equippedStats, onMatchResult }
       gameBridge.off("match:ended", onEnded);
       game.destroy(true);
     };
-  }, [onMatchResult]);
-
-  const handleStart = useCallback(() => {
-    gameBridge.emit("match:start", {
-      heroClass: heroClass ?? "warrior",
-      level: heroLevel ?? 1,
-      equippedStats: equippedStats ?? {},
-    });
-  }, [heroClass, heroLevel, equippedStats]);
+  }, []);
 
   const handleExit = useCallback(() => {
     gameBridge.emit("match:exit", {});
   }, []);
-
-  useEffect(() => {
-    handleStart();
-  }, [handleStart]);
 
   return (
     <div className="game-container">
