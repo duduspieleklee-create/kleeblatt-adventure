@@ -1,0 +1,16 @@
+{
+  "id": "minen_abenteuer",
+  "title": "Minen-Abenteuer",
+  "description": "Sammle 3 Eisen-Erz in der Mine.",
+  "giver": "auftraggeber",
+  "requirements": {
+    "collect": {
+      "item": "eisen_erz",
+      "amount": 3
+    }
+  },
+  "rewards": {
+    "xp": 200,
+    "gold": 50
+  }
+}
