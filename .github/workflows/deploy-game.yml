@@ -9,6 +9,7 @@ on:
       - "packages/shared/**"
       - "package.json"
       - "turbo.json"
+      - "game-config.json"
       - ".github/workflows/deploy-game.yml"
   workflow_dispatch:
 
@@ -45,6 +46,7 @@ jobs:
         run: |
           test -f apps/web/dist/index.html
           test -f apps/api/dist/index.js
+          test -f game-config.json
           ls -la apps/web/dist/ apps/api/dist/
 
       - name: Check deploy secrets
@@ -145,6 +147,12 @@ jobs:
             packages/shared/package.json \
             "${DEPLOY_USER}@${HOST}:${API_PATH}/packages/shared/package.json"
 
+          # Gameplay config required by hero/match/loot (API loadGameConfig)
+          rsync -avz --rsync-path="sudo rsync" --temp-dir="/tmp" --no-times \
+            -e "ssh -p ${PORT} -o StrictHostKeyChecking=yes" \
+            game-config.json \
+            "${DEPLOY_USER}@${HOST}:${API_PATH}/game-config.json"
+
       - name: Merge production .env & restart API
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -166,7 +174,6 @@ jobs:
             exit 1
           fi
 
-          # Overlay file: only keys we manage from CI (never wipe DB/Redis if secret empty)
           {
             echo "NODE_ENV=production"
             echo "API_URL=https://game.kleeblatt.space"
@@ -190,7 +197,6 @@ jobs:
             /tmp/kleeblatt.env.overlay \
             "${DEPLOY_USER}@${HOST}:/tmp/kleeblatt.env.overlay"
 
-          # On server: merge overlay into existing .env (preserve DATABASE_URL etc.)
           ssh -p "$PORT" -o StrictHostKeyChecking=yes "${DEPLOY_USER}@${HOST}" bash -s -- "$API_PATH" <<'REMOTE'
           set -euo pipefail
           API_PATH="$1"
@@ -202,11 +208,9 @@ jobs:
           sudo touch "$ENV_FILE"
           sudo chmod 640 "$ENV_FILE" || true
 
-          # Start from existing env (keeps DATABASE_URL / REDIS_URL / extras)
           sudo cat "$ENV_FILE" > "$MERGED" 2>/dev/null || true
           touch "$MERGED"
 
-          # Apply overlay keys (upsert)
           while IFS= read -r line || [ -n "$line" ]; do
             case "$line" in
               ''|\#*) continue ;;
@@ -230,7 +234,6 @@ jobs:
 
           sudo systemctl restart kleeblatt-api
 
-          # Health retry (process may need a few seconds after restart)
           ok=0
           for i in 1 2 3 4 5 6 7 8 9 10; do
             if curl -sf http://127.0.0.1:4000/health >/dev/null; then

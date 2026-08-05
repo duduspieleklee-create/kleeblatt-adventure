@@ -7,7 +7,8 @@ export const createHeroSchema = z.object({
     .string()
     .min(2, "Heldenname muss 2–20 Zeichen lang sein.")
     .max(20, "Heldenname muss 2–20 Zeichen lang sein.")
-    .regex(/^[A-Za-z0-9 ]+$/, "Heldenname: nur Buchstaben, Zahlen und Leerzeichen erlaubt.")
+    // Unicode letters + numbers + spaces (German umlauts etc.)
+    .regex(/^[\p{L}\p{N} ]+$/u, "Heldenname: nur Buchstaben, Zahlen und Leerzeichen erlaubt.")
     .transform((value) => value.trim()),
   class: z.enum(["mage", "ranged", "melee"], {
     message: "Ungültige Klasse: mage | ranged | melee",

@@ -17,8 +17,8 @@ import { loadGameConfig } from "../lib/gameConfig.js";
 import { newId } from "../lib/ids.js";
 import { memHeroes, memItems } from "./memoryStore.js";
 
-/** Laut API-Vertrag: 2–20 Zeichen, alphanumerisch + Leerzeichen. */
-const HERO_NAME_RE = /^[A-Za-z0-9 ]{2,20}$/;
+/** 2–20 Zeichen: Unicode-Buchstaben, Zahlen, Leerzeichen (inkl. Umlaute). */
+const HERO_NAME_RE = /^[\p{L}\p{N} ]{2,20}$/u;
 
 export function validateHeroName(name: string): string | null {
   if (!name) return "Heldenname fehlt.";
@@ -88,38 +88,43 @@ export async function createHero(
   };
   const starterItems = buildStarterItems(input.class);
 
-  if (await isDbAvailable()) {
-    const db = getDb()!;
-    await db.insert(heroesTable).values({
-      userId: hero.userId,
-      heroName: hero.heroName,
-      class: hero.class,
-      level: hero.level,
-      xp: hero.xp,
-      equipped: hero.equipped,
-    });
-    if (starterItems.length > 0) {
-      await db.insert(itemsTable).values(
-        starterItems.map((it) => ({
-          id: it.itemId,
-          userId,
-          templateId: it.templateId,
-          name: it.name,
-          slot: it.slot,
-          rarity: it.rarity,
-          state: it.state,
-          stats: it.stats,
-          allowedClasses: it.allowedClasses,
-          description: it.description,
-          equipped: false,
-        })),
-      );
+  try {
+    if (await isDbAvailable()) {
+      const db = getDb()!;
+      await db.insert(heroesTable).values({
+        userId: hero.userId,
+        heroName: hero.heroName,
+        class: hero.class,
+        level: hero.level,
+        xp: hero.xp,
+        equipped: hero.equipped,
+      });
+      if (starterItems.length > 0) {
+        await db.insert(itemsTable).values(
+          starterItems.map((it) => ({
+            id: it.itemId,
+            userId,
+            templateId: it.templateId,
+            name: it.name,
+            slot: it.slot,
+            rarity: it.rarity,
+            state: it.state,
+            stats: it.stats,
+            allowedClasses: it.allowedClasses,
+            description: it.description,
+            equipped: false,
+          })),
+        );
+      }
+    } else {
+      memHeroes.set(userId, hero);
+      for (const item of starterItems) {
+        memItems.set(item.itemId, { ownerId: userId, item });
+      }
     }
-  } else {
-    memHeroes.set(userId, hero);
-    for (const item of starterItems) {
-      memItems.set(item.itemId, { ownerId: userId, item });
-    }
+  } catch (err) {
+    console.error("[createHero] persist failed:", err);
+    return { ok: false, status: 400, error: "Held konnte nicht gespeichert werden. Bitte erneut versuchen." };
   }
 
   return { ok: true, hero, starterItems };

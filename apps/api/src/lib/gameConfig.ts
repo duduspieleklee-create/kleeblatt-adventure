@@ -1,13 +1,31 @@
-/** Lädt game-config.json aus dem Repo-Root (Quelle aller Gameplay-Werte). */
+/** Lädt game-config.json (Quelle aller Gameplay-Werte). */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-// src/lib (oder dist/lib) → Repo-Root
-const rootDir = resolve(here, "../../../../");
-const configPath = resolve(rootDir, "game-config.json");
+
+/** Candidate paths: monorepo root from dist/lib or src/lib, cwd, explicit env. */
+function resolveConfigPath(): string {
+  const candidates = [
+    process.env.GAME_CONFIG_PATH,
+    // apps/api/dist/lib → ../../../../game-config.json (repo root)
+    resolve(here, "../../../../game-config.json"),
+    // apps/api/dist/lib → ../../../game-config.json (apps/)
+    resolve(here, "../../../game-config.json"),
+    // next to package: apps/api/game-config.json
+    resolve(here, "../../game-config.json"),
+    // cwd (systemd WorkingDirectory often API root)
+    resolve(process.cwd(), "game-config.json"),
+    resolve(process.cwd(), "apps/api/game-config.json"),
+  ].filter((p): p is string => Boolean(p));
+
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return candidates[0] ?? resolve(here, "../../../../game-config.json");
+}
 
 export interface StarterGearItem {
   templateId: string;
@@ -66,11 +84,30 @@ export interface GameConfig {
   lootTables: Record<string, LootTable>;
 }
 
+const EMPTY_CONFIG: GameConfig = {
+  starterGear: {},
+  itemStateEnum: [],
+  rarityEnum: [],
+  hero: { classes: {} },
+  enemies: { archetypes: {}, spawnConfig: { prototype: { type: "skeleton", count: 1, respawnMs: 5000 } } },
+  xpCurve: { levels: [], rules: { xpOnEnemyDeath: true, xpKeptOnDeath: true, levelUpHealToFull: true } },
+  match: { mapId: "proto", mapSize: { width: 2000, height: 2000, tileSize: 32 }, playerSpawn: { x: 1000, y: 1000 } },
+  lootTables: {},
+};
+
 let cached: GameConfig | null = null;
 
 export function loadGameConfig(): GameConfig {
   if (cached) return cached;
-  const raw = readFileSync(configPath, "utf8");
-  cached = JSON.parse(raw) as GameConfig;
-  return cached;
+  const configPath = resolveConfigPath();
+  try {
+    const raw = readFileSync(configPath, "utf8");
+    cached = JSON.parse(raw) as GameConfig;
+    return cached;
+  } catch (err) {
+    console.error(`[gameConfig] failed to load ${configPath}:`, err);
+    // Do not crash hero creation / match if file missing on server
+    cached = EMPTY_CONFIG;
+    return cached;
+  }
 }
