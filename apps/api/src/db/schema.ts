@@ -1,4 +1,4 @@
-/** Drizzle-Schema: users, heroes, items, item_templates, wallets, user_onboarding */
+/** Drizzle-Schema: users, heroes, items, item_templates, wallets, user_onboarding, inventory_stacks */
 
 import {
   boolean,
@@ -100,6 +100,16 @@ export const userOnboardings = pgTable("user_onboarding", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Rucksack-Stacks: templateId → quantity (Materialien, Tränke). */
+export const inventoryStacks = pgTable("inventory_stacks", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id),
+  /** jsonb: { [templateId]: number } */
+  stacks: jsonb("stacks").notNull().default({}),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type HeroRow = typeof heroes.$inferSelect;
 export type ItemRow = typeof items.$inferSelect;
@@ -107,3 +117,4 @@ export type ItemTemplateRow = typeof itemTemplates.$inferSelect;
 export type WalletRow = typeof wallets.$inferSelect;
 export type UserOnboardingRow = typeof userOnboardings.$inferSelect;
 export type ChestOpenRow = typeof chestOpens.$inferSelect;
+export type InventoryStacksRow = typeof inventoryStacks.$inferSelect;
