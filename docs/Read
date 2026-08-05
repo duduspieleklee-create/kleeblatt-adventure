@@ -1,0 +1,126 @@
+# Kleeblatt Adventure — Phaser/React Audit Notes
+
+## 1. Fixed: `phaser3spectorjs` module resolution error
+
+**Error:**
+```
+Uncaught TypeError: Failed to resolve module specifier "phaser3spectorjs"
+```
+
+**Cause:** `apps/web/vite.config.ts` had:
+```ts
+resolve: {
+  alias: {
+    phaser: resolve(__dirname, "../../node_modules/phaser/src/phaser.js"),
+  },
+},
+```
+This aliased Phaser to its raw, uncompiled source tree instead of its published entry point. Deep inside that tree, `WebGLRenderer.js` has a bare `import` of `phaser3spectorjs` — an optional dev-only dependency never meant to be resolved by consumers. Vite couldn't resolve it, so the literal specifier shipped to the browser, which can't resolve bare specifiers at runtime.
+
+**Fix applied:** removed the alias entirely. Confirmed working — the `phaser3spectorjs` error is gone and the game now reaches boot (Phaser v4.2.1 banner logs, `ready` event fires).
+
+---
+
+## 2. Confirmed bug — `Phaser` used without importing it
+
+Found by grepping the actual source for `Phaser.` usage vs. top-level `import Phaser`.
+
+Most files only use `Phaser.Scene`, `Phaser.GameObjects.Sprite`, etc. as **types** — safe, erased at compile time, no import needed.
+
+But two files use `Phaser.X` as a **runtime value**, with no import at all:
+
+```ts
+// src/game/entities/Enemy.ts:95
+const dist = Phaser.Math.Distance.Between(...)
+```
+
+```ts
+// src/game/systems/InventorySystem.ts:28
+scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {...})
+```
+
+TypeScript doesn't flag this because Phaser's `.d.ts` also declares an *ambient global* `namespace Phaser` (legacy script-tag support), so it type-checks fine with zero import. At runtime in an ESM bundle there is no global `Phaser` — only `import Phaser from "phaser"` creates a real binding. These **will** throw once those code paths run (enemy distance checks, inventory scene-shutdown cleanup).
+
+**Fix:** add to the top of both files:
+```ts
+import Phaser from "phaser";
+```
+
+---
+
+## 3. Current/next crash to chase — inside Phaser's own code via `anims.create`
+
+**Error (from your screenshot):**
+```
+ReferenceError: Phaser is not defined
+  at new IO (...)
+  at tm.create (...)
+  at initialize.create (bootScene)
+  at initialize.start
+```
+
+This is thrown *inside Phaser's library internals*, triggered from `this.anims.create(...)` in `boot-scene.ts` — not from a missing import in your own code (boot-scene.ts imports Phaser correctly).
+
+**Best current lead (not yet verified against a real build):** Phaser 4's official Vite template (`npm create @phaserjs/game`) deliberately splits Phaser into its own build chunk — documented as a Phaser-4-specific requirement, different from the Phaser 3 templates. Worth trying:
+
+```ts
+// vite.config.ts
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: { manualChunks: { phaser: ["phaser"] } },
+    },
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      "/api": { target: "http://localhost:4000", changeOrigin: true },
+      "/health": { target: "http://localhost:4000", changeOrigin: true },
+      "/auth": { target: "http://localhost:4000", changeOrigin: true },
+      "/me": { target: "http://localhost:4000", changeOrigin: true },
+    },
+  },
+});
+```
+
+**Confidence:** medium. I couldn't run your actual build (no network/node_modules in my sandbox) to confirm this resolves the exact crash — treat it as the next thing to try, then report back what the console shows.
+
+---
+
+## 4. Earlier finding — Phaser game recreated on every parent re-render
+
+In `MatchPage.tsx`, the effect that creates/destroys the Phaser game depended on `onMatchResult`, which was a new function every render because `useHero()` (in `HomePage.tsx`) returns a fresh `{ state, refresh }` object on every render. Net effect: the running Phaser game tears down and rebuilds on ordinary React re-renders — most visibly right after a match ends.
+
+**Fix (recommended, not yet confirmed applied):** hold `onMatchResult` in a `ref` and make the game-creation effect run once on mount/unmount only:
+
+```ts
+const onMatchResultRef = useRef(onMatchResult);
+useEffect(() => { onMatchResultRef.current = onMatchResult; }, [onMatchResult]);
+
+useEffect(() => {
+  const container = containerRef.current;
+  if (!container) return;
+  const game = createGame(container);
+  // ...
+  const onEnded = (payload) => {
+    // ...
+    onMatchResultRef.current?.({ ... });
+  };
+  gameBridge.on("match:ended", onEnded);
+  return () => { gameBridge.off("match:ended", onEnded); game.destroy(true); };
+}, []); // mount/unmount only
+```
+
+Same churn pattern applies to the `handleStart` effect right below it in `MatchPage.tsx`.
+
+---
+
+## Status summary
+
+| # | Issue | Status |
+|---|-------|--------|
+| 1 | `phaser3spectorjs` resolve error (broken vite alias) | ✅ Fixed, confirmed |
+| 2 | `Phaser` used without import (Enemy.ts, InventorySystem.ts) | ⚠️ Confirmed bug, fix not yet applied |
+| 3 | `ReferenceError: Phaser is not defined` inside `anims.create` | 🔍 Investigating, try manualChunks fix |
+| 4 | Phaser game recreated on every parent re-render | ⚠️ Confirmed bug, fix not yet applied |
