@@ -1,5 +1,5 @@
-import { gameBridge } from '../../lib/gameBridge';
-import { PhaserEvents } from '../core/GameEvents';
+import { gameBridge } from '../../../lib/gameBridge';
+import { PhaserEvents } from '../../../core/GameEvents';
 
 export interface PlayerStats {
   hp: number;
@@ -25,6 +25,10 @@ export default class Player {
     this.scene = scene;
     this.sprite = scene.physics.add.sprite(x, y, textureKey);
     (this.sprite.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
+    // ★★★ KORREKTE HITBOX ★★★
+    (this.sprite.body as Phaser.Physics.Arcade.Body).setSize(16, 24);
+    (this.sprite.body as Phaser.Physics.Arcade.Body).setOffset(8, 8);
+
     this.stats = {
       hp: 100,
       maxHp: 100,
