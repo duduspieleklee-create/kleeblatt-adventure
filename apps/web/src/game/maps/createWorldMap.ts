@@ -1,4 +1,10 @@
 import Phaser from "phaser";
+import {
+  createParallaxBackground,
+  enableParallaxDrift,
+  type ParallaxBackgroundResult,
+  type ParallaxLayerConfig,
+} from "./createParallaxBackground";
 
 /** Default world size in pixels (not tiles). Safe for mobile. */
 export const DEFAULT_WORLD_SIZE = { width: 2000, height: 2000 } as const;
@@ -20,6 +26,12 @@ export interface WorldMapConfig {
   wallTilesetKey?: string;
   /** If true, draw a 1-tile border wall + a few interior blockers. */
   borderWalls?: boolean;
+  /** Add far/mid parallax layers behind the ground (default true). */
+  parallax?: boolean;
+  /** Override default parallax layer defs. */
+  parallaxLayers?: ParallaxLayerConfig[];
+  /** Gentle horizontal drift on the farthest layer (default true). */
+  parallaxDrift?: boolean;
 }
 
 export interface WorldMapResult {
@@ -33,19 +45,26 @@ export interface WorldMapResult {
   map: Phaser.Tilemaps.Tilemap | null;
   wallLayer: Phaser.Tilemaps.TilemapLayer | null;
   ground: Phaser.GameObjects.TileSprite;
+  /** Parallax stack (empty if disabled). */
+  parallax: ParallaxBackgroundResult | null;
+  /** Call from scene shutdown to stop drift + destroy layers. */
+  destroyParallax: () => void;
 }
 
 /**
  * Build a large scrolling world without filling millions of tiles.
  *
- * Ground: single TileSprite (GPU-friendly, scrolls with camera).
- * Walls: optional blank tilemap layer with border + sparse blockers only.
+ * Layer stack (back → front):
+ *   parallax far / mid  (scrollFactor 0.12–0.55)
+ *   ground TileSprite   (scrollFactor 1)
+ *   wall blank layer    (collision, sparse)
  */
 export function createWorldMap(scene: Phaser.Scene, config: WorldMapConfig): WorldMapResult {
   const tileSize = config.tileSize ?? DEFAULT_TILE_SIZE;
   const groundKey = config.groundKey ?? "tiles_forest";
   const wallTilesetKey = config.wallTilesetKey ?? "tiles_buildings";
   const borderWalls = config.borderWalls ?? true;
+  const useParallax = config.parallax ?? true;
 
   // Snap to tile grid; interpret input as pixels, never as tile counts.
   let cols = Math.max(1, Math.ceil(config.widthPx / tileSize));
@@ -63,15 +82,27 @@ export function createWorldMap(scene: Phaser.Scene, config: WorldMapConfig): Wor
   const widthPx = cols * tileSize;
   const heightPx = rows * tileSize;
 
+  // --- Parallax (behind ground) ---
+  let parallax: ParallaxBackgroundResult | null = null;
+  let stopDrift: (() => void) | null = null;
+
+  if (useParallax) {
+    parallax = createParallaxBackground(scene, {
+      widthPx,
+      heightPx,
+      layers: config.parallaxLayers,
+    });
+    if (config.parallaxDrift !== false && parallax.layers.length > 0) {
+      stopDrift = enableParallaxDrift(scene, parallax.layers);
+    }
+  }
+
   // --- Ground: one TileSprite, scrolls with the world (scrollFactor 1) ---
   const ground = scene.add
     .tileSprite(widthPx / 2, heightPx / 2, widthPx, heightPx, groundKey)
     .setDepth(0)
     .setOrigin(0.5, 0.5);
-  // Explicit: ground must move with the camera follow, not stay fixed like HUD.
   ground.setScrollFactor(1, 1);
-
-  // Soft tint so the repeating tileset is less harsh
   ground.setTint(0xc8e0c0);
 
   let map: Phaser.Tilemaps.Tilemap | null = null;
@@ -91,7 +122,6 @@ export function createWorldMap(scene: Phaser.Scene, config: WorldMapConfig): Wor
       wallLayer = map.createBlankLayer("walls", wallTileset, 0, 0);
 
       if (wallLayer) {
-        // Border only — O(cols + rows), not O(cols * rows)
         for (let x = 0; x < cols; x++) {
           wallLayer.putTileAt(1, x, 0, false);
           wallLayer.putTileAt(1, x, rows - 1, false);
@@ -101,7 +131,6 @@ export function createWorldMap(scene: Phaser.Scene, config: WorldMapConfig): Wor
           wallLayer.putTileAt(1, cols - 1, y, false);
         }
 
-        // A few interior blockers (relative positions so they scale with map size)
         const blockers: Array<[number, number]> = [
           [Math.floor(cols * 0.25), Math.floor(rows * 0.33)],
           [Math.floor(cols * 0.25) + 1, Math.floor(rows * 0.33)],
@@ -123,5 +152,23 @@ export function createWorldMap(scene: Phaser.Scene, config: WorldMapConfig): Wor
 
   scene.physics.world.setBounds(0, 0, widthPx, heightPx);
 
-  return { widthPx, heightPx, tileSize, cols, rows, map, wallLayer, ground };
+  const destroyParallax = () => {
+    stopDrift?.();
+    stopDrift = null;
+    parallax?.destroy();
+    parallax = null;
+  };
+
+  return {
+    widthPx,
+    heightPx,
+    tileSize,
+    cols,
+    rows,
+    map,
+    wallLayer,
+    ground,
+    parallax,
+    destroyParallax,
+  };
 }
