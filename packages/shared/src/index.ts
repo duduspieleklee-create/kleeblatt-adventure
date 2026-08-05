@@ -20,6 +20,12 @@ export type {
   InventoryItem,
 } from "./types/item.js";
 
+export type {
+  InventoryStacks,
+  InventoryStacksResponse,
+  PutInventoryStacksRequest,
+} from "./types/inventory.js";
+
 export type { HealthResponse, ApiErrorBody } from "./types/api.js";
 
 export type { SessionUser, MeResponse } from "./types/user.js";
