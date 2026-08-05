@@ -43,12 +43,10 @@ jobs:
         run: |
           mkdir -p "${HOME}/.ssh"
           ssh-keyscan -H "${DEPLOY_HOST}" >> "${HOME}/.ssh/known_hosts"
-          # First copy package files and install deps (before dist to avoid cleanup)
-          scp -o StrictHostKeyChecking=accept-new -r apps/api/package.json apps/web/package.json packages/shared/package.json package*.json game-config.json ecosystem.config.cjs \
+          # Copy full workspace dirs + root files so npm install sees valid workspaces
+          scp -o StrictHostKeyChecking=accept-new -r apps/ packages/ package*.json game-config.json ecosystem.config.cjs \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
+          # Install production deps (npm install won't clean valid workspace dirs)
           ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc 'cd ${DEPLOY_PATH} && npm install --omit=dev'"
-          # Then copy built dist files
-          scp -o StrictHostKeyChecking=accept-new -r apps/web/dist apps/api/dist packages/shared/dist \
-            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
           # Start/restart API
-          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc 'cd ${DEPLOY_PATH} && echo \"=== remote apps/api/ ===\" && ls -la apps/api/ && echo \"=== remote apps/api/dist/ ===\" && ls -la apps/api/dist/ && (npx pm2 reload ecosystem.config.cjs --update-env 2>/dev/null || npx pm2 start ecosystem.config.cjs --update-env) && npx pm2 save'"
+          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc 'cd ${DEPLOY_PATH} && (npx pm2 reload ecosystem.config.cjs --update-env 2>/dev/null || npx pm2 start ecosystem.config.cjs --update-env) && npx pm2 save'"
