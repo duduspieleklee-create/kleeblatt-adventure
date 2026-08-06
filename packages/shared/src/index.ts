@@ -29,7 +29,13 @@ export type {
 export type { HealthResponse, ApiErrorBody } from "./types/api.js";
 
 export type { SessionUser, MeResponse } from "./types/user.js";
-export type { WalletStatus, WalletResponse, WalletConnectRequest, WalletConnectResponse, WalletBalance } from "./types/wallet.js";
+export type {
+  WalletStatus,
+  WalletResponse,
+  WalletConnectRequest,
+  WalletConnectResponse,
+  WalletBalance,
+} from "./types/wallet.js";
 export type { OnboardingPath, OnboardingStatus } from "./types/onboarding.js";
 
 export type { GameBridgeEvents } from "./gameBridge.js";
@@ -37,6 +43,22 @@ export { gameBridge, TypedEmitter } from "./gameBridge.js";
 
 export type { XpCurveLevel, XpState, ApplyXpResult } from "./rules/xp.js";
 export { applyXp, DEFAULT_XP_CURVE } from "./rules/xp.js";
+
+export type { FinalStats } from "./stats.js";
+export {
+  HERO_CLASS_BASE_STATS,
+  HERO_LEVEL_BONUSES,
+  computeFinalStats,
+  computeHeroFinalStats,
+} from "./stats.js";
+
+export type {
+  WorldMap,
+  WorldMapTile,
+  WorldEnemy,
+  WorldChest,
+  WorldNpcPosition,
+} from "./types/worldState.js";
 
 export { API_DEFAULT_PORT, WEB_DEFAULT_PORT, PROTOTYPE_MAP_ID } from "./constants/index.js";
 

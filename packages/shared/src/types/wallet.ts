@@ -17,7 +17,7 @@ export interface WalletResponse {
 export interface WalletConnectRequest {
   address: string;
   signature?: string;
-  provider: "mock" | "metamask" | "walletconnect";
+  provider: "mock" | "metamask" | "walletconnect" | "immutable";
 }
 
 export interface WalletConnectResponse {

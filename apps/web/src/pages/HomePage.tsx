@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
-import type { HeroResponse, OnboardingPath } from "@kleeblatt/shared";
+import type { HeroClass, HeroResponse, OnboardingPath } from "@kleeblatt/shared";
+import { computeHeroFinalStats } from "@kleeblatt/shared";
 import { useMe } from "../hooks/useMe";
 import { useHero } from "../hooks/useHero";
 import { useOnboarding } from "../hooks/useOnboarding";
@@ -12,21 +13,14 @@ import { NeulingIntro } from "../components/NeulingIntro";
 import { ExperteIntro } from "../components/ExperteIntro";
 import { MatchPage } from "./MatchPage";
 
-/** Summiere Stats aller ausgerüsteten Items. */
-function sumEquippedStats(
-  hero: { equipped: Record<string, string> },
-  inventory: Array<{ itemId: string; stats: Record<string, number> }>,
+/** Finale Held-Stats nach statStacking (base + gear + levelBonus). */
+function equippedStatsFor(
+  heroClass: HeroClass,
+  level: number,
+  inventory: Array<{ equipped: boolean; stats: Record<string, number> }>,
 ): Record<string, number> {
-  const result: Record<string, number> = {};
-  for (const itemId of Object.values(hero.equipped ?? {})) {
-    const item = inventory.find((i) => i.itemId === itemId);
-    if (item?.stats) {
-      for (const [key, val] of Object.entries(item.stats)) {
-        result[key] = (result[key] ?? 0) + val;
-      }
-    }
-  }
-  return result;
+  const { maxHp, atk, speed } = computeHeroFinalStats(heroClass, level, inventory);
+  return { maxHp, atk, speed };
 }
 
 export function HomePage() {
@@ -76,7 +70,7 @@ export function HomePage() {
   // Equipped stats für MatchPage berechnen
   const equippedStats = useMemo(() => {
     if (hero.state.status !== "ready") return {};
-    return sumEquippedStats(hero.state.hero, hero.state.inventory);
+    return equippedStatsFor(hero.state.hero.class, hero.state.hero.level, hero.state.inventory);
   }, [hero.state]);
 
   // Nach Match-Ende (XP + Level-Up verrechnet) Held neu laden
