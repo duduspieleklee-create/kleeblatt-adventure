@@ -18,11 +18,11 @@ const ATTACK_COOLDOWN = 600;
 const CHEST_OPEN_DIST = 64;
 
 // Enemy FSM States
-type EnemyState = 'idle' | 'chase' | 'attack' | 'leash' | 'dead';
+type EnemyState = "idle" | "chase" | "attack" | "leash" | "dead";
 
 // Enemy stats definitions
 interface EnemyStats {
-  id: 'bruiser' | 'runner' | 'spitter';
+  id: "bruiser" | "runner" | "spitter";
   maxHp: number;
   speed: number;
   detectRange: number;
@@ -35,9 +35,9 @@ interface EnemyStats {
   leashRange: number;
 }
 
-const ENEMY_STATS: Record<'bruiser' | 'runner' | 'spitter', EnemyStats> = {
+const ENEMY_STATS: Record<"bruiser" | "runner" | "spitter", EnemyStats> = {
   bruiser: {
-    id: 'bruiser',
+    id: "bruiser",
     maxHp: 80,
     speed: 60,
     detectRange: 180,
@@ -48,7 +48,7 @@ const ENEMY_STATS: Record<'bruiser' | 'runner' | 'spitter', EnemyStats> = {
     leashRange: 400,
   },
   runner: {
-    id: 'runner',
+    id: "runner",
     maxHp: 35,
     speed: 110,
     detectRange: 220,
@@ -59,7 +59,7 @@ const ENEMY_STATS: Record<'bruiser' | 'runner' | 'spitter', EnemyStats> = {
     leashRange: 350,
   },
   spitter: {
-    id: 'spitter',
+    id: "spitter",
     maxHp: 45,
     speed: 50,
     detectRange: 240,
@@ -127,7 +127,7 @@ export class MatchScene extends Phaser.Scene {
   private attackTimer: Phaser.Time.TimerEvent | null = null;
 
   private enemy!: Phaser.Physics.Arcade.Sprite;
-  private enemyType: 'bruiser' | 'runner' | 'spitter' = 'bruiser';
+  private enemyType: "bruiser" | "runner" | "spitter" = "bruiser";
   private enemyStats!: EnemyStats;
   private enemyHp = 60;
   private enemyMaxHp = 60;
@@ -135,7 +135,7 @@ export class MatchScene extends Phaser.Scene {
   private enemyHpBar!: Phaser.GameObjects.Rectangle;
   private enemyHpBg!: Phaser.GameObjects.Rectangle;
   private enemyHpText!: Phaser.GameObjects.Text;
-  private enemyState: EnemyState = 'idle';
+  private enemyState: EnemyState = "idle";
   private enemySpawnPosition = { x: 0, y: 0 };
   private enemyAttackReadyAt = 0;
 
@@ -150,6 +150,20 @@ export class MatchScene extends Phaser.Scene {
   private chestPromptText!: Phaser.GameObjects.Text;
 
   private damageNumbers: Phaser.GameObjects.Text[] = [];
+
+  /** Village-specific properties */
+  private isVillageArea = false;
+  private villageCenterX = 400;
+  private villageCenterY = 400;
+  private villageRadius = 200;
+  private hasVisitedVillage = false;
+  private villageStatusText: Phaser.GameObjects.Text | null = null;
+
+  /** Persistent world state loaded from API (world-state service). */
+  private persistentWorldState: {
+    enemies: Array<{ id: string; type: string; x: number; y: number; hp: number; maxHp: number }>;
+    chests: Array<{ id: string; x: number; y: number; opened: boolean }>;
+  } = { enemies: [], chests: [] };
 
   constructor() {
     super("match");
@@ -167,15 +181,32 @@ export class MatchScene extends Phaser.Scene {
   create(): void {
     try {
       devLog("[MatchScene] create() started");
+
+      // Load persistent village state
+      this.loadVillageState();
+
       this.createMap();
       devLog("[MatchScene] map created", this.worldW, "x", this.worldH);
       this.createVillage();
       devLog("[MatchScene] village created");
       this.createPlayer();
       devLog("[MatchScene] player created");
-      this.createSkeleton();
+
+      // Create enemies from persistent state if available
+      if (this.persistentWorldState && this.persistentWorldState.enemies.length > 0) {
+        this.createEnemiesFromState();
+      } else {
+        this.createSkeleton();
+      }
       devLog("[MatchScene] skeleton created");
-      this.createChests();
+
+      // Create chests from persistent state if available
+      if (this.persistentWorldState && this.persistentWorldState.chests.length > 0) {
+        this.createChestsFromState();
+      } else {
+        this.createChests();
+      }
+
       this.createCrops();
       this.createAnimals();
       this.createVfxTriggers();
@@ -192,6 +223,89 @@ export class MatchScene extends Phaser.Scene {
       devLog("[MatchScene] match started, player at", this.player.x, this.player.y);
     } catch (e) {
       devError(`[MatchScene] create() CRASHED: ${e}`);
+    }
+  }
+
+  /** Load persistent village state from API */
+  private async loadVillageState(): Promise<void> {
+    try {
+      // Load village state from API
+      const response = await fetch(`/api/world-state/village`);
+      const villageState = await response.json();
+
+      // Update village properties from API response
+      this.villageCenterX = villageState.center?.x || 400;
+      this.villageCenterY = villageState.center?.y || 400;
+      this.villageRadius = villageState.radius || 200;
+      this.hasVisitedVillage = villageState.hasVisited || false;
+
+      devLog("[MatchScene] Village state loaded:", {
+        center: { x: this.villageCenterX, y: this.villageCenterY },
+        radius: this.villageRadius,
+        visited: this.hasVisitedVillage,
+      });
+    } catch (error) {
+      devError("[MatchScene] Failed to load village state:", error);
+      // Default to safe values if loading fails
+      this.villageCenterX = 400;
+      this.villageCenterY = 400;
+      this.villageRadius = 200;
+      this.hasVisitedVillage = false;
+    }
+  }
+
+  /** Create player at appropriate spawn location */
+  private createPlayer(): void {
+    // Determine spawn position based on whether player has visited village
+    let spawnX, spawnY;
+
+    if (!this.hasVisitedVillage) {
+      // First-time player spawns at village center
+      spawnX = this.villageCenterX;
+      spawnY = this.villageCenterY;
+
+      // Mark that player has visited village now
+      this.hasVisitedVillage = true;
+
+      // Track village visitation via API
+      this.trackVillageVisit();
+    } else {
+      // Returning player spawns at last known position or default
+      spawnX = this.worldW * 0.5;
+      spawnY = this.worldH * 0.5;
+    }
+
+    this.player = this.physics.add.sprite(spawnX, spawnY, "hero_idle");
+    this.player.setCollideWorldBounds(true);
+    this.player.setDepth(10);
+    this.player.play("hero_idle", true);
+
+    this.chestPromptText = this.add
+      .text(0, 0, "", {
+        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+        fontSize: "12px",
+        color: "#ffcc44",
+      })
+      .setOrigin(0.5)
+      .setDepth(20)
+      .setVisible(false);
+
+    devLog("[MatchScene] Player created at:", spawnX, spawnY);
+  }
+
+  /** Track player visit to village via API */
+  private async trackVillageVisit(): Promise<void> {
+    try {
+      await fetch(`/api/world-state/village/visit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ visited: true }),
+      });
+      devLog("[MatchScene] Village visit tracked");
+    } catch (error) {
+      devError("[MatchScene] Failed to track village visit:", error);
     }
   }
 
@@ -215,7 +329,10 @@ export class MatchScene extends Phaser.Scene {
     // Small decorative markers (not a full tile layer)
     if (this.textures.exists("tiles_16")) {
       this.add.image(120, 120, "tiles_16").setDisplaySize(32, 32).setDepth(0);
-      this.add.image(this.worldW - 120, 100, "tiles_16").setDisplaySize(32, 32).setDepth(0);
+      this.add
+        .image(this.worldW - 120, 100, "tiles_16")
+        .setDisplaySize(32, 32)
+        .setDepth(0);
     }
   }
 
@@ -234,7 +351,14 @@ export class MatchScene extends Phaser.Scene {
 
     // Village tint scrolls with the world (not fixed to camera)
     this.add
-      .rectangle(zone.x + zone.width / 2, zone.y + zone.height / 2, zone.width, zone.height, 0x2a4a2e, 0.25)
+      .rectangle(
+        zone.x + zone.width / 2,
+        zone.y + zone.height / 2,
+        zone.width,
+        zone.height,
+        0x2a4a2e,
+        0.25,
+      )
       .setDepth(0)
       .setScrollFactor(1);
 
@@ -296,24 +420,18 @@ export class MatchScene extends Phaser.Scene {
     }
   }
 
-  private createPlayer(): void {
-    this.player = this.physics.add.sprite(this.worldW * 0.5, this.worldH * 0.5, "hero_idle");
-    this.player.setCollideWorldBounds(true);
-    this.player.setDepth(10);
-    this.player.play("hero_idle", true);
-
-    this.chestPromptText = this.add
-      .text(0, 0, "", {
-        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-        fontSize: "12px",
-        color: "#ffcc44",
-      })
-      .setOrigin(0.5)
-      .setDepth(20)
-      .setVisible(false);
+  /** Check if player is in village area */
+  private checkVillageArea(x: number, y: number): boolean {
+    const distance = Math.sqrt(
+      Math.pow(x - this.villageCenterX, 2) + Math.pow(y - this.villageCenterY, 2),
+    );
+    return distance <= this.villageRadius;
   }
 
-  private createSkeleton(enemyType: 'bruiser' | 'runner' | 'spitter' = 'bruiser'): void {
+  // ============================================================
+  //  ENEMIES: persistent state or default spawn
+  // ============================================================
+  private createSkeleton(enemyType: "bruiser" | "runner" | "spitter" = "bruiser"): void {
     this.enemyType = enemyType;
     this.enemyStats = ENEMY_STATS[enemyType];
     this.enemyHp = this.enemyStats.maxHp;
@@ -350,10 +468,32 @@ export class MatchScene extends Phaser.Scene {
 
     this.enemyAlive = true;
     this.enemySpawnPosition = { x: this.worldW * 0.75, y: this.worldH * 0.75 };
-    this.enemyState = 'idle';
+    this.enemyState = "idle";
     this.enemyAttackReadyAt = 0;
   }
 
+  /** Create enemies from persistent world state (restored positions/HP). */
+  private createEnemiesFromState(): void {
+    const first = this.persistentWorldState.enemies[0];
+    if (!first) {
+      this.createSkeleton();
+      return;
+    }
+    const type = (["bruiser", "runner", "spitter"] as const).includes(first.type as "bruiser")
+      ? (first.type as "bruiser" | "runner" | "spitter")
+      : "bruiser";
+    this.createSkeleton(type);
+    this.enemy.setPosition(first.x, first.y);
+    this.enemyHp = first.hp;
+    this.enemyMaxHp = first.maxHp;
+    this.enemySpawnPosition = { x: first.x, y: first.y };
+    this.updateEnemyHpBar();
+    devLog("[MatchScene] enemy restored from state at", first.x, first.y);
+  }
+
+  // ============================================================
+  //  CHESTS: persistent state or default spawn
+  // ============================================================
   private createChests(): void {
     const chestPositions = [
       { x: this.worldW * 0.2, y: this.worldH * 0.3 },
@@ -363,8 +503,14 @@ export class MatchScene extends Phaser.Scene {
 
     for (let i = 0; i < chestPositions.length; i++) {
       const pos = chestPositions[i]!;
-      const chestSprite = this.add.rectangle(pos.x, pos.y, 32, 24, 0xaa8833).setDepth(1).setScrollFactor(1);
-      this.add.rectangle(pos.x, pos.y - 10, 32, 6, 0xccaa44).setDepth(1).setScrollFactor(1);
+      const chestSprite = this.add
+        .rectangle(pos.x, pos.y, 32, 24, 0xaa8833)
+        .setDepth(1)
+        .setScrollFactor(1);
+      this.add
+        .rectangle(pos.x, pos.y - 10, 32, 6, 0xccaa44)
+        .setDepth(1)
+        .setScrollFactor(1);
       const label = this.add
         .text(pos.x, pos.y - 22, "Kiste", {
           fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
@@ -386,6 +532,121 @@ export class MatchScene extends Phaser.Scene {
     }
   }
 
+  /** Create chests from persistent world state (restored positions/open state). */
+  private createChestsFromState(): void {
+    for (const c of this.persistentWorldState.chests) {
+      const chestSprite = this.add
+        .rectangle(c.x, c.y, 32, 24, c.opened ? 0x555555 : 0xaa8833)
+        .setDepth(1)
+        .setScrollFactor(1);
+      this.add
+        .rectangle(c.x, c.y - 10, 32, 6, c.opened ? 0x666666 : 0xccaa44)
+        .setDepth(1)
+        .setScrollFactor(1);
+      const label = this.add
+        .text(c.x, c.y - 22, c.opened ? "geoeffnet" : "Kiste", {
+          fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+          fontSize: "10px",
+          color: c.opened ? "#888888" : "#ffcc44",
+        })
+        .setOrigin(0.5)
+        .setDepth(2)
+        .setScrollFactor(1);
+
+      this.chests.push({
+        sprite: chestSprite,
+        label,
+        x: c.x,
+        y: c.y,
+        opened: c.opened,
+        chestId: c.id || `chest_${this.chests.length + 1}`,
+      });
+    }
+    devLog("[MatchScene] chests restored from state:", this.chests.length);
+  }
+
+  // ============================================================
+  //  CROPS (#86): render on farm tiles inside the village zone
+  // ============================================================
+  private createCrops(): void {
+    const zone = this.villageZone;
+    if (!zone) return;
+
+    // Farm tiles: soil texture, then crop rows (final growth stage per type)
+    const farmPatch = {
+      x: zone.x + zone.width * 0.15,
+      y: zone.y + zone.height * 0.15,
+      cols: 4,
+      rows: 3,
+      spacing: 40,
+    };
+    const cropTypes = [
+      "crop_wheat",
+      "crop_carrot",
+      "crop_pumpkin",
+      "crop_cabbage",
+      "crop_sunflower",
+      "crop_radish",
+    ];
+
+    for (let r = 0; r < farmPatch.rows; r++) {
+      for (let c = 0; c < farmPatch.cols; c++) {
+        const x = farmPatch.x + c * farmPatch.spacing;
+        const y = farmPatch.y + r * farmPatch.spacing;
+        // Soil tile under the crop
+        if (this.textures.exists("crop_soil")) {
+          this.add.image(x, y, "crop_soil").setDepth(0).setScrollFactor(1);
+        }
+        const key = cropTypes[(r * farmPatch.cols + c) % cropTypes.length]!;
+        this.add.image(x, y, key).setDepth(1).setScrollFactor(1).setScale(1.6);
+      }
+    }
+  }
+
+  // ============================================================
+  //  ANIMALS (#86): animated spritesheets render in the world
+  // ============================================================
+  private createAnimals(): void {
+    const zone = this.villageZone;
+    if (!zone) return;
+
+    const animals = [
+      { x: zone.x + zone.width * 0.8, y: zone.y + zone.height * 0.3, key: "animal_cow" },
+      { x: zone.x + zone.width * 0.85, y: zone.y + zone.height * 0.35, key: "animal_chicken" },
+      { x: zone.x + zone.width * 0.78, y: zone.y + zone.height * 0.4, key: "animal_sheep" },
+      { x: zone.x + zone.width * 0.82, y: zone.y + zone.height * 0.22, key: "animal_duck" },
+    ];
+
+    for (const animal of animals) {
+      const sprite = this.add
+        .sprite(animal.x, animal.y, animal.key)
+        .setDepth(1)
+        .setScrollFactor(1)
+        .setScale(2);
+      const animKey = `${animal.key}_walk`;
+      if (this.anims.exists(animKey)) {
+        sprite.play(animKey, true);
+      }
+    }
+  }
+
+  // ============================================================
+  //  VFX (#86): spritesheet emitters play on proximity triggers
+  // ============================================================
+  private createVfxTriggers(): void {
+    this.vfxZones = [
+      { x: this.worldW * 0.4, y: this.worldH * 0.6, radius: 80, key: "vfx_dust" },
+      { x: this.worldW * 0.8, y: this.worldH * 0.2, radius: 60, key: "vfx_smoke" },
+      // Campfire smoke inside the village
+      {
+        x: this.villageZone.x + this.villageZone.width * 0.5,
+        y: this.villageZone.y + this.villageZone.height * 0.75,
+        radius: 100,
+        key: "vfx_smoke",
+      },
+    ];
+  }
+
   private createVfxEmitters(): void {
     for (const zone of this.vfxZones) {
       const emitter = this.add.particles(zone.x, zone.y, zone.key, {
@@ -401,6 +662,28 @@ export class MatchScene extends Phaser.Scene {
     }
   }
 
+  /** Trigger VFX emitters when the player enters a zone (throttled). */
+  private maybeSpawnVfx(x: number, y: number, time: number): void {
+    if (time - this.vfxLastSpawn < this.VFX_THROTTLE_MS) return;
+
+    for (let i = 0; i < this.vfxZones.length; i++) {
+      const zone = this.vfxZones[i];
+      if (!zone) continue;
+      const dx = x - zone.x;
+      const dy = y - zone.y;
+      if (dx * dx + dy * dy <= zone.radius * zone.radius) {
+        const emitter = this.vfxEmitters[i];
+        if (emitter) {
+          emitter.explode(8);
+          this.vfxLastSpawn = time;
+        }
+      }
+    }
+  }
+
+  // ============================================================
+  //  INPUT / CAMERA / COLLISIONS / BRIDGE
+  // ============================================================
   private setupInput(): void {
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.wasd = {
@@ -435,7 +718,9 @@ export class MatchScene extends Phaser.Scene {
   private setupCollisions(): void {
     if (this.wallLayer) {
       this.physics.add.collider(this.player, this.wallLayer);
-      this.physics.add.collider(this.enemy, this.wallLayer);
+      if (this.enemy) {
+        this.physics.add.collider(this.enemy, this.wallLayer);
+      }
     }
   }
 
@@ -445,57 +730,6 @@ export class MatchScene extends Phaser.Scene {
     gameBridge.on("pause", this.pauseHandler);
     gameBridge.on("resume", this.resumeHandler);
     gameBridge.on("match:exit", this.matchExitHandler);
-  }
-
-  private createCrops(): void {
-    const zone = this.villageZone;
-    const crops = [
-      { x: zone.x + 40, y: zone.y + 40, key: "crop_wheat" },
-      { x: zone.x + 80, y: zone.y + 40, key: "crop_wheat" },
-      { x: zone.x + 40, y: zone.y + 80, key: "crop_carrot" },
-      { x: zone.x + zone.width - 60, y: zone.y + zone.height - 60, key: "crop_pumpkin" },
-    ];
-
-    for (const crop of crops) {
-      this.add.image(crop.x, crop.y, crop.key).setDepth(1).setScrollFactor(1);
-    }
-  }
-
-  private createAnimals(): void {
-    const zone = this.villageZone;
-    const animals = [
-      { x: zone.x + zone.width * 0.8, y: zone.y + zone.height * 0.3, key: "animal_cow" },
-      { x: zone.x + zone.width * 0.85, y: zone.y + zone.height * 0.35, key: "animal_chicken" },
-    ];
-
-    for (const animal of animals) {
-      this.add.image(animal.x, animal.y, animal.key).setDepth(1).setScrollFactor(1);
-    }
-  }
-
-  private createVfxTriggers(): void {
-    this.vfxZones = [
-      { x: this.worldW * 0.4, y: this.worldH * 0.6, radius: 80, key: "vfx_dust" },
-      { x: this.worldW * 0.8, y: this.worldH * 0.2, radius: 60, key: "vfx_smoke" },
-    ];
-  }
-
-  private maybeSpawnVfx(x: number, y: number, time: number): void {
-    if (time - this.vfxLastSpawn < this.VFX_THROTTLE_MS) return;
-
-    for (let i = 0; i < this.vfxZones.length; i++) {
-      const zone = this.vfxZones[i];
-      if (!zone) continue;
-      const dx = x - zone.x;
-      const dy = y - zone.y;
-      if (dx * dx + dy * dy <= zone.radius * zone.radius) {
-        const emitter = this.vfxEmitters[i];
-        if (emitter) {
-          emitter.explode(8);
-          this.vfxLastSpawn = time;
-        }
-      }
-    }
   }
 
   private onMatchStart(payload: GameBridgeEvents["match:start"]): void {
@@ -697,14 +931,14 @@ export class MatchScene extends Phaser.Scene {
     this.enemyHpText.setVisible(true);
     this.updateEnemyHpBar();
     this.enemySpawnPosition = { x: rx, y: ry };
-    this.enemyState = 'idle';
+    this.enemyState = "idle";
     this.enemyAttackReadyAt = 0;
   }
 
   /** Enemy AI: FSM (idle → chase → attack → leash → dead). */
   private updateEnemyAI(_delta: number): void {
     if (!this.enemyAlive) {
-      this.enemyState = 'dead';
+      this.enemyState = "dead";
       return;
     }
 
@@ -714,19 +948,19 @@ export class MatchScene extends Phaser.Scene {
     const now = this.time.now;
 
     switch (this.enemyState) {
-      case 'idle':
+      case "idle":
         this.updateEnemyIdle(dist, dx, dy);
         break;
-      case 'chase':
+      case "chase":
         this.updateEnemyChase(dist, dx, dy, now);
         break;
-      case 'attack':
+      case "attack":
         this.updateEnemyAttack(dist, dx, dy, now);
         break;
-      case 'leash':
+      case "leash":
         this.updateEnemyLeash(dist, dx, dy);
         break;
-      case 'dead':
+      case "dead":
         // Dead enemies do nothing
         break;
     }
@@ -735,22 +969,22 @@ export class MatchScene extends Phaser.Scene {
   private updateEnemyIdle(dist: number, _dx: number, _dy: number): void {
     // Detect player within aggro range
     if (dist <= this.enemyStats.detectRange) {
-      this.enemyState = 'chase';
+      this.enemyState = "chase";
       this.enemy.anims.stop();
-      this.enemy.play('skeleton_walk', true);
+      this.enemy.play("skeleton_walk", true);
     } else if (Math.random() < 0.01) {
       // Occasional idle animation refresh
       this.enemy.anims.stop();
-      this.enemy.play('skeleton_idle', true);
+      this.enemy.play("skeleton_idle", true);
     }
   }
 
   private updateEnemyChase(dist: number, dx: number, dy: number, now: number): void {
     // Player escaped aggro range → return to idle
     if (dist > this.enemyStats.detectRange * 1.15) {
-      this.enemyState = 'idle';
+      this.enemyState = "idle";
       this.enemy.anims.stop();
-      this.enemy.play('skeleton_idle', true);
+      this.enemy.play("skeleton_idle", true);
       return;
     }
 
@@ -759,16 +993,16 @@ export class MatchScene extends Phaser.Scene {
     const dySpawn = this.enemy.y - this.enemySpawnPosition.y;
     const distFromSpawn = Math.sqrt(dxSpawn * dxSpawn + dySpawn * dySpawn);
     if (distFromSpawn > this.enemyStats.leashRange) {
-      this.enemyState = 'leash';
+      this.enemyState = "leash";
       this.enemy.anims.stop();
-      this.enemy.play('skeleton_walk', true);
+      this.enemy.play("skeleton_walk", true);
       return;
     }
 
     // Movement direction depends on enemy type
     let vx = 0;
     let vy = 0;
-    if (this.enemyType === 'spitter') {
+    if (this.enemyType === "spitter") {
       // Spitter keeps preferred distance
       const minRange = this.enemyStats.preferRangeMin ?? 0;
       const maxRange = this.enemyStats.preferRangeMax ?? this.enemyStats.attackRange;
@@ -794,9 +1028,9 @@ export class MatchScene extends Phaser.Scene {
 
     // Enter attack state when in range and cooldown ready
     if (dist <= this.enemyStats.attackRange && now > this.enemyAttackReadyAt) {
-      this.enemyState = 'attack';
+      this.enemyState = "attack";
       this.enemy.anims.stop();
-      this.enemy.play('skeleton_attack', true);
+      this.enemy.play("skeleton_attack", true);
       this.enemyAttackReadyAt = now + this.enemyStats.attackCooldownMs;
     }
   }
@@ -811,13 +1045,13 @@ export class MatchScene extends Phaser.Scene {
       this.player.setTint(0xff0000);
       this.time.delayedCall(200, () => this.player.clearTint());
 
-      gameBridge.emit('player:hp', {
+      gameBridge.emit("player:hp", {
         current: this.stats.currentHp,
         max: this.stats.maxHp,
       });
 
       devLog(
-        `[MatchScene] Enemy (${this.enemyType}) hit player for ${this.enemyStats.damage} (HP: ${this.stats.currentHp}/${this.stats.maxHp})`
+        `[MatchScene] Enemy (${this.enemyType}) hit player for ${this.enemyStats.damage} (HP: ${this.stats.currentHp}/${this.stats.maxHp})`,
       );
 
       if (this.stats.currentHp <= 0) {
@@ -825,9 +1059,9 @@ export class MatchScene extends Phaser.Scene {
       }
     } else {
       // Out of range → resume chase
-      this.enemyState = 'chase';
+      this.enemyState = "chase";
       this.enemy.anims.stop();
-      this.enemy.play('skeleton_walk', true);
+      this.enemy.play("skeleton_walk", true);
     }
   }
 
@@ -838,9 +1072,9 @@ export class MatchScene extends Phaser.Scene {
 
     if (distToSpawn < 10) {
       // Back at spawn → idle + full heal
-      this.enemyState = 'idle';
+      this.enemyState = "idle";
       this.enemy.anims.stop();
-      this.enemy.play('skeleton_idle', true);
+      this.enemy.play("skeleton_idle", true);
       if (this.enemyHp < this.enemyMaxHp) {
         this.enemyHp = this.enemyMaxHp;
         this.updateEnemyHpBar();
@@ -851,7 +1085,7 @@ export class MatchScene extends Phaser.Scene {
       this.enemy.setVelocity(nx * this.enemyStats.speed * 0.7, ny * this.enemyStats.speed * 0.7);
       this.enemy.flipX = dxToSpawn < 0;
       this.enemy.anims.stop();
-      this.enemy.play('skeleton_walk', true);
+      this.enemy.play("skeleton_walk", true);
     }
   }
 
@@ -908,9 +1142,24 @@ export class MatchScene extends Phaser.Scene {
         gameBridge.emit("chest:opened", { chestId: chest.chestId });
 
         const lootItems = [
-          { itemId: `loot_${this.chestsOpened}`, templateId: "iron_sword", name: "Eisenschwert", rarity: "selten" },
-          { itemId: `loot_${this.chestsOpened}`, templateId: "health_potion", name: "Heiltrank", rarity: "gemein" },
-          { itemId: `loot_${this.chestsOpened}`, templateId: "gold_coin", name: "Goldmuenze", rarity: "gemein" },
+          {
+            itemId: `loot_${this.chestsOpened}`,
+            templateId: "iron_sword",
+            name: "Eisenschwert",
+            rarity: "selten",
+          },
+          {
+            itemId: `loot_${this.chestsOpened}`,
+            templateId: "health_potion",
+            name: "Heiltrank",
+            rarity: "gemein",
+          },
+          {
+            itemId: `loot_${this.chestsOpened}`,
+            templateId: "gold_coin",
+            name: "Goldmuenze",
+            rarity: "gemein",
+          },
         ];
         const loot = lootItems[this.chestsOpened % lootItems.length]!;
         gameBridge.emit("loot:received", loot);
@@ -947,6 +1196,31 @@ export class MatchScene extends Phaser.Scene {
     this.maybeSpawnVfx(this.player.x, this.player.y, time);
     this.updatePlayerAnimation();
     this.updateEnemyHpBar();
+
+    // Village safe-zone indicator
+    const inVillage = this.checkVillageArea(this.player.x, this.player.y);
+    if (inVillage !== this.isVillageArea) {
+      this.isVillageArea = inVillage;
+      this.updateVillageStatusText();
+    }
+  }
+
+  /** Toggle the village safe-zone HUD label. */
+  private updateVillageStatusText(): void {
+    if (!this.villageStatusText) {
+      this.villageStatusText = this.add
+        .text(16, 16, "", {
+          fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+          fontSize: "13px",
+          color: "#88ff88",
+          backgroundColor: "#1a2a1a",
+          padding: { x: 8, y: 4 },
+        })
+        .setDepth(50)
+        .setScrollFactor(0);
+    }
+    this.villageStatusText.setText(this.isVillageArea ? "🛡️ Willkommen-Dorf (sicher)" : "");
+    this.villageStatusText.setVisible(this.isVillageArea);
   }
 
   private handleAttack(time: number): void {

@@ -36,25 +36,50 @@ export class BootScene extends Phaser.Scene {
 
     this.progressBar = this.add.graphics();
 
-    this.loadingText = this.add.text(width / 2, height / 2 - 40, "Lade Assets …", {
-      fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
-      fontSize: "18px",
-      color: "#e8f0e8",
-    }).setOrigin(0.5);
+    this.loadingText = this.add
+      .text(width / 2, height / 2 - 40, "Lade Assets …", {
+        fontFamily: "system-ui, Segoe UI, Roboto, sans-serif",
+        fontSize: "18px",
+        color: "#e8f0e8",
+      })
+      .setOrigin(0.5);
 
-    this.detailText = this.add.text(width / 2, barY + 32, "", {
-      fontFamily: "Cascadia Code, Fira Code, monospace",
-      fontSize: "11px",
-      color: "#8fa88f",
-    }).setOrigin(0.5);
+    this.detailText = this.add
+      .text(width / 2, barY + 32, "", {
+        fontFamily: "Cascadia Code, Fira Code, monospace",
+        fontSize: "11px",
+        color: "#8fa88f",
+      })
+      .setOrigin(0.5);
 
     const allFiles = [
-      "tiles_buildings", "tiles_forest", "tiles_16",
-      "hero_idle", "hero_walk", "hero_run", "hero_attack", "hero_hurt", "hero_death",
-      "skeleton_idle", "skeleton_walk", "skeleton_attack", "skeleton_hurt", "skeleton_death",
-      "crop_wheat", "crop_carrot", "crop_pumpkin",
-      "animal_cow", "animal_chicken",
-      "vfx_dust", "vfx_smoke",
+      "tiles_buildings",
+      "tiles_forest",
+      "tiles_16",
+      "hero_idle",
+      "hero_walk",
+      "hero_run",
+      "hero_attack",
+      "hero_hurt",
+      "hero_death",
+      "skeleton_idle",
+      "skeleton_walk",
+      "skeleton_attack",
+      "skeleton_hurt",
+      "skeleton_death",
+      "crop_wheat",
+      "crop_carrot",
+      "crop_pumpkin",
+      "crop_cabbage",
+      "crop_sunflower",
+      "crop_radish",
+      "crop_soil",
+      "animal_cow",
+      "animal_chicken",
+      "animal_sheep",
+      "animal_duck",
+      "vfx_dust",
+      "vfx_smoke",
     ];
     this.loadTotal = allFiles.length;
 
@@ -72,17 +97,22 @@ export class BootScene extends Phaser.Scene {
       devLog(`[BootScene] loaded ${key} (${this.loadDone}/${this.loadTotal})`);
     });
 
-    this.load.on("loaderror", (_file: Phaser.Loader.File, _key: string, _frame: string, xhr: unknown) => {
-      const key = _key || _file?.key || "unknown";
-      this.loadErrors.push(key);
-      this.detailText.setText(`✗ ${key} (FEHLGESCHLAGEN)`);
-      this.detailText.setColor("#ff4444");
-      console.error(`[BootScene] FAILED: ${key}`, xhr);
-    });
+    this.load.on(
+      "loaderror",
+      (_file: Phaser.Loader.File, _key: string, _frame: string, xhr: unknown) => {
+        const key = _key || _file?.key || "unknown";
+        this.loadErrors.push(key);
+        this.detailText.setText(`✗ ${key} (FEHLGESCHLAGEN)`);
+        this.detailText.setColor("#ff4444");
+        console.error(`[BootScene] FAILED: ${key}`, xhr);
+      },
+    );
 
     this.load.on("complete", () => {
       this.detailText.setColor("#8fa88f");
-      this.detailText.setText(`${this.loadDone}/${this.loadTotal} geladen${this.loadErrors.length ? ` · ${this.loadErrors.length} Fehler` : ""}`);
+      this.detailText.setText(
+        `${this.loadDone}/${this.loadTotal} geladen${this.loadErrors.length ? ` · ${this.loadErrors.length} Fehler` : ""}`,
+      );
     });
 
     // Tilesets (single images)
@@ -98,24 +128,69 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet("hero_hurt", "assets/characters/base_hurt_strip8.png", CHAR_FRAME);
     this.load.spritesheet("hero_death", "assets/characters/base_death_strip13.png", CHAR_FRAME);
 
-    this.load.spritesheet("skeleton_idle", "assets/characters/skeleton_idle_strip6.png", CHAR_FRAME);
-    this.load.spritesheet("skeleton_walk", "assets/characters/skeleton_walk_strip8.png", CHAR_FRAME);
-    this.load.spritesheet("skeleton_attack", "assets/characters/skeleton_attack_strip7.png", CHAR_FRAME);
-    this.load.spritesheet("skeleton_hurt", "assets/characters/skeleton_hurt_strip7.png", CHAR_FRAME);
-    this.load.spritesheet("skeleton_death", "assets/characters/skeleton_death_strip10.png", CHAR_FRAME);
+    this.load.spritesheet(
+      "skeleton_idle",
+      "assets/characters/skeleton_idle_strip6.png",
+      CHAR_FRAME,
+    );
+    this.load.spritesheet(
+      "skeleton_walk",
+      "assets/characters/skeleton_walk_strip8.png",
+      CHAR_FRAME,
+    );
+    this.load.spritesheet(
+      "skeleton_attack",
+      "assets/characters/skeleton_attack_strip7.png",
+      CHAR_FRAME,
+    );
+    this.load.spritesheet(
+      "skeleton_hurt",
+      "assets/characters/skeleton_hurt_strip7.png",
+      CHAR_FRAME,
+    );
+    this.load.spritesheet(
+      "skeleton_death",
+      "assets/characters/skeleton_death_strip10.png",
+      CHAR_FRAME,
+    );
 
     // Elements (single images — use final growth stage, not seeds)
     this.load.image("crop_wheat", "assets/elements/crops/wheat_05.png");
     this.load.image("crop_carrot", "assets/elements/crops/carrot_05.png");
     this.load.image("crop_pumpkin", "assets/elements/crops/pumpkin_05.png");
+    this.load.image("crop_cabbage", "assets/elements/crops/cabbage_05.png");
+    this.load.image("crop_sunflower", "assets/elements/crops/sunflower_05.png");
+    this.load.image("crop_radish", "assets/elements/crops/radish_05.png");
+    this.load.image("crop_soil", "assets/elements/crops/soil_00.png");
 
     // Animals — spritesheets with 4 frames of 32×32 each
-    this.load.spritesheet("animal_cow", "assets/elements/animals/spr_deco_cow_strip4.png", { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet("animal_chicken", "assets/elements/animals/spr_deco_chicken_01_strip4.png", { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet("animal_cow", "assets/elements/animals/spr_deco_cow_strip4.png", {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+    this.load.spritesheet(
+      "animal_chicken",
+      "assets/elements/animals/spr_deco_chicken_01_strip4.png",
+      { frameWidth: 32, frameHeight: 32 },
+    );
+    this.load.spritesheet("animal_sheep", "assets/elements/animals/spr_deco_sheep_01_strip4.png", {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+    this.load.spritesheet("animal_duck", "assets/elements/animals/spr_deco_duck_01_strip4.png", {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
 
     // VFX — spritesheets (dust: 9 frames of 21×9, smoke: 30 frames of 15×37)
-    this.load.spritesheet("vfx_dust", "assets/vfx/dust_general_strip9.png", { frameWidth: 21, frameHeight: 9 });
-    this.load.spritesheet("vfx_smoke", "assets/vfx/chimneysmoke_01_strip30.png", { frameWidth: 15, frameHeight: 37 });
+    this.load.spritesheet("vfx_dust", "assets/vfx/dust_general_strip9.png", {
+      frameWidth: 21,
+      frameHeight: 9,
+    });
+    this.load.spritesheet("vfx_smoke", "assets/vfx/chimneysmoke_01_strip30.png", {
+      frameWidth: 15,
+      frameHeight: 37,
+    });
   }
 
   create(): void {
@@ -130,8 +205,17 @@ export class BootScene extends Phaser.Scene {
 
       // Generate fallback textures for missing character spritesheets
       const charFallbacks = [
-        "hero_idle", "hero_walk", "hero_run", "hero_attack", "hero_hurt", "hero_death",
-        "skeleton_idle", "skeleton_walk", "skeleton_attack", "skeleton_hurt", "skeleton_death",
+        "hero_idle",
+        "hero_walk",
+        "hero_run",
+        "hero_attack",
+        "hero_hurt",
+        "hero_death",
+        "skeleton_idle",
+        "skeleton_walk",
+        "skeleton_attack",
+        "skeleton_hurt",
+        "skeleton_death",
       ];
       for (const key of charFallbacks) {
         if (!this.textures.exists(key)) {
@@ -163,9 +247,19 @@ export class BootScene extends Phaser.Scene {
 
       // Generate fallback for missing elements
       const elFallbacks = [
-        "crop_wheat", "crop_carrot", "crop_pumpkin",
-        "animal_cow", "animal_chicken",
-        "vfx_dust", "vfx_smoke",
+        "crop_wheat",
+        "crop_carrot",
+        "crop_pumpkin",
+        "crop_cabbage",
+        "crop_sunflower",
+        "crop_radish",
+        "crop_soil",
+        "animal_cow",
+        "animal_chicken",
+        "animal_sheep",
+        "animal_duck",
+        "vfx_dust",
+        "vfx_smoke",
       ];
       for (const key of elFallbacks) {
         if (!this.textures.exists(key)) {
@@ -246,12 +340,24 @@ export class BootScene extends Phaser.Scene {
         repeat: 0,
       });
 
+      // Animal idle/walk animations (4 frames, 32×32)
+      const animalKeys = ["animal_cow", "animal_chicken", "animal_sheep", "animal_duck"];
+      for (const key of animalKeys) {
+        if (!this.textures.exists(key)) continue;
+        this.anims.create({
+          key: `${key}_walk`,
+          frames: this.anims.generateFrameNumbers(key, { start: 0, end: 3 }),
+          frameRate: 6,
+          repeat: -1,
+        });
+      }
+
       devLog("[BootScene] all animations created, starting town scene");
       try {
         this.scene.start("town");
       } catch (e) {
         console.error(`[BootScene] Failed to start town scene: ${e}`);
-        this.add.text(20, 20, `Fehler: ${e}`, { color: '#ff4444', fontSize: '14px' });
+        this.add.text(20, 20, `Fehler: ${e}`, { color: "#ff4444", fontSize: "14px" });
       }
     } catch (e) {
       console.error(`[BootScene] create() CRASHED: ${e}`);
