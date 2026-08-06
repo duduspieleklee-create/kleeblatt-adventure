@@ -43,10 +43,27 @@ jobs:
         run: |
           mkdir -p "${HOME}/.ssh"
           ssh-keyscan -H "${DEPLOY_HOST}" >> "${HOME}/.ssh/known_hosts"
+
+          # Quick SSH connectivity check with retries
+          attempts=5
+          for i in $(seq 1 $attempts); do
+            echo "Attempt $i: testing SSH to ${DEPLOY_USER}@${DEPLOY_HOST}..."
+            if ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" 'echo connected' >/dev/null 2>&1; then
+              echo "SSH reachable"
+              break
+            fi
+            echo "SSH not reachable yet; sleeping before retry..."
+            sleep $((i * 5))
+            if [ "$i" -eq "$attempts" ]; then
+              echo "ERROR: cannot reach ${DEPLOY_HOST} after ${attempts} attempts"
+              exit 1
+            fi
+          done
+
           # Copy full workspace dirs + root files so npm install sees valid workspaces
           scp -o StrictHostKeyChecking=accept-new -r apps/ packages/ package*.json game-config.json ecosystem.config.cjs \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
           # Install production deps (npm install won't clean valid workspace dirs)
           ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc 'cd ${DEPLOY_PATH} && npm install --omit=dev'"
           # Start/restart API
-          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc 'cd ${DEPLOY_PATH} && (npx pm2 reload ecosystem.config.cjs --update-env 2>/dev/null || npx pm2 start ecosystem.config.cjs --update-env) && npx pm2 save'"
+          ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "bash -lc 'cd ${DEPLOY_PATH} && (npx pm2 reload ecosystem.config.cjs --update-env 2>/dev/null || npx pm2 start eco[...]
