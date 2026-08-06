@@ -249,3 +249,34 @@ export async function completeOnboarding(): Promise<ApiResult<OnboardingStatus>>
     return { ok: false, status: res.status, message: errorMessage(body, "Intro konnte nicht abgeschlossen werden.") };
   return { ok: true, status: res.status, data: body as OnboardingStatus };
 }
+
+/**
+ * Connect wallet using Immutable SDK
+ */
+export async function connectImmutableWallet(
+  input: import("@kleeblatt/shared").WalletConnectRequest,
+): Promise<import("@kleeblatt/shared").WalletConnectResponse | null> {
+  const res = await apiFetch("/wallet/connect-immutable", { method: "POST", body: JSON.stringify(input) });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/**
+ * Get deposit address using Immutable SDK
+ */
+export async function getImmutableDepositAddress(): Promise<string | null> {
+  const res = await apiFetch("/wallet/deposit-address-immutable");
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.depositAddress || null;
+}
+
+/**
+ * Get deposit address for wallet
+ */
+export async function getWalletDepositAddress(): Promise<string | null> {
+  const res = await apiFetch("/wallet/deposit-address");
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.depositAddress || null;
+}

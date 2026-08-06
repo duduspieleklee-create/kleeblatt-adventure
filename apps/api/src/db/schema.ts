@@ -110,6 +110,77 @@ export const inventoryStacks = pgTable("inventory_stacks", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Persistent world maps (migration 0004_world_state.sql). */
+export const worldMaps = pgTable("world_maps", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  mapId: text("map_id").notNull(),
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
+  tileSize: integer("tile_size").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const worldMapTiles = pgTable("world_map_tiles", {
+  id: text("id").primaryKey(),
+  mapId: text("map_id")
+    .notNull()
+    .references(() => worldMaps.id, { onDelete: "cascade" }),
+  x: integer("x").notNull(),
+  y: integer("y").notNull(),
+  tilesetKey: text("tileset_key").notNull(),
+  tileIndex: integer("tile_index").notNull(),
+  layer: text("layer").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const worldEnemies = pgTable("world_enemies", {
+  id: text("id").primaryKey(),
+  mapId: text("map_id")
+    .notNull()
+    .references(() => worldMaps.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  enemyType: text("enemy_type").notNull(),
+  x: integer("x").notNull(),
+  y: integer("y").notNull(),
+  hp: integer("hp").notNull(),
+  maxHp: integer("max_hp").notNull(),
+  state: text("state").notNull(),
+  spawnPointX: integer("spawn_point_x").notNull(),
+  spawnPointY: integer("spawn_point_y").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const worldChests = pgTable("world_chests", {
+  id: text("id").primaryKey(),
+  mapId: text("map_id")
+    .notNull()
+    .references(() => worldMaps.id, { onDelete: "cascade" }),
+  x: integer("x").notNull(),
+  y: integer("y").notNull(),
+  chestId: text("chest_id").notNull(),
+  itemTemplateId: text("item_template_id"),
+  opened: boolean("opened").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const worldNpcPositions = pgTable("world_npc_positions", {
+  id: text("id").primaryKey(),
+  mapId: text("map_id")
+    .notNull()
+    .references(() => worldMaps.id, { onDelete: "cascade" }),
+  npcId: text("npc_id").notNull(),
+  x: integer("x").notNull(),
+  y: integer("y").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type HeroRow = typeof heroes.$inferSelect;
 export type ItemRow = typeof items.$inferSelect;
@@ -118,3 +189,8 @@ export type WalletRow = typeof wallets.$inferSelect;
 export type UserOnboardingRow = typeof userOnboardings.$inferSelect;
 export type ChestOpenRow = typeof chestOpens.$inferSelect;
 export type InventoryStacksRow = typeof inventoryStacks.$inferSelect;
+export type WorldMapRow = typeof worldMaps.$inferSelect;
+export type WorldMapTileRow = typeof worldMapTiles.$inferSelect;
+export type WorldEnemyRow = typeof worldEnemies.$inferSelect;
+export type WorldChestRow = typeof worldChests.$inferSelect;
+export type WorldNpcPositionRow = typeof worldNpcPositions.$inferSelect;

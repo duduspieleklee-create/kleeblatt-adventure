@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { getDb, isDbAvailable } from "../db/client.js";
 import { wallets as walletsTable } from "../db/schema.js";
 import { memWallets } from "./memoryStore.js";
+import { immutableWalletService } from "./immutableWallet.js";
 import type { WalletConnectRequest, WalletConnectResponse } from "@kleeblatt/shared";
 
 export function mockAddressFor(userId: string): string {
@@ -48,17 +49,20 @@ export interface WalletView {
 export async function getWallet(userId: string): Promise<WalletView | null> {
   if (await isDbAvailable()) {
     const db = getDb()!;
-    const rows = await db.select().from(walletsTable).where(eq(walletsTable.userId, userId)).limit(1);
-  if (rows.length === 0) return null;
-  const row = rows[0]!;
-  return {
-    address: row.address,
-    status: row.status as WalletView["status"],
-    provider: row.providerRef ?? "mock",
-    depositAddress: row.providerRef ? mockDepositAddress(row.address) : undefined,
-    chainId: 13371,
-  };
-
+    const rows = await db
+      .select()
+      .from(walletsTable)
+      .where(eq(walletsTable.userId, userId))
+      .limit(1);
+    if (rows.length === 0) return null;
+    const row = rows[0]!;
+    return {
+      address: row.address,
+      status: row.status as WalletView["status"],
+      provider: row.providerRef ?? "mock",
+      depositAddress: row.providerRef ? mockDepositAddress(row.address) : undefined,
+      chainId: 13371,
+    };
   }
 
   const mem = memWallets.get(userId);
@@ -87,13 +91,16 @@ export async function getOrCreateWallet(userId: string): Promise<WalletView> {
 
   if (await isDbAvailable()) {
     const db = getDb()!;
-    await db.insert(walletsTable).values({
-      userId,
-      address,
-      providerRef: "mock",
-      status: "ready",
-      createdAt: new Date(),
-    }).onConflictDoNothing();
+    await db
+      .insert(walletsTable)
+      .values({
+        userId,
+        address,
+        providerRef: "mock",
+        status: "ready",
+        createdAt: new Date(),
+      })
+      .onConflictDoNothing();
   } else {
     memWallets.set(userId, { address, status: "ready", provider: "mock" });
   }
@@ -110,13 +117,16 @@ export async function connectWallet(
 
   if (await isDbAvailable()) {
     const db = getDb()!;
-    await db.insert(walletsTable).values({
-      userId,
-      address,
-      providerRef: _input.provider,
-      status: "ready",
-      createdAt: new Date(),
-    }).onConflictDoNothing();
+    await db
+      .insert(walletsTable)
+      .values({
+        userId,
+        address,
+        providerRef: _input.provider,
+        status: "ready",
+        createdAt: new Date(),
+      })
+      .onConflictDoNothing();
   } else {
     memWallets.set(userId, { address, status: "ready", provider: _input.provider });
   }
@@ -133,7 +143,10 @@ export async function connectWallet(
 export async function disconnectWallet(userId: string): Promise<WalletView | null> {
   if (await isDbAvailable()) {
     const db = getDb()!;
-    await db.update(walletsTable).set({ status: "disconnected", providerRef: null }).where(eq(walletsTable.userId, userId));
+    await db
+      .update(walletsTable)
+      .set({ status: "disconnected", providerRef: null })
+      .where(eq(walletsTable.userId, userId));
   } else {
     const mem = memWallets.get(userId);
     if (mem) {
@@ -148,4 +161,78 @@ export async function disconnectWallet(userId: string): Promise<WalletView | nul
 export async function getDepositAddress(userId: string): Promise<string> {
   const wallet = await getOrCreateWallet(userId);
   return wallet.depositAddress ?? wallet.address;
+}
+
+/**
+ * Connect wallet using Immutable SDK
+ */
+export async function connectImmutableWallet(
+  userId: string,
+  _address: string,
+): Promise<WalletConnectResponse> {
+  try {
+    // First check if we have an existing wallet
+    const existingWallet = await getWallet(userId);
+    if (existingWallet && existingWallet.provider === "immutable") {
+      // Already connected to Immutable
+      return {
+        address: existingWallet.address,
+        status: existingWallet.status,
+        provider: "immutable" as const,
+        depositAddress: existingWallet.depositAddress ?? "",
+        isNewUser: false,
+      };
+    }
+
+    // Use Immutable SDK to connect wallet
+    const result = await immutableWalletService.createWallet(userId);
+
+    // Update database with the new wallet
+    if (await isDbAvailable()) {
+      const db = getDb()!;
+      await db
+        .insert(walletsTable)
+        .values({
+          userId,
+          address: result.address,
+          providerRef: "immutable",
+          status: "ready",
+          createdAt: new Date(),
+        })
+        .onConflictDoNothing();
+    }
+
+    return {
+      address: result.address,
+      status: "ready",
+      provider: "immutable",
+      depositAddress: mockDepositAddress(result.address),
+      isNewUser: !existingWallet,
+    };
+  } catch (error) {
+    console.error("Error connecting Immutable wallet:", error);
+    throw new Error("Failed to connect Immutable wallet");
+  }
+}
+
+/**
+ * Get deposit address using Immutable SDK
+ */
+export async function getImmutableDepositAddress(userId: string): Promise<string> {
+  try {
+    // First get existing wallet
+    const wallet = await getOrCreateWallet(userId);
+
+    // If we have an immutable wallet, get its deposit address
+    if (wallet.provider === "immutable") {
+      // In a real implementation, we'd use the Immutable SDK to get the actual deposit address
+      // For now, we'll use our mock
+      return mockDepositAddress(wallet.address);
+    }
+
+    return wallet.depositAddress ?? wallet.address;
+  } catch (error) {
+    console.error("Error getting Immutable deposit address:", error);
+    throw new Error("Failed to get deposit address");
+  }
 }
