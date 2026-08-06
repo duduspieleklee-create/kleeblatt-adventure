@@ -33,15 +33,33 @@ interface BarProps {
   current: number;
   max: number;
   className: string;
+  /** Base name of the bar sprite (redbar/bluebar/greenbar) – frame 00..N. */
+  sprite: string;
 }
 
-function StatBar({ label, current, max, className }: BarProps) {
+/** Number of pixel-art bar frames per sprite (assets/ui/{sprite}_NN.png). */
+const BAR_SPRITE_FRAMES: Record<string, number> = {
+  redbar: 7,
+  bluebar: 6,
+  greenbar: 7,
+};
+
+function StatBar({ label, current, max, className, sprite }: BarProps) {
   const pct = max > 0 ? Math.min(100, Math.max(0, (current / max) * 100)) : 0;
+  // Map 0..100% → frame index 0..(frames-1) (00 = empty, last = full)
+  const frames = BAR_SPRITE_FRAMES[sprite] ?? 7;
+  const frame = Math.min(frames - 1, Math.round((pct / 100) * (frames - 1)));
+  const frameLabel = String(frame).padStart(2, "0");
   return (
     <div className={`game-hud-bar ${className}`}>
       <span className="game-hud-bar-label">{label}</span>
       <div className="game-hud-bar-track">
-        <div className="game-hud-bar-fill" style={{ width: `${pct}%` }} />
+        <img
+          className="game-hud-bar-sprite"
+          src={`/assets/ui/${sprite}_${frameLabel}.png`}
+          alt={`${label} ${Math.round(pct)}%`}
+          draggable={false}
+        />
       </div>
       <span className="game-hud-bar-value">
         {Math.round(current)}/{Math.round(max)}
@@ -53,9 +71,11 @@ function StatBar({ label, current, max, className }: BarProps) {
 interface SkillSlotProps {
   slot: string;
   readyAt?: number;
+  /** Tool icon base name from assets/ui (e.g. "sword"). */
+  icon?: string;
 }
 
-function SkillSlot({ slot, readyAt }: SkillSlotProps) {
+function SkillSlot({ slot, readyAt, icon }: SkillSlotProps) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -71,13 +91,32 @@ function SkillSlot({ slot, readyAt }: SkillSlotProps) {
 
   return (
     <div className={`game-hud-skill${remainingMs > 0 ? " game-hud-skill--cooldown" : ""}`}>
-      <span className="game-hud-skill-key">{slot}</span>
+      {icon ? (
+        <img
+          className="game-hud-skill-icon"
+          src={`/assets/ui/${icon}.png`}
+          alt={slot}
+          draggable={false}
+        />
+      ) : (
+        <span className="game-hud-skill-key">{slot}</span>
+      )}
       {remainingMs > 0 && <span className="game-hud-skill-cd">{seconds}s</span>}
     </div>
   );
 }
 
-function DamagePopup({ value, x, y, color }: { value: number; x: number; y: number; color: string }) {
+function DamagePopup({
+  value,
+  x,
+  y,
+  color,
+}: {
+  value: number;
+  x: number;
+  y: number;
+  color: string;
+}) {
   const [opacity, setOpacity] = useState(1);
   const [offsetY, setOffsetY] = useState(0);
 
@@ -194,6 +233,9 @@ export function GameHud() {
     Array<{ id: number; value: number; x: number; y: number; color: string }>
   >([]);
   const [gold, setGold] = useState(0);
+  /** Expression icon base name from assets/ui/expression_*.png */
+  const [expression, setExpression] = useState("chat");
+  const expressionTimer = useRef<number | null>(null);
   const prevLevel = useRef(levelState.level);
   const levelUpTimer = useRef<number | null>(null);
   const logIdCounter = useRef(0);
@@ -307,12 +349,8 @@ export function GameHud() {
         if (data.level > prevLevel.current) {
           prevLevel.current = data.level;
           setLevelUp(true);
-          if (levelUpTimer.current !== null)
-            window.clearTimeout(levelUpTimer.current);
-          levelUpTimer.current = window.setTimeout(
-            () => setLevelUp(false),
-            LEVEL_UP_DURATION_MS
-          );
+          if (levelUpTimer.current !== null) window.clearTimeout(levelUpTimer.current);
+          levelUpTimer.current = window.setTimeout(() => setLevelUp(false), LEVEL_UP_DURATION_MS);
           setCombatLog((prev) => [
             ...prev.slice(-(COMBAT_LOG_MAX - 1)),
             {
@@ -340,10 +378,30 @@ export function GameHud() {
       });
     };
 
+    /** Flash a player expression icon for ~1.6s, then back to "chat". */
+    const flashExpression = (name: string) => {
+      setExpression(name);
+      if (expressionTimer.current !== null) window.clearTimeout(expressionTimer.current);
+      expressionTimer.current = window.setTimeout(() => setExpression("chat"), 1600);
+    };
+
     gameBridge.on(PhaserEvents.PLAYER_STATS_UPDATED, onStats);
-    gameBridge.on(PhaserEvents.COMBAT_HIT, onCombatHit);
-    gameBridge.on(PhaserEvents.COMBAT_DEATH, onCombatDeath);
-    gameBridge.on(PhaserEvents.LOOT_DROPPED, onLootDropped);
+    gameBridge.on(PhaserEvents.COMBAT_HIT, (data: { attackerId?: string }) => {
+      onCombatHit(data);
+      // Show "attack" expression when the player lands a hit
+      if (data.attackerId === "player") flashExpression("attack");
+    });
+    gameBridge.on(PhaserEvents.COMBAT_DEATH, (data: { targetId?: string; name?: string }) => {
+      onCombatDeath(data);
+      flashExpression("alerted");
+    });
+    gameBridge.on(
+      PhaserEvents.LOOT_DROPPED,
+      (data: { item?: string; amount?: number; gold?: number }) => {
+        onLootDropped(data);
+        flashExpression("love");
+      },
+    );
     gameBridge.on(PhaserEvents.PLAYER_HP_CHANGED, onHpChanged);
     gameBridge.on(PhaserEvents.PLAYER_XP_CHANGED, onXpChanged);
     gameBridge.on(PhaserEvents.SKILL_READY, onSkillReady);
@@ -355,7 +413,7 @@ export function GameHud() {
       : 0;
 
   const cleanedPopups = damagePopups.filter((p) => {
-    const age = Date.now() - (p.id * 1000);
+    const age = Date.now() - p.id * 1000;
     return age < 2000;
   });
 
@@ -384,10 +442,22 @@ export function GameHud() {
           marginBottom: 8,
         }}
       >
-        <div className="game-hud-level" style={{ fontSize: 16, fontWeight: "bold", color: "#fbbf24" }}>
+        <div
+          className="game-hud-level"
+          style={{ fontSize: 16, fontWeight: "bold", color: "#fbbf24" }}
+        >
           Lv. {levelState.level}
         </div>
-        <div style={{ fontSize: 14, color: "#fbbf24" }}>💰 {gold} Gold</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <img
+            className="game-hud-expression"
+            src={`/assets/ui/expression_${expression}.png`}
+            alt="Player expression"
+            title={expression}
+            draggable={false}
+          />
+          <div style={{ fontSize: 14, color: "#fbbf24" }}>💰 {gold} Gold</div>
+        </div>
       </div>
 
       <div
@@ -415,10 +485,7 @@ export function GameHud() {
           }}
         />
       </div>
-      <div
-        className="game-hud-xp-text"
-        style={{ fontSize: 11, color: "#8fa88f", marginBottom: 8 }}
-      >
+      <div className="game-hud-xp-text" style={{ fontSize: 11, color: "#8fa88f", marginBottom: 8 }}>
         {levelState.xp} / {levelState.xpToNext} XP
       </div>
 
@@ -427,28 +494,28 @@ export function GameHud() {
         current={hp.current}
         max={hp.max}
         className="game-hud-bar--hp"
+        sprite="redbar"
       />
       <StatBar
         label="Mana"
         current={mana.current}
         max={mana.max}
         className="game-hud-bar--mana"
+        sprite="bluebar"
       />
       <StatBar
         label="Stamina"
         current={stamina.current}
         max={stamina.max}
         className="game-hud-bar--stamina"
+        sprite="greenbar"
       />
 
-      <div
-        className="game-hud-skills"
-        style={{ display: "flex", gap: 8, marginTop: 8 }}
-      >
-        <SkillSlot slot="Q" readyAt={cooldowns["slash"]} />
-        <SkillSlot slot="E" readyAt={cooldowns["fireball"]} />
-        <SkillSlot slot="A" readyAt={cooldowns["heal"]} />
-        <SkillSlot slot="J" readyAt={cooldowns["power_strike"]} />
+      <div className="game-hud-skills" style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <SkillSlot slot="Q" readyAt={cooldowns["slash"]} icon="sword" />
+        <SkillSlot slot="E" readyAt={cooldowns["fireball"]} icon="rod" />
+        <SkillSlot slot="A" readyAt={cooldowns["heal"]} icon="plant" />
+        <SkillSlot slot="J" readyAt={cooldowns["power_strike"]} icon="hammer" />
       </div>
 
       <div style={{ marginTop: 8 }}>
