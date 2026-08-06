@@ -3,7 +3,7 @@
 import { Hono } from "hono";
 import type { WalletBalance, WalletConnectRequest, WalletConnectResponse, WalletResponse } from "@kleeblatt/shared";
 import { requireAuth, type AppVariables } from "../middleware/session.js";
-import { connectWallet, disconnectWallet, getDepositAddress, getMockBalance, getWallet } from "../services/wallets.js";
+import { connectWallet, disconnectWallet, getDepositAddress, getMockBalance, getWallet, connectImmutableWallet, getImmutableDepositAddress } from "../services/wallets.js";
 import { signSession } from "../lib/jwt.js";
 import { upsertGoogleUser } from "../services/users.js";
 import { getOrCreateWallet } from "../services/wallets.js";
@@ -36,6 +36,24 @@ walletRoutes.post("/wallet/connect", requireAuth, async (c) => {
   return c.json(result satisfies WalletConnectResponse);
 });
 
+/**
+ * POST /wallet/connect-immutable - Connect wallet using Immutable SDK
+ */
+walletRoutes.post("/wallet/connect-immutable", requireAuth, async (c) => {
+  const user = c.get("user")!;
+  const input = (await c.req.json()) as WalletConnectRequest;
+  
+  // If provider is 'immutable', use the Immutable SDK integration
+  if (input.provider === 'immutable') {
+    const result = await connectImmutableWallet(user.userId, input.address);
+    return c.json(result satisfies WalletConnectResponse);
+  }
+  
+  // Otherwise fall back to regular connect
+  const result = await connectWallet(user.userId, input);
+  return c.json(result satisfies WalletConnectResponse);
+});
+
 walletRoutes.post("/wallet/disconnect", requireAuth, async (c) => {
   const user = c.get("user")!;
   const wallet = await disconnectWallet(user.userId);
@@ -54,6 +72,15 @@ walletRoutes.post("/wallet/disconnect", requireAuth, async (c) => {
 walletRoutes.get("/wallet/deposit-address", requireAuth, async (c) => {
   const user = c.get("user")!;
   const deposit = await getDepositAddress(user.userId);
+  return c.json({ depositAddress: deposit });
+});
+
+/**
+ * GET /wallet/deposit-address-immutable - Get deposit address using Immutable SDK
+ */
+walletRoutes.get("/wallet/deposit-address-immutable", requireAuth, async (c) => {
+  const user = c.get("user")!;
+  const deposit = await getImmutableDepositAddress(user.userId);
   return c.json({ depositAddress: deposit });
 });
 
