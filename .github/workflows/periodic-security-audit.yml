@@ -1,24 +1,46 @@
-name: Security Audit
+name: Periodic Security Audit
 
 on:
   schedule:
+    # Run once a week (Sunday at 2 AM UTC)
     - cron: "0 2 * * 0"
-  workflow_dispatch:
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
-  audit:
+  security-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - run: npm ci
-      - run: npm audit --audit-level=high
-      
-      - name: CodeQL Scan
+      - name: Install dependencies
+        run: npm install
+
+      - name: Security Scan with CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript, typescript
-      - uses: github/codeql-action/analyze@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
+
+      - name: Run dependency security audit
+        run: npm audit --audit-level=high

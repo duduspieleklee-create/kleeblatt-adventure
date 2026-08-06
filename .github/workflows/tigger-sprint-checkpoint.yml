@@ -1,0 +1,33 @@
+name: Tigger Sprint Checkpoint
+
+on:
+  schedule:
+    # Run daily at 9 AM UTC
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  daily-checkpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check sprint progress
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Running daily sprint checkpoint for Tigger..."
+
+          # Check workboard cards assigned to Tigger
+          echo "Checking Tigger's workboard cards..."
+
+          # Check GitHub issues in current sprint milestones
+          echo "Current milestone statuses:"
+          curl -s -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/duduspieleklee-create/kleeblatt-adventure/milestones \
+            | jq -r '.[] | select(.state=="open") | "MVP: \(.title) - \(.open_issues) open, \(.closed_issues) closed"' 2>/dev/null || echo "Could not fetch milestones"
+
+          echo "Daily checkpoint complete."
