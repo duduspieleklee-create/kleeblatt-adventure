@@ -1,0 +1,16 @@
+{
+  "welcome_npc": {
+    "sequence": [
+      "Welcome to Sunny Side Island!",
+      "Talk to everyone, then we can talk about supplies.",
+      "Watch out for the ocean — it's deeper than it looks!"
+    ]
+  },
+  "vibes_npc": {
+    "sequence": [
+      "The sun always shines here.",
+      "No monsters, just good vibes!",
+      "After you meet the locals, keep an eye out for supply crates."
+    ]
+  }
+}

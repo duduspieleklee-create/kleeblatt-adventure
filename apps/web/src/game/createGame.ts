@@ -1,25 +1,33 @@
 import Phaser from "phaser";
 import { BootScene } from "./scenes/boot-scene";
 import { MatchScene } from "./scenes/match-scene";
-import { TowerScene } from "./scenes/TownScene";
+import { TownScene } from "./scenes/TownScene";
+import { BASE_WIDTH, BASE_HEIGHT } from "./config/GameConfig";
 
-/** Viewport der Match-Shell (16:9). Map-Größe kommt aus game-config.json (match.mapSize). */
-export const GAME_VIEWPORT = { width: 960, height: 540 } as const;
+/** Logical viewport 1280×720; Scale.FIT adapts to the React container / window. */
+export const GAME_VIEWPORT = { width: BASE_WIDTH, height: BASE_HEIGHT } as const;
 
 /**
- * Erstellt das Phaser-Spiel in `container` (React-Page mit Phaser-Container).
- * Aufrufer ist für `game.destroy(true)` beim Unmount verantwortlich.
+ * Creates the Phaser game in `container` (React page with Phaser host).
+ * Caller is responsible for `game.destroy(true)` on unmount.
+ *
+ * Island / kleeblock scenes will replace or sit beside legacy Town/Match
+ * as the port continues (see docs/architecture/28-kleeblock-port-plan.md).
  */
 export function createGame(container: HTMLElement): Phaser.Game {
   return new Phaser.Game({
     type: Phaser.AUTO,
     parent: container,
-    width: GAME_VIEWPORT.width,
-    height: GAME_VIEWPORT.height,
+    width: BASE_WIDTH,
+    height: BASE_HEIGHT,
     backgroundColor: "#101810",
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
+    render: {
+      antialias: false,
+      roundPixels: true,
     },
     physics: {
       default: "arcade",
@@ -28,6 +36,7 @@ export function createGame(container: HTMLElement): Phaser.Game {
         debug: false,
       },
     },
-    scene: [BootScene, MatchScene, TowerScene],
+    // Legacy scenes until IslandScene port is wired in
+    scene: [BootScene, MatchScene, TownScene],
   });
 }
