@@ -1,8 +1,12 @@
 import Phaser from "phaser";
+import { BASE_WIDTH, BASE_HEIGHT } from "./config/GameConfig";
+import { IslandBootScene } from "./scenes/IslandBootScene";
+import { IslandPreloaderScene } from "./scenes/IslandPreloaderScene";
+import { IslandScene } from "./scenes/IslandScene";
+// Legacy scenes kept in tree for gradual migration
 import { BootScene } from "./scenes/boot-scene";
 import { MatchScene } from "./scenes/match-scene";
 import { TownScene } from "./scenes/TownScene";
-import { BASE_WIDTH, BASE_HEIGHT } from "./config/GameConfig";
 
 /** Logical viewport 1280×720; Scale.FIT adapts to the React container / window. */
 export const GAME_VIEWPORT = { width: BASE_WIDTH, height: BASE_HEIGHT } as const;
@@ -11,8 +15,8 @@ export const GAME_VIEWPORT = { width: BASE_WIDTH, height: BASE_HEIGHT } as const
  * Creates the Phaser game in `container` (React page with Phaser host).
  * Caller is responsible for `game.destroy(true)` on unmount.
  *
- * Island / kleeblock scenes will replace or sit beside legacy Town/Match
- * as the port continues (see docs/architecture/28-kleeblock-port-plan.md).
+ * Default flow: IslandBoot → IslandPreloader → IslandScene (kleeblock port).
+ * Legacy Town/Match remain registered for optional starts.
  */
 export function createGame(container: HTMLElement): Phaser.Game {
   return new Phaser.Game({
@@ -36,7 +40,14 @@ export function createGame(container: HTMLElement): Phaser.Game {
         debug: false,
       },
     },
-    // Legacy scenes until IslandScene port is wired in
-    scene: [BootScene, MatchScene, TownScene],
+    scene: [
+      IslandBootScene,
+      IslandPreloaderScene,
+      IslandScene,
+      // legacy (not auto-started)
+      BootScene,
+      MatchScene,
+      TownScene,
+    ],
   });
 }
