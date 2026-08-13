@@ -1,7 +1,7 @@
 # Kleeblattadventure – Immutable zkEVM Architektur-Dokumentation
 
-**Version:** 2.8  
-**Stand:** 3. August 2026  
+**Version:** 2.9  
+**Stand:** 13. August 2026  
 **Zielplattform:** Immutable zkEVM (L2) + Web2 Game Backend
 
 ## Für Entwickler zuerst
@@ -12,6 +12,8 @@
 → **[23-db-schema.md](./23-db-schema.md)** – **DB-Schema & Migrations**  
 → **[24-api-contract.md](./24-api-contract.md)** – **REST-API-Vertrag**  
 → **[25-glossary.md](./25-glossary.md)** – **Glossar / Begriffsverzeichnis**  
+→ **[27-idempotency-keys.md](./27-idempotency-keys.md)** – **Idempotency-Keys (Write-Schutz)**  
+→ **[28-kleeblock-port-plan.md](./28-kleeblock-port-plan.md)** – **Port kleeblock → kleeblatt**  
 → **[16-developer-guide.md](./16-developer-guide.md)** – Stack, MVP Build-Order  
 → **[17-mvp-gameplay.md](./17-mvp-gameplay.md)** – Gameplay + Skills  
 → **[19-phaser-rule-engine.md](./19-phaser-rule-engine.md)** – Combat RuleEngine  
@@ -43,9 +45,12 @@ GitHub Issues + Milestones (P0–P3) sind im Repo unter [Issues](https://github.
 | [23-db-schema.md](./23-db-schema.md) | **DB-Schema & Migrations** |
 | [24-api-contract.md](./24-api-contract.md) | **REST-API-Vertrag** |
 | [25-glossary.md](./25-glossary.md) | **Glossar** |
+| [27-idempotency-keys.md](./27-idempotency-keys.md) | **Idempotency-Keys** |
+| [28-kleeblock-port-plan.md](./28-kleeblock-port-plan.md) | **kleeblock Port-Plan** |
 
 ## Kurzfassung
 
 Zuerst spielbarer Prototyp (Auth, Held, Map, Kampf, XP, Kiste); Web3/MPC/Hub danach. Docs beschreiben das Gesamtbild.  
 Alle Gameplay-Werte in [`game-config.json`](../../game-config.json).  
-DB-Schema in [23-db-schema.md](./23-db-schema.md). API-Vertrag in [24-api-contract.md](./24-api-contract.md).
+DB-Schema in [23-db-schema.md](./23-db-schema.md). API-Vertrag in [24-api-contract.md](./24-api-contract.md).  
+Game-Port aus kleeblock: [28-kleeblock-port-plan.md](./28-kleeblock-port-plan.md). Write-Schutz: [27-idempotency-keys.md](./27-idempotency-keys.md).
