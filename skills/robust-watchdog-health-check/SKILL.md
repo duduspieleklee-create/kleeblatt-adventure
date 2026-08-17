@@ -1,52 +1,51 @@
 ---
-name: "watchdog-health-check"
-description: "Automated health monitoring and recovery for main agent sessions"
+name: "robust-watchdog-health-check"
+description: "Improved watchdog health check protocol to reduce false positive alerts by implementing better session status verification"
 ---
 
-# Watchdog Health Check and Recovery
+# Robust Watchdog Health Check
 
 ## When to use
-When an automated watchdog detects potential issues with main agent sessions and needs to perform health checks and recovery procedures.
+When a watchdog system detects potential issues with main agent sessions and needs to perform health checks with enhanced accuracy to prevent false positive alerts.
 
 ## Procedure
-1. **Initial Detection**: When watchdog receives alert about session health issues
-2. **Verify Status**: Check actual session status using `session_status` tool for the specific session
-3. **Compare Findings**: Cross-reference watchdog report with actual session status
-4. **Take Action**:
-   - If session is truly unhealthy: Send alert and initiate recovery
-   - If session is healthy (false positive): Log the discrepancy and continue monitoring
-5. **Report Results**: Provide clear status update to stakeholders
-
-## Enhanced Robust Verification Protocol
-
-This procedure incorporates the robust watchdog health check protocol to minimize false positive alerts:
-
-1. **Immediate Status Verification**: 
+1. **Initial Alert Receipt**: Receive watchdog alert about session health issues
+2. **Immediate Status Verification**: 
    - Use `session_status` tool to check actual session status
    - Compare with watchdog's reported status
    - Verify session activity timestamps are recent (within 5 minutes)
-
-2. **Cross-Reference Monitoring Systems**:
+3. **Cross-Reference Monitoring Systems**:
    - Check alternative monitoring sources if available
    - Validate against session type discrimination to avoid confusing main sessions with others
-
-3. **Analyze Discrepancies**:
+4. **Analyze Discrepancies**:
    - If statuses differ significantly, log detailed comparison
    - Document timestamp validation results
-
-4. **Decision Making**:
+5. **Decision Making**:
    - If actual session is healthy: Log discrepancy and continue monitoring
    - If actual session is truly unhealthy: Send alert and initiate recovery
-
-5. **Post-Check Verification**: 
+6. **Post-Check Verification**: 
    - After any action, verify that actual session status matches watchdog's initial report
    - If they differ, document the discrepancy and flag for future review
+
+## Implementation Details
+
+The improved watchdog health check protocol is implemented in the `src/services/watchdog-health-check.ts` file with the following key features:
+
+- Real-time session status checking using `session_status` tool
+- Session type discrimination to avoid confusing main sessions with other session types
+- Timestamp validation to ensure session activity is recent (within 5 minutes)
+- Comprehensive logging of discrepancies between watchdog claims and actual session status
+- Retry logic for transient status check failures
+- Threshold-based alerting to distinguish between temporary hiccups and actual problems
 
 ## Evidenced Pitfalls
 - False positive alerts due to timing issues or incomplete status reporting
 - Inconsistent session status between different monitoring systems
 - Recovery procedures initiated unnecessarily when sessions are actually healthy
 - Cached data causing outdated status reports
+
+## Verification Step
+After completing health check, verify that the actual session status matches the watchdog's initial report. If they differ, document the discrepancy and ensure the watchdog's logic is reviewed to prevent similar false positives in the future.
 
 ## Corrective Actions
 To address the root cause of false positive alerts:
