@@ -1,0 +1,52 @@
+name: Deploy Stage (kleeblatt-adventure)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-stage
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web + api (turbo)
+        run: npx turbo run build --filter=web --filter=api
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_STAGE_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.DEPLOY_STAGE_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy to stage
+        env:
+          DEPLOY_STAGE_HOST: ${{ secrets.DEPLOY_STAGE_HOST }}
+          DEPLOY_STAGE_USER: ${{ secrets.DEPLOY_STAGE_USER }}
+          DEPLOY_STAGE_PORT: ${{ secrets.DEPLOY_STAGE_PORT }}
+          WEB_PATH: /var/www/stage
+          API_PATH: /opt/kleeblatt-adventure
+          STAGE_WEB_URL: https://stage.kleeblatt.space
+          STAGE_CORS_ORIGIN: https://stage.kleeblatt.space
+          STAGE_VITE_API_URL: https://stage.kleeblatt.space
+          STAGE_SESSION_SECRET: ${{ secrets.STAGE_SESSION_SECRET }}
+          STAGE_DATABASE_URL: ${{ secrets.STAGE_DATABASE_URL }}
+          STAGE_REDIS_URL: ${{ secrets.STAGE_REDIS_URL }}
+          STAGE_GOOGLE_CLIENT_ID: ${{ secrets.STAGE_GOOGLE_CLIENT_ID }}
+          STAGE_GOOGLE_CLIENT_SECRET: ${{ secrets.STAGE_GOOGLE_CLIENT_SECRET }}
+          STAGE_GOOGLE_CALLBACK_URL: https://stage.kleeblatt.space/auth/google/callback
+        run: bash scripts/server-deploy-stage.sh
