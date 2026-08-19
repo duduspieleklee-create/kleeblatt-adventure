@@ -66,7 +66,7 @@ export function buildSceneryColliders(
   }
 
   if (import.meta.env.DEV) {
-    console.log(`[Scenery] ${group.getLength()} collider(s)`);
+    console.info(`[Scenery] ${group.getLength()} collider(s)`);
   }
 
   return group;

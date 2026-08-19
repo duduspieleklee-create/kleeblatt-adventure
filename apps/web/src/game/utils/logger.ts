@@ -7,7 +7,7 @@ const isDev = import.meta.env.DEV;
 
 export const log = {
   debug(...args: unknown[]): void {
-    if (isDev) console.log(...args);
+    if (isDev) console.info(...args);
   },
   info(...args: unknown[]): void {
     if (isDev) console.info(...args);

@@ -76,7 +76,7 @@ export class DebugOverlay {
   private resetQuests = (): void => {
     this.sources.questManager?.resetAllQuests();
     GameState.getInstance().reset();
-    console.log('[Debug] Quests + GameState reset (reload scene for full clean spawn)');
+    console.info('[Debug] Quests + GameState reset (reload scene for full clean spawn)');
   };
 
   private refresh = (): void => {

@@ -61,7 +61,7 @@ export class InputManager {
     }
 
     if (import.meta.env.DEV) {
-      console.log('[InputManager] device:', this.device, 'joystick:', wantJoystick);
+      console.info('[InputManager] device:', this.device, 'joystick:', wantJoystick);
     }
   }
 

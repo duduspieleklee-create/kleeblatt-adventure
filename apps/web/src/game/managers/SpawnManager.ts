@@ -82,7 +82,7 @@ export class SpawnManager {
         `[SpawnManager] Only spawned ${spawned.length}/${count} for quest ${questId} (${candidates.length} candidates)`,
       );
     } else if (import.meta.env.DEV) {
-      console.log(`[SpawnManager] Spawned ${spawned.length}× ${itemKey} for ${questId}`);
+      console.info(`[SpawnManager] Spawned ${spawned.length}× ${itemKey} for ${questId}`);
     }
 
     return spawned;

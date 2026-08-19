@@ -221,7 +221,7 @@ export class IslandScene extends Phaser.Scene {
   private onInputInteract(): void {}
   private onInputInteractTarget(payload: InteractTargetPayload): void {
     if (import.meta.env.DEV) {
-      console.log('[IslandScene] interactTarget', payload.targetId);
+      console.info('[IslandScene] interactTarget', payload.targetId);
     }
   }
   private onOpenQuestbook(): void {}
@@ -322,7 +322,7 @@ export class IslandScene extends Phaser.Scene {
       },
     );
 
-    console.log('[IslandScene] Debug tools active (?debug=1)  F1 panel · F2 collision · F3 reset quests');
+    console.info('[IslandScene] Debug tools active (?debug=1)  F1 panel · F2 collision · F3 reset quests');
   }
 
   private setCollisionDebugVisible(show: boolean): void {

@@ -95,7 +95,7 @@ export function loadIslandMap(
   collisionLayer.setCollisionByExclusion([-1], true);
 
   if (import.meta.env.DEV) {
-    console.log(
+    console.info(
       `[MapLoader] Map ${map.width}×${map.height} tiles (${map.widthInPixels}×${map.heightInPixels}px)`,
     );
     logObjectLayerSummary(map);
@@ -119,7 +119,7 @@ function logObjectLayerSummary(map: Phaser.Tilemaps.Tilemap): void {
   for (const name of names) {
     const layer = map.getObjectLayer(name);
     if (layer) {
-      console.log(`[MapLoader] Object layer "${name}": ${layer.objects.length} object(s)`);
+      console.info(`[MapLoader] Object layer "${name}": ${layer.objects.length} object(s)`);
     }
   }
 }

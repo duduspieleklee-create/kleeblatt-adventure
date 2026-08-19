@@ -108,7 +108,7 @@ export class QuestManager {
     this.activeQuests[questId] = questStatus;
     this.saveQuestStates();
 
-    console.log(`[QuestManager] Quest started: ${questId}`);
+    console.info(`[QuestManager] Quest started: ${questId}`);
     this.questEvents.emit('questStarted', { questId, quest });
 
     return true;
@@ -176,7 +176,7 @@ export class QuestManager {
     }
 
     questStatus.objectives[objectiveId] = true;
-    console.log(`[QuestManager] Objective completed: ${questId} -> ${objectiveId}`);
+    console.info(`[QuestManager] Objective completed: ${questId} -> ${objectiveId}`);
     this.questEvents.emit('objectiveCompleted', { questId, objectiveId });
 
     if (this.areAllObjectivesComplete(questId)) {
@@ -202,8 +202,8 @@ export class QuestManager {
       this.gameState.set(quest.reward.stateFlag, true);
     }
 
-    console.log(`[QuestManager] Quest completed: ${questId}`);
-    console.log(`[QuestManager] Reward: ${quest?.reward.message}`);
+    console.info(`[QuestManager] Quest completed: ${questId}`);
+    console.info(`[QuestManager] Reward: ${quest?.reward.message}`);
     this.questEvents.emit('questCompleted', { questId, quest });
 
     this.saveQuestStates();
@@ -218,7 +218,7 @@ export class QuestManager {
     }
 
     questStatus.status = 'FAILED';
-    console.log(`[QuestManager] Quest failed: ${questId}`);
+    console.info(`[QuestManager] Quest failed: ${questId}`);
     this.questEvents.emit('questFailed', { questId });
 
     this.saveQuestStates();
@@ -259,14 +259,14 @@ export class QuestManager {
     return completed / objectives.length;
   }
 
-  on(
+  on<T>(
     event:
       | 'questStarted'
       | 'objectiveCompleted'
       | 'questCompleted'
       | 'questFailed'
       | 'itemProgress',
-    callback: (data: any) => void,
+    callback: (data: T) => void,
   ): void {
     this.questEvents.on(event, callback);
   }
@@ -278,10 +278,10 @@ export class QuestManager {
   resetAllQuests(): void {
     this.activeQuests = {};
     this.saveQuestStates();
-    console.log('[QuestManager] All quests reset');
+    console.info('[QuestManager] All quests reset');
   }
 
-  getDebugInfo(): Record<string, any> {
+  getDebugInfo(): Record<string, unknown> {
     return {
       activeQuests: this.getActiveQuests().length,
       completedQuests: this.getCompletedQuests().length,

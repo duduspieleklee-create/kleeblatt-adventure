@@ -67,7 +67,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     if (import.meta.env.DEV) {
-      console.log('[UIScene] ready; mobile controls:', this.showMobileControls);
+      console.info('[UIScene] ready; mobile controls:', this.showMobileControls);
     }
   }
 
