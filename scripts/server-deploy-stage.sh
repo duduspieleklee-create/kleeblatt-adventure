@@ -37,7 +37,7 @@ cd ${API_PATH}
 # install prod deps at workspace root -> creates @kleeblatt/shared symlink
 npm install --omit=dev --no-audit --no-fund
 
-# API reads process.env directly; PM2 loads this file via --env-file
+# API reads process.env directly; source this file into the shell before PM2 start
 cat > apps/api/.env <<ENV
 NODE_ENV=production
 API_PORT=4000
