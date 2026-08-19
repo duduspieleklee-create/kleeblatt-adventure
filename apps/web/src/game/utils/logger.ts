@@ -1,8 +1,22 @@
-/** Thin logger — DEV-friendly, silent enough for production. */
+/**
+ * Thin log helpers — silent in production builds.
+ * Prefer these over bare console.* for game logic noise.
+ */
+
+const isDev = import.meta.env.DEV;
+
 export const log = {
-  debug: (...args: unknown[]) => {
-    if (import.meta.env.DEV) console.log(...args);
+  debug(...args: unknown[]): void {
+    if (isDev) console.log(...args);
   },
-  warn: (...args: unknown[]) => console.warn(...args),
-  error: (...args: unknown[]) => console.error(...args),
+  info(...args: unknown[]): void {
+    if (isDev) console.info(...args);
+  },
+  warn(...args: unknown[]): void {
+    // Keep warnings in prod for real issues, but prefix lightly
+    console.warn(...args);
+  },
+  error(...args: unknown[]): void {
+    console.error(...args);
+  },
 };

@@ -24,7 +24,7 @@
       {
         "type": "spritesheet",
         "key": "ss_idle",
-        "url": "assets/characters/base_idle_strip9.png",
+        "url": "assets/characters/sunnyside/base_idle_strip9.png",
         "frameConfig": {
           "frameWidth": 96,
           "frameHeight": 64
@@ -33,7 +33,7 @@
       {
         "type": "spritesheet",
         "key": "ss_walk",
-        "url": "assets/characters/base_walk_strip8.png",
+        "url": "assets/characters/sunnyside/base_walk_strip8.png",
         "frameConfig": {
           "frameWidth": 96,
           "frameHeight": 64
@@ -42,7 +42,7 @@
       {
         "type": "spritesheet",
         "key": "ss_run",
-        "url": "assets/characters/base_run_strip8.png",
+        "url": "assets/characters/sunnyside/base_run_strip8.png",
         "frameConfig": {
           "frameWidth": 96,
           "frameHeight": 64

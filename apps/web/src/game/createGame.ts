@@ -1,33 +1,30 @@
 import Phaser from "phaser";
 import { BASE_WIDTH, BASE_HEIGHT } from "./config/GameConfig";
-import { IslandBootScene } from "./scenes/IslandBootScene";
-import { IslandPreloaderScene } from "./scenes/IslandPreloaderScene";
+import { BootScene } from "./scenes/BootScene";
+import { PreloaderScene } from "./scenes/PreloaderScene";
+import { MainMenuScene } from "./scenes/MainMenuScene";
 import { IslandScene } from "./scenes/IslandScene";
-// Legacy scenes kept in tree for gradual migration
-import { BootScene } from "./scenes/boot-scene";
-import { MatchScene } from "./scenes/match-scene";
-import { TowerScene } from "./scenes/TownScene";
+import { UIScene } from "./scenes/UIScene";
 
-/** Logical viewport 1280×720; Scale.FIT adapts to the React container / window. */
-export const GAME_VIEWPORT = { width: BASE_WIDTH, height: BASE_HEIGHT } as const;
+// Always keep fatal hooks; verbose stack only needed in DEV
+window.onerror = (msg, _src, _line, _col, err) => {
+  console.error("GLOBAL ERROR:", msg, import.meta.env.DEV ? err?.stack : undefined);
+};
+window.onunhandledrejection = (ev) => {
+  console.error("UNHANDLED REJECTION:", ev.reason);
+};
 
-/**
- * Creates the Phaser game in `container` (React page with Phaser host).
- * Caller is responsible for `game.destroy(true)` on unmount.
- *
- * Default flow: IslandBoot → IslandPreloader → IslandScene (kleeblock port).
- * Legacy Town/Match remain registered for optional starts.
- */
 export function createGame(container: HTMLElement): Phaser.Game {
-  return new Phaser.Game({
+  const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
-    parent: container,
     width: BASE_WIDTH,
     height: BASE_HEIGHT,
-    backgroundColor: "#101810",
+    parent: container,
+    backgroundColor: "#000000",
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
+      expandParent: true,
     },
     render: {
       antialias: false,
@@ -40,14 +37,14 @@ export function createGame(container: HTMLElement): Phaser.Game {
         debug: false,
       },
     },
-    scene: [
-      IslandBootScene,
-      IslandPreloaderScene,
-      IslandScene,
-      // legacy (not auto-started)
-      BootScene,
-      MatchScene,
-      TowerScene,
-    ],
-  });
+    scene: [BootScene, PreloaderScene, MainMenuScene, IslandScene, UIScene],
+  };
+
+  const game = new Phaser.Game(config);
+
+  if (import.meta.env.DEV) {
+    (window as unknown as { __PHASER_GAME__?: Phaser.Game }).__PHASER_GAME__ = game;
+  }
+
+  return game;
 }

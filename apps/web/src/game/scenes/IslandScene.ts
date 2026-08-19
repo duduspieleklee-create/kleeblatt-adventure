@@ -1,62 +1,234 @@
-import Phaser from "phaser";
-import { NPC } from "../objects/NPC";
-import { SunnysidePlayer } from "../objects/SunnysidePlayer";
+import Phaser from 'phaser';
+import { NPC } from '../objects/NPC';
+import { SunnysidePlayer } from '../objects/SunnysidePlayer';
+import { CollectibleItem } from '../objects/CollectibleItem';
+import { buildSceneryColliders } from '../objects/SceneryCollider';
+import { InteractionManager } from '../managers/InteractionManager';
+import { QuestManager, Quest } from '../managers/QuestManager';
+import { SpawnManager } from '../managers/SpawnManager';
+import { InputManager } from '../input/InputManager';
+import { InputEvents, InteractTargetPayload, ItemEvents, QuestEvents } from '../input/InputEvents';
 import {
   loadIslandMap,
   getNpcSpawns,
   getPlayerSpawn,
   MAP_DEPTH,
-} from "../maps/MapLoader";
-import { KeyboardInputManager } from "../input/KeyboardInputManager";
-import { InputEvents } from "../input/InputEvents";
-import { gameBridge } from "@kleeblatt/shared";
+} from '../maps/MapLoader';
+import { isFootprintWalkable } from '../maps/Walkability';
+import { DebugOverlay, isDebugMode } from '../debug/DebugOverlay';
 
-/**
- * Core island world (ported from kleeblock).
- * Quests / dialog managers / pointer follow in later commits.
- */
+const DEFAULT_SCENERY = [
+  { x: 120, y: 100, width: 12, height: 10, name: 'trunk_nw' },
+  { x: 248, y: 100, width: 12, height: 10, name: 'trunk_ne' },
+  { x: 100, y: 200, width: 12, height: 10, name: 'trunk_sw' },
+  { x: 240, y: 210, width: 14, height: 10, name: 'rock_se' },
+];
+
 export class IslandScene extends Phaser.Scene {
   private player!: SunnysidePlayer;
   private npcGroup!: Phaser.Physics.Arcade.StaticGroup;
+  private sceneryGroup?: Phaser.Physics.Arcade.StaticGroup;
   private map!: Phaser.Tilemaps.Tilemap;
+
   private collisionLayer!: Phaser.Tilemaps.TilemapLayer;
-  private inputManager?: KeyboardInputManager;
+  private collisionDebugGfx?: Phaser.GameObjects.Graphics;
+
+  private interactionManager?: InteractionManager;
+  private questManager?: QuestManager;
+  private spawnManager?: SpawnManager;
+  private inputManager?: InputManager;
+  private debugOverlay?: DebugOverlay;
+
+  private dialogueData: Record<string, { sequence: string[] }> = {};
+  private questsData: Record<string, Quest> = {};
 
   constructor() {
-    super({ key: "IslandScene" });
+    super({ key: 'IslandScene' });
   }
 
   create(): void {
+    this.dialogueData = this.cache.json.get('dialogues') ?? {};
+    this.questsData = this.cache.json.get('quests') ?? {};
+
     const loaded = loadIslandMap(this);
     if (!loaded) {
-      console.error("[IslandScene] Map setup failed");
-      this.add
-        .text(this.scale.width / 2, this.scale.height / 2, "Map load failed", {
-          color: "#ff6b6b",
-          fontSize: "18px",
-        })
-        .setOrigin(0.5);
+      console.error('[IslandScene] Map setup failed – aborting scene');
+      this.scene.start('MainMenuScene');
       return;
     }
 
     this.map = loaded.map;
     this.collisionLayer = loaded.layers.collision;
 
-    this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
-
+    this.setupPhysics(loaded.map);
     this.setupPlayer();
     this.setupNPCs();
-    this.setupCamera();
+    this.setupScenery();
+    this.setupCamera(loaded.map);
     this.setupInput();
 
-    this.events.on(Phaser.Scenes.Events.UPDATE, this.updateDepth, this);
-    this.events.on(InputEvents.INTERACT, this.onInteract, this);
+    const npcs = this.npcGroup.getChildren() as NPC[];
+    this.interactionManager = new InteractionManager(this, this.player, npcs, this.dialogueData);
 
-    gameBridge.emit("scene:loaded", { scene: "IslandScene" });
+    this.questManager = new QuestManager(this, this.questsData);
+    this.spawnManager = new SpawnManager(this, this.map, this.collisionLayer);
+    this.setupItemCollection();
+    this.setupQuestTriggers();
+    this.setupDebugTools();
 
-    if (import.meta.env.DEV) {
-      console.log("[IslandScene] ready — WASD/arrows to move, E to interact");
+    if (!this.scene.isActive('UIScene')) {
+      this.scene.launch('UIScene', {
+        questManager: this.questManager,
+        questsData: this.questsData,
+        worldSceneKey: 'IslandScene',
+      });
     }
+
+    this.questManager.startQuest('island_explorer');
+
+    this.updateQuestMarkers();
+
+    this.questManager.on('questStarted', (data: { questId: string }) => {
+      this.updateQuestMarkers();
+      this.onQuestStarted(data.questId);
+    });
+    this.questManager.on('objectiveCompleted', () => this.updateQuestMarkers());
+    this.questManager.on('questCompleted', (data: { questId: string }) => {
+      this.updateQuestMarkers();
+      this.onQuestCompleted(data.questId);
+    });
+    this.questManager.on('itemProgress', (data: {
+      questId: string;
+      objectiveId: string;
+      current: number;
+      required: number;
+    }) => {
+      this.events.emit(QuestEvents.PROGRESS_CHANGED, data);
+    });
+
+    this.events.on(Phaser.Scenes.Events.UPDATE, this.updateDepth, this);
+  }
+
+  private onQuestStarted(questId: string): void {
+    const def = this.questManager?.getQuestDefinition(questId);
+    if (!def?.itemKey || !this.spawnManager) return;
+
+    const count = def.requiredCount ?? 3;
+    this.spawnManager.spawnForQuest(
+      questId,
+      def.itemKey,
+      count,
+      { x: this.player.x, y: this.player.y },
+      { minPlayerDistance: 40 },
+    );
+
+    this.events.emit(QuestEvents.UPDATE, {
+      title: def.title,
+      description: def.description,
+      questId,
+    });
+  }
+
+  private onQuestCompleted(questId: string): void {
+    if (questId === 'island_explorer') {
+      this.questManager?.startQuest('find_supplies');
+    }
+  }
+
+  private setupItemCollection(): void {
+    if (!this.spawnManager) return;
+
+    this.physics.add.overlap(
+      this.player,
+      this.spawnManager.getGroup(),
+      (_player, obj) => {
+        const item = obj as CollectibleItem;
+        if (!(item instanceof CollectibleItem) || item.isCollected()) return;
+
+        if (!item.collect()) return;
+
+        this.spawnManager?.removeItem(item);
+
+        this.events.emit(ItemEvents.COLLECTED, {
+          itemId: item.itemId,
+          questId: item.questId,
+        });
+
+        this.questManager?.onItemCollected(item.questId, item.itemId);
+      },
+      undefined,
+      this,
+    );
+  }
+
+  private setupInput(): void {
+    let enableJoystick = false;
+    try {
+      const q = new URLSearchParams(window.location.search).get('joystick');
+      enableJoystick = q === '1' || q === 'true';
+    } catch {
+      enableJoystick = false;
+    }
+
+    this.inputManager = new InputManager(this, {
+      player: this.player,
+      speed: 80,
+      enableJoystick,
+      pointer: {
+        isPointerOnUI: (pointer) => this.isPointerOnUI(pointer),
+        isWalkable: (x, y) => this.isWalkable(x, y),
+        findTargets: () => this.getInteractiveTargets(),
+        interactPickRadius: 40,
+        isWorldInputBlocked: () => this.interactionManager?.isDialogOpen() === true,
+      },
+    });
+
+    this.events.on(InputEvents.INTERACT, this.onInputInteract, this);
+    this.events.on(InputEvents.INTERACT_TARGET, this.onInputInteractTarget, this);
+    this.events.on(InputEvents.OPEN_QUESTBOOK, this.onOpenQuestbook, this);
+    this.events.on(InputEvents.CANCEL, this.onInputCancel, this);
+  }
+
+  private getInteractiveTargets() {
+    const npcs = this.npcGroup.getChildren() as NPC[];
+    return npcs.map((npc) => ({
+      id: npc.dialogueId,
+      x: npc.x,
+      y: npc.y,
+      radius: 36,
+    }));
+  }
+
+  private isPointerOnUI(pointer: Phaser.Input.Pointer): boolean {
+    const uiScene = this.scene.get('UIScene');
+    if (uiScene && uiScene.scene.isActive()) {
+      const uiHits = uiScene.input.hitTestPointer(pointer);
+      if (uiHits.length > 0) return true;
+    }
+
+    const hits = this.input.hitTestPointer(pointer);
+    return hits.some((obj) => {
+      const go = obj as Phaser.GameObjects.GameObject & { scrollFactorX?: number };
+      return typeof go.scrollFactorX === 'number' && go.scrollFactorX === 0;
+    });
+  }
+
+  private isWalkable(worldX: number, worldY: number): boolean {
+    if (!this.collisionLayer || !this.map) return false;
+    return isFootprintWalkable(this.map, this.collisionLayer, worldX, worldY);
+  }
+
+  private onInputInteract(): void {}
+  private onInputInteractTarget(payload: InteractTargetPayload): void {
+    if (import.meta.env.DEV) {
+      console.log('[IslandScene] interactTarget', payload.targetId);
+    }
+  }
+  private onOpenQuestbook(): void {}
+  private onInputCancel(): void {}
+
+  private setupPhysics(map: Phaser.Tilemaps.Tilemap): void {
+    this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
   }
 
   private setupPlayer(): void {
@@ -73,90 +245,142 @@ export class IslandScene extends Phaser.Scene {
     this.npcGroup = this.physics.add.staticGroup();
 
     const npcSpawns = getNpcSpawns(this.map);
-    const list =
-      npcSpawns.length > 0
-        ? npcSpawns.map((obj) => ({
-            x: obj.x,
-            y: obj.y,
-            dialogueId:
-              (typeof obj.properties.dialogueId === "string"
-                ? obj.properties.dialogueId
-                : null) ||
-              obj.name ||
-              "unknown",
-          }))
-        : [
-            { x: 160, y: 120, dialogueId: "welcome_npc" },
-            { x: 200, y: 180, dialogueId: "vibes_npc" },
-          ];
 
-    for (const data of list) {
-      const npc = new NPC(this, data.x, data.y, data.dialogueId);
-      npc.setDepth(MAP_DEPTH.ENTITIES);
-      this.npcGroup.add(npc);
+    if (npcSpawns.length === 0) {
+      console.warn('[IslandScene] No NPCs in NPCSpawns/objects – using fallback');
+      const fallback = [
+        { x: 160, y: 120, dialogueId: 'welcome_npc' },
+        { x: 200, y: 180, dialogueId: 'vibes_npc' },
+      ];
+      for (const data of fallback) {
+        const npc = new NPC(this, data.x, data.y, data.dialogueId);
+        npc.setDepth(MAP_DEPTH.ENTITIES);
+        this.npcGroup.add(npc);
+      }
+    } else {
+      for (const obj of npcSpawns) {
+        const dialogueId =
+          (typeof obj.properties.dialogueId === 'string'
+            ? obj.properties.dialogueId
+            : null) ||
+          obj.name ||
+          'unknown';
+        const npc = new NPC(this, obj.x, obj.y, dialogueId);
+        npc.setDepth(MAP_DEPTH.ENTITIES);
+        this.npcGroup.add(npc);
+      }
     }
 
     this.physics.add.collider(this.npcGroup, this.collisionLayer);
     this.physics.add.collider(this.player, this.npcGroup);
   }
 
-  private setupCamera(): void {
+  private setupScenery(): void {
+    this.sceneryGroup = buildSceneryColliders(this, this.map, DEFAULT_SCENERY);
+    this.physics.add.collider(this.player, this.sceneryGroup);
+    this.physics.add.collider(this.npcGroup, this.sceneryGroup);
+  }
+
+  private setupCamera(map: Phaser.Tilemaps.Tilemap): void {
     const cam = this.cameras.main;
-    cam.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+    cam.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     cam.startFollow(this.player, true, 0.1, 0.1);
     cam.setZoom(2);
     cam.setRoundPixels(true);
   }
 
-  private setupInput(): void {
-    this.inputManager = new KeyboardInputManager(this, this.player, 80);
+  /** Milestone 11 — physics / collision / overlay only when ?debug=1 */
+  private setupDebugTools(): void {
+    if (!isDebugMode()) return;
+
+    this.physics.world.createDebugGraphic();
+    this.physics.world.drawDebug = true;
+
+    this.collisionDebugGfx = this.add.graphics().setAlpha(0.6).setDepth(50).setVisible(true);
+    this.collisionLayer.renderDebug(this.collisionDebugGfx, {
+      tileColor: null,
+      collidingTileColor: new Phaser.Display.Color(243, 134, 48, 200),
+      faceColor: new Phaser.Display.Color(40, 39, 37, 255),
+    });
+    this.collisionLayer.setVisible(true).setAlpha(0.35);
+
+    this.sceneryGroup?.getChildren().forEach((child) => {
+      const r = child as Phaser.GameObjects.Rectangle;
+      r.setVisible(true);
+      r.setFillStyle(0x00aaff, 0.35);
+      r.setStrokeStyle(1, 0x00ffff, 0.9);
+    });
+
+    this.debugOverlay = new DebugOverlay(
+      this,
+      {
+        getPlayerPos: () => ({ x: this.player.x, y: this.player.y }),
+        questManager: this.questManager,
+      },
+      {
+        onToggleCollision: (show) => this.setCollisionDebugVisible(show),
+      },
+    );
+
+    console.log('[IslandScene] Debug tools active (?debug=1)  F1 panel · F2 collision · F3 reset quests');
   }
 
-  private onInteract(): void {
-    const npcs = this.npcGroup.getChildren() as NPC[];
-    let nearest: NPC | null = null;
-    let best = 40;
+  private setCollisionDebugVisible(show: boolean): void {
+    this.collisionDebugGfx?.setVisible(show);
+    this.collisionLayer.setVisible(show);
+    if (show) this.collisionLayer.setAlpha(0.35);
+    this.physics.world.drawDebug = show;
+    this.sceneryGroup?.getChildren().forEach((child) => {
+      (child as Phaser.GameObjects.Rectangle).setVisible(show);
+    });
+  }
 
-    for (const npc of npcs) {
-      const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
-      if (d < best) {
-        best = d;
-        nearest = npc;
+  private setupQuestTriggers(): void {
+    if (!this.questManager) return;
+
+    this.events.on('dialogueSequenceCompleted', (data: { dialogueId: string }) => {
+      const { dialogueId } = data;
+      const activeQuests = this.questManager!.getActiveQuests();
+
+      for (const questStatus of activeQuests) {
+        const quest = this.questsData[questStatus.questId];
+        if (!quest) continue;
+
+        for (const objective of quest.objectives) {
+          if (objective.type === 'dialogue' && objective.targetId === dialogueId) {
+            this.questManager!.completeObjective(questStatus.questId, objective.id);
+          }
+        }
+      }
+    });
+  }
+
+  private updateQuestMarkers(): void {
+    if (!this.questManager || !this.npcGroup) return;
+
+    const activeQuests = this.questManager.getActiveQuests();
+    const targetDialogueIds = new Set<string>();
+
+    for (const status of activeQuests) {
+      const quest = this.questsData[status.questId];
+      if (!quest) continue;
+
+      for (const obj of quest.objectives) {
+        if (obj.type === 'dialogue' && !status.objectives[obj.id]) {
+          targetDialogueIds.add(obj.targetId);
+        }
       }
     }
 
-    if (!nearest) return;
-
-    const dialogues = this.cache.json.get("dialogues") as
-      | Record<string, { sequence: string[] }>
-      | undefined;
-    const sequence = dialogues?.[nearest.dialogueId]?.sequence ?? [
-      `(${nearest.dialogueId})`,
-    ];
-
-    // Temporary in-world toast until DialogBox / UIScene is ported
-    const text = sequence[0] ?? "…";
-    const toast = this.add
-      .text(this.player.x, this.player.y - 36, text, {
-        fontSize: "10px",
-        color: "#fff",
-        backgroundColor: "#000000aa",
-        padding: { x: 6, y: 4 },
-      })
-      .setOrigin(0.5)
-      .setDepth(100);
-
-    this.time.delayedCall(2200, () => toast.destroy());
-
-    gameBridge.emit("dialog:start", {
-      npcId: nearest.dialogueId,
-      dialogueId: nearest.dialogueId,
-      lines: sequence,
+    this.npcGroup.getChildren().forEach((child) => {
+      const npc = child as NPC;
+      npc.setQuestMarker(targetDialogueIds.has(npc.dialogueId), '#ffcc00');
     });
   }
 
   private updateDepth = (): void => {
     this.player.setDepth(MAP_DEPTH.ENTITIES + this.player.y * 0.01);
+
     this.npcGroup.getChildren().forEach((child) => {
       const sprite = child as Phaser.GameObjects.Sprite;
       sprite.setDepth(MAP_DEPTH.ENTITIES + sprite.y * 0.01);
@@ -164,14 +388,31 @@ export class IslandScene extends Phaser.Scene {
   };
 
   update(): void {
-    if (!this.inputManager || !this.player) return;
-    const result = this.inputManager.update();
-    this.player.applyMovementResult(result);
+    if (this.inputManager) {
+      const result = this.inputManager.update();
+      this.player.applyMovementResult(result);
+    }
+
+    if (this.interactionManager) {
+      this.interactionManager.update({ x: this.player.x, y: this.player.y });
+    }
   }
 
   shutdown(): void {
     this.inputManager?.shutdown();
+    this.interactionManager?.shutdown();
+    this.spawnManager?.shutdown();
+    this.debugOverlay?.shutdown();
+
+    if (this.scene.isActive('UIScene')) {
+      this.scene.stop('UIScene');
+    }
+
     this.events.off(Phaser.Scenes.Events.UPDATE, this.updateDepth, this);
-    this.events.off(InputEvents.INTERACT, this.onInteract, this);
+    this.events.off('dialogueSequenceCompleted');
+    this.events.off(InputEvents.INTERACT, this.onInputInteract, this);
+    this.events.off(InputEvents.INTERACT_TARGET, this.onInputInteractTarget, this);
+    this.events.off(InputEvents.OPEN_QUESTBOOK, this.onOpenQuestbook, this);
+    this.events.off(InputEvents.CANCEL, this.onInputCancel, this);
   }
 }

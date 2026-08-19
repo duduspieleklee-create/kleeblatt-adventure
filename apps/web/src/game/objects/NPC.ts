@@ -1,5 +1,5 @@
-import Phaser from "phaser";
-import { applyCharacterBodyWhenReady } from "./characterBody";
+import Phaser from 'phaser';
+import { applyCharacterBodyWhenReady } from './characterBody';
 
 export class NPC extends Phaser.Physics.Arcade.Sprite {
   private _dialogueId: string;
@@ -11,7 +11,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
   }
 
   constructor(scene: Phaser.Scene, x: number, y: number, dialogueId: string) {
-    super(scene, x, y, "ss_idle", 1);
+    super(scene, x, y, 'ss_idle', 1);
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
@@ -21,46 +21,50 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     this.setImmovable(true);
     this._dialogueId = dialogueId;
 
+    // Same feet hitbox as the player for consistent collision feel
     applyCharacterBodyWhenReady(scene, this);
 
-    if (!scene.anims.exists("npc_idle")) {
-      scene.anims.create({
-        key: "npc_idle",
-        frames: [
-          { key: "ss_idle", frame: 1 },
-          { key: "ss_idle", frame: 3 },
-          { key: "ss_idle", frame: 5 },
-          { key: "ss_idle", frame: 7 },
-        ],
-        frameRate: 6,
-        repeat: -1,
-      });
-    }
+    // NPC idle animation (facing down, bobbing)
+    scene.anims.create({
+      key: 'npc_idle',
+      frames: [
+        { key: 'ss_idle', frame: 1 },
+        { key: 'ss_idle', frame: 3 },
+        { key: 'ss_idle', frame: 5 },
+        { key: 'ss_idle', frame: 7 },
+      ],
+      frameRate: 6,
+      repeat: -1,
+    });
 
-    this.anims.play("npc_idle");
+    this.anims.play('npc_idle');
   }
 
-  setQuestMarker(visible: boolean, color = "#ffcc00"): void {
+  /**
+   * Show or hide the spatial quest marker (!)
+   */
+  setQuestMarker(visible: boolean, color: string = '#ffcc00'): void {
     if (visible) {
       if (!this.questMarker) {
         this.questMarker = this.scene.add
-          .text(this.x, this.y - 28, "!", {
-            fontSize: "16px",
-            color,
-            fontStyle: "bold",
-            stroke: "#000000",
+          .text(this.x, this.y - 28, '!', {
+            fontSize: '16px',
+            color: color,
+            fontStyle: 'bold',
+            stroke: '#000000',
             strokeThickness: 3,
           })
           .setOrigin(0.5)
           .setDepth(20);
 
+        // Gentle bobbing animation
         this.markerTween = this.scene.tweens.add({
           targets: this.questMarker,
           y: this.y - 34,
           duration: 600,
           yoyo: true,
           repeat: -1,
-          ease: "Sine.easeInOut",
+          ease: 'Sine.easeInOut',
         });
       } else {
         this.questMarker.setVisible(true);
@@ -71,9 +75,22 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  /**
+   * Keep marker positioned above the NPC (call in update if NPC can move)
+   */
+  updateQuestMarkerPosition(): void {
+    if (this.questMarker && this.questMarker.visible) {
+      this.questMarker.setPosition(this.x, this.questMarker.y);
+    }
+  }
+
   destroy(fromScene?: boolean): void {
-    this.markerTween?.destroy();
-    this.questMarker?.destroy();
+    if (this.markerTween) {
+      this.markerTween.destroy();
+    }
+    if (this.questMarker) {
+      this.questMarker.destroy();
+    }
     super.destroy(fromScene);
   }
 }
