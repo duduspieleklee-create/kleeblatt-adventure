@@ -23,8 +23,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build web + api (turbo)
-        run: npx turbo run build --filter=web --filter=api
+      - name: Build shared + api + web (turbo)
+        run: npx turbo run build --filter=@kleeblatt/shared --filter=@kleeblatt/api --filter=@kleeblatt/web
+
+      - name: Verify build artifacts
+        run: |
+          test -f apps/web/dist/index.html
+          test -f apps/api/dist/index.js
+          test -f packages/shared/dist/index.js
 
       - name: Setup SSH key
         run: |

@@ -53,8 +53,10 @@ GOOGLE_CALLBACK_URL=${STAGE_GOOGLE_CALLBACK_URL:-https://stage.kleeblatt.space/a
 ENV
 
 cd ${API_PATH}
+# Load env into the current shell so the Node API sees them as process.env
+set -a && source apps/api/.env && set +a
 pm2 delete kleeblatt-api 2>/dev/null || true
-pm2 start apps/api/dist/index.js --name kleeblatt-api --env-file apps/api/.env
+pm2 start apps/api/dist/index.js --name kleeblatt-api
 pm2 save
 REMOTE
 
