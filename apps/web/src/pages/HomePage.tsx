@@ -31,8 +31,10 @@ export function HomePage() {
   };
 
   const walletAddress = walletState.status === "ready" ? walletState.data.address : undefined;
-  const ethBalance = walletState.status === "ready" ? walletState.data.ethBalance : undefined;
-  const imxBalance = walletState.status === "ready" ? walletState.data.imxBalance : undefined;
+  // Only surface balances once a wallet is actually linked (Backend sets `connected`
+  // and returns null balances otherwise, so guest / pre-connect users see no balance).
+  const ethBalance = walletState.status === "ready" && walletState.data.connected ? walletState.data.ethBalance ?? undefined : undefined;
+  const imxBalance = walletState.status === "ready" && walletState.data.connected ? walletState.data.imxBalance ?? undefined : undefined;
 
   return (
     <div className="app-shell">

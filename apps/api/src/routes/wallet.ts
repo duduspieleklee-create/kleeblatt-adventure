@@ -57,16 +57,17 @@ walletRoutes.get("/wallet/deposit-address", requireAuth, async (c) => {
   return c.json({ depositAddress: deposit });
 });
 
-/** GET /wallet/balance – mock ETH + IMX balance */
+/** GET /wallet/balance – mock ETH + IMX balance (null when no wallet linked) */
 walletRoutes.get("/wallet/balance", requireAuth, async (c) => {
   const user = c.get("user")!;
   const wallet = await getWallet(user.userId);
   if (!wallet || !wallet.address) {
-    return c.json({ address: "", ethBalance: "0", imxBalance: "0" } satisfies WalletBalance);
+    return c.json({ address: "", connected: false, ethBalance: null, imxBalance: null } satisfies WalletBalance);
   }
   const balance = getMockBalance(wallet.address);
   const body: WalletBalance = {
     address: wallet.address,
+    connected: true,
     ethBalance: balance.eth,
     imxBalance: balance.imx,
   };

@@ -29,7 +29,12 @@ export interface WalletConnectResponse {
 }
 
 export interface WalletBalance {
+  /** Connected wallet address, or "" when no wallet is linked. */
   address: string;
-  ethBalance: string;
-  imxBalance: string;
+  /** True only when a wallet is linked; false → balances are null. */
+  connected: boolean;
+  /** Mock ETH balance (wei → ETH formatted), or null when disconnected. */
+  ethBalance: string | null;
+  /** Mock IMX balance, or null when disconnected. */
+  imxBalance: string | null;
 }
