@@ -40,6 +40,7 @@ export class IslandScene extends Phaser.Scene {
   private inputManager?: InputManager;
   private debugOverlay?: DebugOverlay;
   private onInventoryHydrate?: (payload: unknown) => void;
+  private onResize?: () => void;
 
   private dialogueData: Record<string, { sequence: string[] }> = {};
   private questsData: Record<string, Quest> = {};
@@ -298,8 +299,24 @@ export class IslandScene extends Phaser.Scene {
     const cam = this.cameras.main;
     cam.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     cam.startFollow(this.player, true, 0.1, 0.1);
-    cam.setZoom(2);
     cam.setRoundPixels(true);
+    this.fitCameraToMap();
+
+    this.onResize = () => this.fitCameraToMap();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
+  }
+
+  private fitCameraToMap(): void {
+    const cam = this.cameras.main;
+    const { width, height } = this.scale.gameSize;
+    const mapW = this.map.widthInPixels;
+    const mapH = this.map.heightInPixels;
+
+    // Cover the viewport so the map fills the entire canvas.
+    // A square map on a 16:9 screen will have its top/bottom cropped,
+    // eliminating the black side bars and keeping UI on the visible world.
+    const zoom = Math.max(width / mapW, height / mapH);
+    cam.setZoom(zoom);
   }
 
   /** Milestone 11 — physics / collision / overlay only when ?debug=1 */
@@ -416,6 +433,11 @@ export class IslandScene extends Phaser.Scene {
     this.interactionManager?.shutdown();
     this.spawnManager?.shutdown();
     this.debugOverlay?.shutdown();
+
+    if (this.onResize) {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
+      this.onResize = undefined;
+    }
 
     if (this.scene.isActive('UIScene')) {
       this.scene.stop('UIScene');
