@@ -11,6 +11,7 @@ export async function signSession(user: SessionUser): Promise<string> {
     email: user.email,
     displayName: user.displayName,
     picture: user.picture,
+    guest: user.guest,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.userId)
@@ -30,6 +31,7 @@ export async function verifySession(token: string): Promise<SessionUser | null> 
       email,
       displayName: typeof payload.displayName === "string" ? payload.displayName : null,
       picture: typeof payload.picture === "string" ? payload.picture : null,
+      guest: typeof payload.guest === "boolean" ? payload.guest : false,
     };
   } catch {
     return null;

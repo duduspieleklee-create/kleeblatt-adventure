@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { QuestPanel } from "./QuestPanel";
 import { ChatWidget } from "./ChatWidget";
+import { gameBridge } from "@kleeblatt/shared";
 import type Phaser from "phaser";
 
 interface ShortcutRailProps {
@@ -16,7 +16,6 @@ interface ShortcutRailProps {
  */
 export function ShortcutRail({ game }: ShortcutRailProps) {
   const [chatOpen, setChatOpen] = useState(false);
-  const [questsOpen, setQuestsOpen] = useState(false);
 
   return (
     <div className="shortcut-rail">
@@ -25,8 +24,8 @@ export function ShortcutRail({ game }: ShortcutRailProps) {
           type="button"
           className="shortcut-btn"
           aria-label="Questbuch"
-          aria-pressed={questsOpen}
-          onClick={() => setQuestsOpen((v) => !v)}
+          aria-pressed={false}
+          onClick={() => gameBridge.emit("ui:toggleQuestbook")}
           onMouseDown={(e) => e.preventDefault()}
         >
           📖
@@ -42,12 +41,6 @@ export function ShortcutRail({ game }: ShortcutRailProps) {
           💬
         </button>
       </div>
-
-      {questsOpen && (
-        <div className="shortcut-panel shortcut-panel-quests">
-          <QuestPanel />
-        </div>
-      )}
 
       {chatOpen && <ChatWidget game={game} onClose={() => setChatOpen(false)} />}
     </div>

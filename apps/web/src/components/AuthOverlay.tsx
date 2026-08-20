@@ -1,171 +1,246 @@
-import { useState, useCallback } from "react";
-import { HERO_CLASS_OPTIONS, type HeroClass, type HeroResponse } from "@kleeblatt/shared";
-import { createHero, walletAuth } from "../lib/api";
-import type { MeState } from "../hooks/useMe";
+import { useEffect, useState, type FormEvent } from "react";
+import type { MeResponse } from "@kleeblatt/shared";
+import { PASSWORD_REQUIREMENTS, validatePassword } from "@kleeblatt/shared";
+import { checkEmailAvailable, login, register, guest } from "../lib/api";
+import { signInWithWalletAndExchange, WalletAuthError } from "../game/utils/walletAuth";
+import { StatusSpinner, type SpinnerState } from "./StatusSpinner";
+import "../styles/auth.css";
+
+type Mode = "login" | "register";
 
 interface AuthOverlayProps {
-  meState: MeState;
-  onAuthenticated: () => void;
-  onHeroCreated: (hero: HeroResponse) => void;
-  onClose?: () => void;
+  /** Called after a successful login/registration with the session user. */
+  onAuthenticated: (me: MeResponse) => void;
 }
 
-export function AuthOverlay({ meState, onAuthenticated: _onAuthenticated, onHeroCreated, onClose }: AuthOverlayProps) {
-  const [heroName, setHeroName] = useState("");
-  const [selectedClass, setSelectedClass] = useState<HeroClass | null>(null);
-  const [busy, setBusy] = useState(false);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function AuthOverlay({ onAuthenticated }: AuthOverlayProps) {
+  const [mode, setMode] = useState<Mode>("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [emailState, setEmailState] = useState<SpinnerState>("idle");
+  const [pwValid, setPwValid] = useState(false);
+  const [confirmValid, setConfirmValid] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [walletMode, setWalletMode] = useState(false);
-  const [walletAddress, setWalletAddress] = useState("");
-  const [walletBusy, setWalletBusy] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const showLogin = meState.status !== "authenticated";
+  // Debounced email-availability check (registration only).
+  useEffect(() => {
+    if (mode !== "register") {
+      setEmailState("idle");
+      return;
+    }
+    const trimmed = email.trim().toLowerCase();
+    if (!EMAIL_RE.test(trimmed)) {
+      setEmailState(trimmed ? "invalid" : "idle");
+      return;
+    }
+    setEmailState("checking");
+    const handle = setTimeout(async () => {
+      try {
+        const res = await checkEmailAvailable(trimmed);
+        setEmailState(res.available && res.valid ? "valid" : "invalid");
+      } catch {
+        setEmailState("invalid");
+      }
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [email, mode]);
 
-  const handleWalletLogin = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!walletAddress || !walletAddress.startsWith("0x") || walletAddress.length !== 42) {
-        setError("Ungültige Wallet-Adresse (muss 0x... sein, 42 Zeichen).");
+  // Password policy (shared rules).
+  useEffect(() => {
+    setPwValid(validatePassword(password).valid);
+  }, [password]);
+
+  // Confirm must match password and meet the policy.
+  useEffect(() => {
+    setConfirmValid(confirm.length > 0 && confirm === password && pwValid);
+  }, [confirm, password, pwValid]);
+
+  const canSubmitLogin = email.trim().length > 0 && password.length > 0 && !submitting;
+  const canSubmitRegister = emailState === "valid" && pwValid && confirmValid && !submitting;
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const result =
+        mode === "login"
+          ? await login(email.trim(), password)
+          : await register(email.trim().toLowerCase(), password);
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
-      setWalletBusy(true);
-      setError(null);
-      const result = await walletAuth(walletAddress);
-      setWalletBusy(false);
-      if (result.ok) {
-        window.location.href = result.data.redirect;
-      } else {
-        setError(result.message);
-      }
-    },
-    [walletAddress],
-  );
+      onAuthenticated(result.data);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
-  const handleHeroCreate = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!selectedClass || heroName.trim().length < 2) {
-        setError("Bitte Name (2–20 Zeichen) und Klasse wählen.");
+  const pwSpinner: SpinnerState = password.length === 0 ? "idle" : pwValid ? "valid" : "invalid";
+  const confirmSpinner: SpinnerState =
+    confirm.length === 0 ? "idle" : confirmValid ? "valid" : "invalid";
+
+  async function handleWalletLogin(): Promise<void> {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const me = await signInWithWalletAndExchange();
+      onAuthenticated(me);
+    } catch (err) {
+      setError(err instanceof WalletAuthError ? err.message : "Wallet login failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleGuestLogin(): Promise<void> {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const result = await guest();
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
-      setBusy(true);
-      setError(null);
-      const result = await createHero({ heroName: heroName.trim(), class: selectedClass });
-      setBusy(false);
-      if (result.ok) {
-        onHeroCreated(result.data);
-      } else {
-        setError(result.message);
-      }
-    },
-    [selectedClass, heroName, onHeroCreated],
-  );
+      onAuthenticated(result.data);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
-    <div className="overlay-backdrop" onClick={onClose}>
-      <div className="overlay-panel" onClick={(e) => e.stopPropagation()}>
-        {onClose && (
-          <button type="button" className="overlay-close" onClick={onClose}>
-            ✕
+    <div className="auth-overlay">
+      <div className="auth-modal">
+        <h1 className="auth-brand">Kleeblatt Adventure</h1>
+
+        <div className="auth-tabs">
+          <button
+            type="button"
+            className={mode === "login" ? "auth-tab active" : "auth-tab"}
+            onClick={() => {
+              setMode("login");
+              setError(null);
+            }}
+          >
+            Login
           </button>
-        )}
+          <button
+            type="button"
+            className={mode === "register" ? "auth-tab active" : "auth-tab"}
+            onClick={() => {
+              setMode("register");
+              setError(null);
+            }}
+          >
+            Register
+          </button>
+        </div>
 
-        {showLogin ? (
-          <div className="auth-flow">
-            <h2>Willkommen</h2>
-            <p className="muted">Melde dich an, um dein Abenteuer zu beginnen.</p>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-label">
+            <span>Email</span>
+            <span className="auth-field">
+              <input
+                className="auth-input"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              {mode === "register" && <StatusSpinner state={emailState} />}
+            </span>
+            {mode === "register" && emailState === "invalid" && email.trim().length > 0 && (
+              <span className="auth-hint auth-hint-bad">Email already taken or invalid</span>
+            )}
+          </label>
 
-            {!walletMode ? (
-              <>
-                <div className="auth-actions">
-                  <a className="btn primary" href="/api/auth/google" target="_self">
-                    Mit Google anmelden
-                  </a>
-                  {import.meta.env.DEV && (
-                    <a className="btn secondary" href="/api/auth/dev-login" target="_self">
-                      Dev-Login
-                    </a>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  className="btn wallet-link"
-                  onClick={() => setWalletMode(true)}
-                >
-                  Mit Wallet verbinden
-                </button>
-              </>
-            ) : (
-              <form onSubmit={handleWalletLogin} className="stack">
-                <label>
-                  Wallet-Adresse
+          <label className="auth-label">
+            <span>Password</span>
+            <span className="auth-field">
+              <input
+                className="auth-input"
+                type="password"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              {mode === "register" && <StatusSpinner state={pwSpinner} />}
+            </span>
+          </label>
+
+          {mode === "register" && (
+            <>
+              <label className="auth-label">
+                <span>Confirm Password</span>
+                <span className="auth-field">
                   <input
-                    type="text"
-                    value={walletAddress}
-                    placeholder="0x..."
-                    maxLength={42}
-                    onChange={(e) => setWalletAddress(e.target.value)}
-                    autoFocus
+                    className="auth-input"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
                   />
-                </label>
-                <button type="submit" className="btn primary" disabled={walletBusy}>
-                  {walletBusy ? "Wird verbunden …" : "Verbinden"}
-                </button>
-                <button
-                  type="button"
-                  className="btn secondary wallet-back"
-                  onClick={() => { setWalletMode(false); setWalletAddress(""); setError(null); }}
-                >
-                  ← Zurück
-                </button>
-              </form>
-            )}
-
-            {meState.status === "error" && (
-              <p className="error">API nicht erreichbar. Bitte versuche es später erneut.</p>
-            )}
-            {error && <p className="error">{error}</p>}
-          </div>
-        ) : (
-          <div className="hero-flow">
-            <h2>Erschaffe deinen Helden</h2>
-            <p className="muted">Wähle Name und Klasse – deine Reise beginnt.</p>
-
-            <form onSubmit={handleHeroCreate} className="stack">
-              <label>
-                Heldenname
-                <input
-                  type="text"
-                  value={heroName}
-                  maxLength={20}
-                  placeholder="z. B. Kleebart der Tapfere"
-                  onChange={(e) => setHeroName(e.target.value)}
-                  autoFocus
-                />
+                  <StatusSpinner state={confirmSpinner} />
+                </span>
               </label>
 
-              <div className="class-grid">
-                {HERO_CLASS_OPTIONS.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    className={`class-card${selectedClass === option.id ? " selected" : ""}`}
-                    onClick={() => setSelectedClass(option.id)}
-                  >
-                    <strong>{option.label}</strong>
-                    <span>{option.description}</span>
-                  </button>
-                ))}
-              </div>
+              <ul className="auth-reqs">
+                {PASSWORD_REQUIREMENTS.map((req) => {
+                  const met = req.test(password);
+                  return (
+                    <li key={req.id} className={met ? "auth-req met" : "auth-req"}>
+                      {req.label}
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
 
-              {error && <p className="error">{error}</p>}
+          {error && <div className="auth-error">{error}</div>}
 
-              <button type="submit" className="btn primary" disabled={busy || !selectedClass}>
-                {busy ? "Wird erstellt …" : "Held erschaffen"}
-              </button>
-            </form>
-          </div>
-        )}
+          <button
+            type="submit"
+            className="auth-submit"
+            disabled={mode === "login" ? !canSubmitLogin : !canSubmitRegister}
+          >
+            {submitting ? "Please wait…" : mode === "login" ? "Login" : "Create account"}
+          </button>
+        </form>
+
+        <div className="auth-alt">
+          <button
+            type="button"
+            className="auth-guest"
+            onClick={() => void handleGuestLogin()}
+            disabled={submitting}
+          >
+            Play as guest
+          </button>
+          <button
+            type="button"
+            className="auth-wallet"
+            onClick={() => void handleWalletLogin()}
+            disabled={submitting}
+          >
+            Connect Wallet
+          </button>
+          <a className="auth-google" href="/api/auth/google">
+            Continue with Google
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ type Loose = Record<string, any>;
  * Documented event payloads. Runtime still accepts string keys from PhaserEvents.
  */
 export type GameBridgeEvents = {
+  // Typed engine → React
   "player:hp": { current: number; max: number };
   "player:resource": { current: number; max: number; type: "mana" | "stamina" };
   "player:level": { level: number; xp: number; xpToNext: number };
@@ -23,45 +24,52 @@ export type GameBridgeEvents = {
   "enemy:died": { enemyId: string; typeId: string; xp: number; x: number; y: number };
   "enemy:damaged": { enemyId: string; hp: number; maxHp: number };
   "loot:received": { itemId: string; templateId: string; name: string; rarity: string };
-  "match:started": { matchId: string };
-  "match:ended": { matchId: string; enemiesKilled: number; chestsOpened: number };
   "skill:cooldown": { skillId: string; readyAt: number };
   "skill:used": { skillId: string };
   "chest:opened": { chestId: string };
   "inventory:updated": { stacks: InventoryStacks };
+  "scene:ready": { scene: string };
 
-  "player:statsUpdated": Loose;
-  "player:hpChanged": Loose;
-  "player:xpChanged": Loose;
-  "equipment:changed": Loose;
-  "combat:hit": Loose;
-  "combat:death": Loose;
-  "loot:dropped": Loose;
+  // Loose engine → React (future-typed quest/dialog events)
   "quest:started": Loose;
   "quest:progress": Loose;
   "quest:completed": Loose;
-  "shop:opened": Loose;
-  "shop:itemBought": Loose;
   "dialog:start": Loose;
   "dialog:option": Loose;
-  "skill:ready": Loose;
-  "npc:stateChanged": Loose;
-  "scene:loaded": Loose;
-  interaction: Loose;
-  "enemy:spawned": Loose;
-  "enemy:killed": Loose;
 
-  "match:start": {
-    heroClass: string;
-    level: number;
-    equippedStats: Record<string, number>;
-  };
-  "match:exit": Record<string, never>;
-  "loadout:update": { equippedStats: Record<string, number> };
+  // React → engine (lifecycle + inventory + auth)
   pause: Record<string, never>;
   resume: Record<string, never>;
   "inventory:hydrate": { stacks: InventoryStacks };
+  logout: Record<string, never>;
+  /** React finished a non-Google auth (email/password) — engine should re-check /api/me and proceed. */
+  "auth:authenticated": Record<string, never>;
 
+  // Session context — emitted by the main game scene after auth resolves
+  "session:initialized": {
+    providerType: "email" | "google" | "wallet" | "guest";
+    profile: {
+      userId: string;
+      username: string | null;
+      walletAddress: string | null;
+      level: number;
+      gold: number;
+    } | null;
+    walletLinked: boolean;
+    isGuest: boolean;
+  };
+
+  // Emitted by engine after session:initialized when wallet is freshly linked
+  // and welcome bonus has not yet been claimed. React calls POST /wallet/welcome-claim.
+  "wallet:welcomeClaim": { address: string };
+
+  // React → engine: request wallet link (Scenario A)
+  "react:linkWallet": Record<string, never>;
+
+  // React → engine: request account upgrade (Scenario B)
+  "react:upgradeAccount": Record<string, never>;
+
+  // React → engine (actions)
   "react:useItem": { itemId: string };
   "react:equipItem": { itemId: string };
   "react:unequipItem": { slot: string };

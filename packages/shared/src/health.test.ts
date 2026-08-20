@@ -35,6 +35,7 @@ describe("shared types smoke", () => {
       displayName: null,
       picture: null,
       hero: null,
+      guest: false,
     };
     expect(me.hero).toBeNull();
   });

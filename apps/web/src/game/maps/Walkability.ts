@@ -1,5 +1,8 @@
-import Phaser from "phaser";
+import Phaser from 'phaser';
 
+/**
+ * Point is walkable if inside map bounds and collision tile is empty / non-colliding.
+ */
 export function isPointWalkable(
   map: Phaser.Tilemaps.Tilemap,
   collisionLayer: Phaser.Tilemaps.TilemapLayer,
@@ -16,10 +19,17 @@ export function isPointWalkable(
   }
 
   const tile = collisionLayer.getTileAtWorldXY(worldX, worldY, true);
-  if (!tile || tile.index === -1) return true;
+  if (!tile || tile.index === -1) {
+    return true;
+  }
+
   return !tile.collides;
 }
 
+/**
+ * Check the player footprint (center + corners), not only a single point.
+ * halfW / halfH are in world pixels (after scale).
+ */
 export function isFootprintWalkable(
   map: Phaser.Tilemaps.Tilemap,
   collisionLayer: Phaser.Tilemaps.TilemapLayer,

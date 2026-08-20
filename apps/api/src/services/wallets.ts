@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { getDb, isDbAvailable } from "../db/client.js";
 import { wallets as walletsTable } from "../db/schema.js";
 import { memWallets } from "./memoryStore.js";
-import type { WalletConnectRequest, WalletConnectResponse } from "@kleeblatt/shared";
+import type { WalletConnectRequest, WalletConnectResponse, WalletResponse } from "@kleeblatt/shared";
 
 export function mockAddressFor(userId: string): string {
   const seed = userId
@@ -43,6 +43,17 @@ export interface WalletView {
   provider: string;
   depositAddress?: string;
   chainId?: number;
+}
+
+/** Map the internal service view to the public API response shape. */
+export function toWalletResponse(wallet: WalletView): WalletResponse {
+  return {
+    address: wallet.address,
+    status: wallet.status,
+    provider: wallet.provider,
+    depositAddress: wallet.depositAddress,
+    chainId: wallet.chainId,
+  };
 }
 
 export async function getWallet(userId: string): Promise<WalletView | null> {

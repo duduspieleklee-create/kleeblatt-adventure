@@ -29,7 +29,28 @@ export interface WalletConnectResponse {
 }
 
 export interface WalletBalance {
+  /** Connected wallet address, or "" when no wallet is linked. */
   address: string;
-  ethBalance: string;
-  imxBalance: string;
+  /** True only when a wallet is linked; false → balances are null. */
+  connected: boolean;
+  /** Mock ETH balance (wei → ETH formatted), or null when disconnected. */
+  ethBalance: string | null;
+  /** Mock IMX balance, or null when disconnected. */
+  imxBalance: string | null;
+}
+
+/**
+ * On-chain staking position for a wallet (KLT, 18 decimals, as decimal strings).
+ * Single source of truth — consumed by the API route via `chain.ts` and by the
+ * web `StakingOverlay` via `api.ts`.
+ */
+export interface StakingInfo {
+  /** Amount currently staked by the wallet. */
+  stakedBalance: string;
+  /** Rewards accrued and claimable. */
+  pendingRewards: string;
+  /** Total KLT staked across all wallets (global). */
+  totalStaked: string;
+  /** Wallet's spendable KLT balance. */
+  kltBalance: string;
 }

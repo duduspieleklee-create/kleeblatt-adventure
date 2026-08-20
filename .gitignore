@@ -47,3 +47,10 @@ coverage/
 
 # Misc
 *.local
+
+# Hermes agent
+.hermes/
+
+# AI agent artifacts (not project documentation)
+memory/
+skills/

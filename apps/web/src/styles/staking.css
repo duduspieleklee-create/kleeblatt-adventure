@@ -1,0 +1,298 @@
+/* Staking & Faucet overlays — reuse auth-overlay/auth-modal base from auth.css */
+
+/* ─── Modal sizing override ─────────────────────────────────────────────── */
+.staking-modal {
+  width: min(460px, 94vw);
+}
+
+/* ─── Section titles ────────────────────────────────────────────────────── */
+.staking-section-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #7a8099;
+}
+
+/* ─── Stat grid (stakedBalance / pendingRewards / totalStaked / kltBalance) */
+.staking-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.staking-stat {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.staking-stat-label {
+  font-size: 11px;
+  color: #7a8099;
+  margin-bottom: 4px;
+  letter-spacing: 0.4px;
+}
+
+.staking-stat-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: #e8e8f0;
+  word-break: break-all;
+}
+
+.staking-stat-value.highlight {
+  color: #6fdc9e;
+}
+
+/* ─── Amount input row ──────────────────────────────────────────────────── */
+.staking-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.staking-input {
+  flex: 1;
+  padding: 11px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #11111f;
+  color: #f0f0f6;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.staking-input:focus {
+  border-color: #4caf87;
+  box-shadow: 0 0 0 3px rgba(76, 175, 135, 0.18);
+}
+
+.staking-max-btn {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(76, 175, 135, 0.4);
+  background: rgba(76, 175, 135, 0.1);
+  color: #4caf87;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.staking-max-btn:hover:not(:disabled) {
+  background: rgba(76, 175, 135, 0.2);
+}
+
+/* ─── Action buttons ────────────────────────────────────────────────────── */
+.staking-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.staking-btn {
+  flex: 1;
+  padding: 11px;
+  border: 0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s, opacity 0.15s;
+}
+
+.staking-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.staking-btn-stake {
+  background: linear-gradient(180deg, #36b37e, #2e7d5b);
+  color: #fff;
+}
+
+.staking-btn-stake:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.staking-btn-unstake {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #c0c4d8;
+}
+
+.staking-btn-unstake:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.staking-btn-claim {
+  background: linear-gradient(180deg, #7c5cd8, #5b3fa8);
+  color: #fff;
+}
+
+.staking-btn-claim:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+/* ─── Tx status / error message ─────────────────────────────────────────── */
+.staking-msg {
+  margin-top: 12px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.staking-msg.success {
+  background: rgba(76, 175, 135, 0.12);
+  border: 1px solid rgba(76, 175, 135, 0.35);
+  color: #6fdc9e;
+}
+
+.staking-msg.error {
+  background: rgba(255, 90, 90, 0.12);
+  border: 1px solid rgba(255, 90, 90, 0.4);
+  color: #ff9a9a;
+}
+
+/* ─── Divider ────────────────────────────────────────────────────────────── */
+.staking-divider {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  margin: 20px 0;
+}
+
+/* ─── Faucet claim box ──────────────────────────────────────────────────── */
+.faucet-box {
+  padding: 18px;
+  border-radius: 12px;
+  background: rgba(76, 175, 135, 0.07);
+  border: 1px solid rgba(76, 175, 135, 0.2);
+  text-align: center;
+}
+
+.faucet-amount {
+  font-size: 36px;
+  font-weight: 800;
+  color: #6fdc9e;
+  margin: 0 0 6px;
+}
+
+.faucet-desc {
+  font-size: 13px;
+  color: #9aa0b5;
+  margin: 0 0 18px;
+  line-height: 1.5;
+}
+
+.faucet-claimed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(76, 175, 135, 0.12);
+  border: 1px solid rgba(76, 175, 135, 0.3);
+  color: #6fdc9e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ─── TopBar staking / faucet buttons ───────────────────────────────────── */
+.topbar-staking-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(76, 175, 135, 0.4);
+  background: rgba(76, 175, 135, 0.1);
+  color: #6fdc9e;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.topbar-staking-btn:hover {
+  background: rgba(76, 175, 135, 0.18);
+}
+
+.topbar-faucet-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(124, 92, 216, 0.4);
+  background: rgba(124, 92, 216, 0.1);
+  color: #c4a8ff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.topbar-faucet-btn:hover {
+  background: rgba(124, 92, 216, 0.18);
+}
+
+/* ─── Shop overlay ────────────────────────────────────────────────────────── */
+.shop-box {
+  padding: 18px;
+  border-radius: 12px;
+  background: rgba(255, 196, 0, 0.07);
+  border: 1px solid rgba(255, 196, 0, 0.2);
+  text-align: center;
+}
+
+.shop-badge {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #ffd24a;
+  border: 1px solid rgba(255, 196, 0, 0.4);
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-bottom: 10px;
+}
+
+.shop-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 4px;
+}
+
+.shop-price {
+  font-size: 30px;
+  font-weight: 800;
+  color: #ffd24a;
+  margin: 0 0 8px;
+}
+
+.shop-desc {
+  font-size: 13px;
+  color: #9aa0b5;
+  margin: 0 0 18px;
+  line-height: 1.5;
+}
+
+.shop-owned-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(124, 92, 216, 0.12);
+  border: 1px solid rgba(124, 92, 216, 0.3);
+  color: #c4a8ff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.shop-tx-hint {
+  font-size: 12px;
+  color: #9aa0b5;
+  margin-top: 10px;
+}

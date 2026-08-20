@@ -1,8 +1,17 @@
-import Phaser from "phaser";
-import { PlayerInputController } from "./PlayerInputController";
-import { InputEvents } from "./InputEvents";
+import Phaser from 'phaser';
+import { PlayerInputController } from './PlayerInputController';
+import { InputEvents } from './InputEvents';
 
+/**
+ * WASD + arrows → moveVector
+ * E → interact | I → openQuestbook | Escape → cancel
+ * Action keys fire once per press via scene events.
+ */
 export class DesktopKeyboardController {
+  private readonly scene: Phaser.Scene;
+  private readonly inputController: PlayerInputController;
+  private readonly eventTarget: Phaser.Events.EventEmitter;
+
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
     up: Phaser.Input.Keyboard.Key;
@@ -11,13 +20,17 @@ export class DesktopKeyboardController {
     right: Phaser.Input.Keyboard.Key;
   };
   private eKey?: Phaser.Input.Keyboard.Key;
+  private iKey?: Phaser.Input.Keyboard.Key;
   private escKey?: Phaser.Input.Keyboard.Key;
 
   constructor(
-    private readonly scene: Phaser.Scene,
-    private readonly inputController: PlayerInputController,
-    private readonly eventTarget: Phaser.Events.EventEmitter = scene.events,
+    scene: Phaser.Scene,
+    inputController: PlayerInputController,
+    eventTarget: Phaser.Events.EventEmitter = scene.events,
   ) {
+    this.scene = scene;
+    this.inputController = inputController;
+    this.eventTarget = eventTarget;
     this.bind();
   }
 
@@ -27,19 +40,22 @@ export class DesktopKeyboardController {
 
     this.cursors = keyboard.createCursorKeys();
     this.wasd = {
-      up: keyboard.addKey("W"),
-      down: keyboard.addKey("S"),
-      left: keyboard.addKey("A"),
-      right: keyboard.addKey("D"),
+      up: keyboard.addKey('W'),
+      down: keyboard.addKey('S'),
+      left: keyboard.addKey('A'),
+      right: keyboard.addKey('D'),
     };
 
-    this.eKey = keyboard.addKey("E");
+    this.eKey = keyboard.addKey('E');
+    this.iKey = keyboard.addKey('I');
     this.escKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
 
     this.eKey.on(Phaser.Input.Keyboard.Events.DOWN, this.onInteract, this);
+    this.iKey.on(Phaser.Input.Keyboard.Events.DOWN, this.onQuestbook, this);
     this.escKey.on(Phaser.Input.Keyboard.Events.DOWN, this.onCancel, this);
   }
 
+  /** Call each frame to refresh continuous move vector. */
   update(): void {
     if (!this.cursors) return;
 
@@ -70,6 +86,10 @@ export class DesktopKeyboardController {
     this.eventTarget.emit(InputEvents.INTERACT);
   }
 
+  private onQuestbook(): void {
+    this.eventTarget.emit(InputEvents.OPEN_QUESTBOOK);
+  }
+
   private onCancel(): void {
     this.inputController.cancelMovement();
     this.eventTarget.emit(InputEvents.CANCEL);
@@ -77,6 +97,7 @@ export class DesktopKeyboardController {
 
   shutdown(): void {
     this.eKey?.off(Phaser.Input.Keyboard.Events.DOWN, this.onInteract, this);
+    this.iKey?.off(Phaser.Input.Keyboard.Events.DOWN, this.onQuestbook, this);
     this.escKey?.off(Phaser.Input.Keyboard.Events.DOWN, this.onCancel, this);
   }
 }

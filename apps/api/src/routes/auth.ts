@@ -3,12 +3,16 @@
 import { randomBytes } from "node:crypto";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { SESSION_COOKIE_NAME } from "@kleeblatt/shared";
+import { jwtVerify } from "jose";
+import { SESSION_COOKIE_NAME, type MeResponse, type SessionUser } from "@kleeblatt/shared";
 import { env, sessionCookie } from "../config/env.js";
 import { signSession } from "../lib/jwt.js";
-import { upsertGoogleUser } from "../services/users.js";
+import { upsertGoogleUser, createEmailUser, createGuestUser, upgradeGuestUser, getUserByEmail, verifyEmailPassword } from "../services/users.js";
 import { getOrCreateWallet } from "../services/wallets.js";
-import type { AppVariables } from "../middleware/session.js";
+import { getHero } from "../services/heroes.js";
+import { hashPassword } from "../lib/password.js";
+import { registerSchema, loginSchema, emailSchema } from "../lib/validation.js";
+import { requireAuth, type AppVariables } from "../middleware/session.js";
 
 export const authRoutes = new Hono<{ Variables: AppVariables }>();
 
@@ -176,6 +180,200 @@ authRoutes.get("/auth/google/callback", async (c) => {
 authRoutes.post("/auth/logout", (c) => {
   deleteCookie(c, SESSION_COOKIE_NAME, { path: sessionCookie.path });
   return c.json({ ok: true });
+});
+
+/** Build a MeResponse (mirrors /me) including the optional hero. */
+async function buildMe(user: SessionUser): Promise<MeResponse> {
+  const hero = await getHero(user.userId);
+  return {
+    userId: user.userId,
+    email: user.email,
+    displayName: user.displayName,
+    picture: user.picture,
+    hero,
+    guest: user.guest,
+  };
+}
+
+/** POST /auth/register — create an email/password account and start a session. */
+authRoutes.post("/auth/register", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = registerSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: {
+          code: "VALIDATION",
+          message: parsed.error.issues[0]?.message ?? "Invalid input.",
+          retryable: false,
+        },
+      },
+      400,
+    );
+  }
+  const { email, password } = parsed.data;
+
+  const existing = await getUserByEmail(email);
+  if (existing) {
+    return c.json(
+      {
+        error: {
+          code: "EMAIL_TAKEN",
+          message: "This email is already registered.",
+          retryable: false,
+        },
+      },
+      409,
+    );
+  }
+
+  const passwordHash = await hashPassword(password);
+  const user = await createEmailUser({ email, passwordHash });
+  await getOrCreateWallet(user.userId);
+  const jwt = await signSession(user);
+  setCookie(c, SESSION_COOKIE_NAME, jwt, cookieOpts());
+  return c.json({ ok: true, me: await buildMe(user) }, 201);
+});
+
+/** POST /auth/login — verify email + password and start a session. */
+authRoutes.post("/auth/login", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = loginSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json(
+      { error: { code: "VALIDATION", message: "Invalid email or password.", retryable: false } },
+      400,
+    );
+  }
+  const { email, password } = parsed.data;
+
+  const user = await verifyEmailPassword(email, password);
+  if (!user) {
+    return c.json(
+      { error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password.", retryable: false } },
+      401,
+    );
+  }
+
+  const jwt = await signSession(user);
+  setCookie(c, SESSION_COOKIE_NAME, jwt, cookieOpts());
+  return c.json({ ok: true, me: await buildMe(user) }, 200);
+});
+
+/** POST /auth/guest — create a temporary guest account and start a session. */
+authRoutes.post("/auth/guest", async (c) => {
+  const guest = await createGuestUser();
+  await getOrCreateWallet(guest.userId);
+  const jwt = await signSession(guest);
+  setCookie(c, SESSION_COOKIE_NAME, jwt, cookieOpts());
+  return c.json({ ok: true, me: await buildMe(guest) }, 201);
+});
+
+/**
+ * POST /auth/upgrade — turn the current guest session into a full
+ * email/password account in place (progress is preserved).
+ */
+authRoutes.post("/auth/upgrade", requireAuth, async (c) => {
+  const current = c.get("user")!;
+  if (!current.guest) {
+    return c.json(
+      { error: { code: "NOT_GUEST", message: "Only guest accounts can be upgraded.", retryable: false } },
+      400,
+    );
+  }
+  const body = await c.req.json().catch(() => null);
+  const parsed = loginSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json(
+      { error: { code: "VALIDATION", message: "Invalid email or password.", retryable: false } },
+      400,
+    );
+  }
+  const { email, password } = parsed.data;
+  const existing = await getUserByEmail(email);
+  if (existing) {
+    return c.json(
+      { error: { code: "EMAIL_TAKEN", message: "This email is already registered.", retryable: false } },
+      409,
+    );
+  }
+  const passwordHash = await hashPassword(password);
+  const updated = await upgradeGuestUser(current.userId, email, passwordHash);
+  if (!updated) {
+    return c.json(
+      { error: { code: "NOT_FOUND", message: "Guest account not found.", retryable: false } },
+      404,
+    );
+  }
+  const jwt = await signSession(updated);
+  setCookie(c, SESSION_COOKIE_NAME, jwt, cookieOpts());
+  return c.json({ ok: true, me: await buildMe(updated) }, 200);
+});
+
+/** GET /auth/check-email?email= — availability check for the registration form. */
+authRoutes.get("/auth/check-email", async (c) => {
+  const raw = c.req.query("email") ?? "";
+  const parsed = emailSchema.safeParse(raw);
+  if (!parsed.success) {
+    return c.json({ available: false, valid: false });
+  }
+  const existing = await getUserByEmail(parsed.data);
+  return c.json({ available: !existing, valid: true });
+});
+
+/** POST /auth/supabase — bridge a Supabase JWT (Web3/SIWE login) into an app session. */
+authRoutes.post("/auth/supabase", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body.access_token !== "string") {
+    return c.json(
+      { error: { code: "VALIDATION", message: "access_token required", retryable: false } },
+      400,
+    );
+  }
+  if (!env.supabaseJwtSecret) {
+    return c.json(
+      { error: { code: "NOT_CONFIGURED", message: "Supabase JWT secret not configured", retryable: false } },
+      503,
+    );
+  }
+
+  try {
+    const { payload } = await jwtVerify(
+      body.access_token,
+      new TextEncoder().encode(env.supabaseJwtSecret),
+    );
+    const userId = typeof payload.sub === "string" ? payload.sub : null;
+    const email = typeof payload.email === "string" ? payload.email : null;
+    if (!userId || !email) {
+      return c.json(
+        { error: { code: "INVALID_TOKEN", message: "Missing user id or email", retryable: false } },
+        401,
+      );
+    }
+
+    const meta = (payload.user_metadata ?? {}) as Record<string, unknown>;
+    const displayName =
+      typeof meta.preferred_username === "string"
+        ? meta.preferred_username
+        : typeof meta.username === "string"
+          ? meta.username
+          : typeof meta.display_name === "string"
+            ? meta.display_name
+            : email.split("@")[0] ?? null;
+    const picture = typeof meta.picture === "string" ? meta.picture : null;
+
+    const user: SessionUser = { userId, email, displayName, picture, guest: false };
+    await getOrCreateWallet(user.userId);
+    const jwt = await signSession(user);
+    setCookie(c, SESSION_COOKIE_NAME, jwt, cookieOpts());
+    return c.json({ ok: true, me: await buildMe(user) }, 200);
+  } catch (err) {
+    console.error("[auth] Supabase bridge error:", err);
+    return c.json(
+      { error: { code: "INVALID_TOKEN", message: "Supabase token verification failed", retryable: false } },
+      401,
+    );
+  }
 });
 
 /**

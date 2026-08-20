@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { gameBridge } from "../lib/gameBridge";
+import { gameBridge } from "@kleeblatt/shared";
 import type Phaser from "phaser";
 
 interface ChatMessage {

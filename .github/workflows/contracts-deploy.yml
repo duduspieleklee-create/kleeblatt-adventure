@@ -1,0 +1,147 @@
+name: Contracts Deploy
+
+# ─── Trigger ──────────────────────────────────────────────────────────────────
+# Deploy is ALWAYS manual — contract deploys are on-chain and irreversible.
+# Select the target network when you dispatch.
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Target network'
+        required: true
+        default: 'testnet'
+        type: choice
+        options:
+          - testnet
+      confirm:
+        description: 'Type "deploy" to confirm you want to broadcast transactions'
+        required: true
+        type: string
+
+# Prevent two deploys running at the same time against the same network.
+concurrency:
+  group: contracts-deploy-${{ inputs.network }}
+  cancel-in-progress: false   # never cancel an in-flight deploy
+
+jobs:
+  # ── Guard ────────────────────────────────────────────────────────────────────
+  # Fail fast if the confirmation word was not typed correctly.
+  guard:
+    name: Confirm deploy intent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "deploy" ]; then
+            echo "::error::Confirmation must be exactly 'deploy'. Got: '${{ inputs.confirm }}'"
+            exit 1
+          fi
+
+  # ── Compile & Test ───────────────────────────────────────────────────────────
+  compile-and-test:
+    name: Compile & Test
+    needs: guard
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile contracts
+        run: npx hardhat compile
+
+      - name: Run tests (must pass before any deploy)
+        run: npx hardhat test
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-artifacts-${{ inputs.network }}
+          path: contracts/artifacts/contracts/**/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  # ── Deploy ───────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to ${{ inputs.network }}
+    needs: compile-and-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+
+    # Map the network input to the correct secret names.
+    env:
+      NETWORK_NAME: ${{ inputs.network }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need push access so we can commit the updated deployments JSON back.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Re-compile to ensure artifacts are fresh in this job's workspace.
+      - name: Compile contracts
+        run: npx hardhat compile
+
+      # ── Testnet deploy ─────────────────────────────────────────────────────
+      - name: Deploy to Immutable zkEVM Testnet
+        if: inputs.network == 'testnet'
+        env:
+          IMX_TESTNET_PRIVATE_KEY: ${{ secrets.IMX_TESTNET_PRIVATE_KEY }}
+          IMX_TESTNET_RPC: ${{ secrets.IMX_TESTNET_RPC }}
+        run: |
+          npx hardhat run scripts/deploy.ts --network immutableTestnet
+          echo "Deploy script exited $?"
+
+      # ── Commit deployments JSON back to branch ────────────────────────────
+      # The deploy script writes contracts/deployments/<network>.json.
+      # Committing it back keeps addresses versioned alongside the code.
+      - name: Commit deployment addresses
+        run: |
+          cd $GITHUB_WORKSPACE
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          DEPLOY_FILE="contracts/deployments/${{ inputs.network }}.json"
+
+          if git diff --quiet "$DEPLOY_FILE"; then
+            echo "No address changes — nothing to commit."
+          else
+            git add "$DEPLOY_FILE"
+            git commit -m "chore(contracts): update ${{ inputs.network }} deployment addresses [skip ci]"
+            git push
+            echo "Deployment addresses committed."
+          fi
+
+      # ── Summary ───────────────────────────────────────────────────────────
+      - name: Print deployed addresses
+        run: |
+          DEPLOY_FILE="deployments/${{ inputs.network }}.json"
+          if [ -f "$DEPLOY_FILE" ]; then
+            echo "### Deployed contracts" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat "$DEPLOY_FILE" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi

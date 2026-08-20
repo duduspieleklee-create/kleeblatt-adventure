@@ -1,43 +1,33 @@
 import { useCallback, useEffect, useState } from "react";
+import type { WalletBalance } from "@kleeblatt/shared";
 import { fetchWalletBalance } from "../lib/api";
 
-export interface WalletBalanceState {
-  address: string;
-  ethBalance: string;
-  imxBalance: string;
-  loading: boolean;
-}
+export type WalletBalanceState =
+  | { status: "loading" }
+  | { status: "ready"; data: WalletBalance }
+  | { status: "error"; message: string };
 
-export function useWalletBalance() {
-  const [state, setState] = useState<WalletBalanceState>({
-    address: "",
-    ethBalance: "0",
-    imxBalance: "0",
-    loading: true,
-  });
+export function useWalletBalance(enabled: boolean) {
+  const [state, setState] = useState<WalletBalanceState>({ status: "loading" });
 
   const refresh = useCallback(async () => {
-    setState((prev) => ({ ...prev, loading: true }));
-    try {
-      const result = await fetchWalletBalance();
-      if (result.ok) {
-        setState({
-          address: result.data.address,
-          ethBalance: result.data.ethBalance,
-          imxBalance: result.data.imxBalance,
-          loading: false,
-        });
-      } else {
-        setState((prev) => ({ ...prev, loading: false }));
-      }
-    } catch {
-      setState((prev) => ({ ...prev, loading: false }));
+    if (!enabled) {
+      setState({ status: "loading" });
+      return;
     }
-  }, []);
+
+    setState({ status: "loading" });
+    const result = await fetchWalletBalance();
+    if (result.ok) {
+      setState({ status: "ready", data: result.data });
+    } else {
+      setState({ status: "error", message: result.message });
+    }
+  }, [enabled]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  return { ...state, refresh };
+  return { state, refresh };
 }

@@ -1,4 +1,4 @@
-/** Thin fetch helpers toward Game API (credentials for session cookie) */
+// Thin fetch helpers toward Game API (credentials for session cookie)
 
 import type {
   CreateHeroInput,
@@ -7,9 +7,14 @@ import type {
   InventoryItem,
   InventoryStacks,
   InventoryStacksResponse,
+  MeResponse,
   OnboardingPath,
   OnboardingStatus,
+  StakingInfo,
 } from "@kleeblatt/shared";
+
+// Re-export shared types consumed by feature components (e.g. StakingOverlay).
+export type { StakingInfo } from "@kleeblatt/shared";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 // Default: /api-Prefix (Doku-Architektur Web → /api/* → nginx/vite → API,
@@ -62,6 +67,82 @@ export async function fetchMe(): Promise<
 
 export async function logout(): Promise<void> {
   await apiFetch("/auth/logout", { method: "POST" });
+}
+
+export async function register(
+  email: string,
+  password: string,
+): Promise<ApiResult<import("@kleeblatt/shared").MeResponse>> {
+  const res = await apiFetch("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Registration failed.") };
+  return { ok: true, status: res.status, data: body.me as import("@kleeblatt/shared").MeResponse };
+}
+
+export async function login(
+  email: string,
+  password: string,
+): Promise<ApiResult<import("@kleeblatt/shared").MeResponse>> {
+  const res = await apiFetch("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Login failed.") };
+  return { ok: true, status: res.status, data: body.me as import("@kleeblatt/shared").MeResponse };
+}
+
+/** Start a temporary guest session (no email/password required). */
+export async function guest(): Promise<ApiResult<import("@kleeblatt/shared").MeResponse>> {
+  const res = await apiFetch("/auth/guest", { method: "POST" });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Guest login failed.") };
+  return { ok: true, status: res.status, data: body.me as import("@kleeblatt/shared").MeResponse };
+}
+
+/** Upgrade the current guest session into a full email/password account in place. */
+export async function upgradeAccount(
+  email: string,
+  password: string,
+): Promise<ApiResult<import("@kleeblatt/shared").MeResponse>> {
+  const res = await apiFetch("/auth/upgrade", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Upgrade failed.") };
+  return { ok: true, status: res.status, data: body.me as import("@kleeblatt/shared").MeResponse };
+}
+
+export interface EmailAvailability {
+  available: boolean;
+  valid: boolean;
+}
+
+/** Lightweight email availability check for the registration form. */
+export async function checkEmailAvailable(email: string): Promise<EmailAvailability> {
+  const res = await apiFetch(`/auth/check-email?email=${encodeURIComponent(email)}`);
+  if (!res.ok) return { available: false, valid: false };
+  return (await res.json()) as EmailAvailability;
+}
+
+/** Exchange a Supabase access token (e.g. from Web3/SIWE login) for an app session cookie. */
+export async function exchangeSupabaseSession(accessToken: string): Promise<ApiResult<MeResponse>> {
+  const res = await apiFetch("/auth/supabase", {
+    method: "POST",
+    body: JSON.stringify({ access_token: accessToken }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Session exchange failed.") };
+  return { ok: true, status: res.status, data: body.me as MeResponse };
 }
 
 export async function fetchHero(): Promise<ApiResult<Hero | null>> {
@@ -226,6 +307,25 @@ export async function fetchWalletBalance(): Promise<ApiResult<import("@kleeblatt
   return { ok: true, status: res.status, data: body as import("@kleeblatt/shared").WalletBalance };
 }
 
+/**
+ * POST /wallet/welcome-claim
+ * Client signs a message to prove wallet ownership, then the server calls
+ * claimFor on-chain and pays gas.
+ */
+export async function claimWelcomeBonus(
+  signature: string,
+  message: string,
+): Promise<ApiResult<{ ok: boolean; txHash?: string; reason?: string }>> {
+  const res = await apiFetch("/wallet/welcome-claim", {
+    method: "POST",
+    body: JSON.stringify({ signature, message }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Welcome claim failed.") };
+  return { ok: true, status: res.status, data: body as { ok: boolean; txHash?: string; reason?: string } };
+}
+
 export async function walletAuth(address: string): Promise<ApiResult<{ ok: boolean; redirect: string }>> {
   const res = await apiFetch("/wallet/auth", { method: "POST", body: JSON.stringify({ address }) });
   const body = await res.json().catch(() => null);
@@ -248,4 +348,13 @@ export async function completeOnboarding(): Promise<ApiResult<OnboardingStatus>>
   if (!res.ok)
     return { ok: false, status: res.status, message: errorMessage(body, "Intro konnte nicht abgeschlossen werden.") };
   return { ok: true, status: res.status, data: body as OnboardingStatus };
+}
+
+/** GET /wallet/staking-info – fetch on-chain staking position for the linked wallet. */
+export async function fetchStakingInfo(): Promise<ApiResult<StakingInfo>> {
+  const res = await apiFetch("/wallet/staking-info");
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Staking-Info konnte nicht geladen werden.") };
+  return { ok: true, status: res.status, data: body as StakingInfo };
 }
