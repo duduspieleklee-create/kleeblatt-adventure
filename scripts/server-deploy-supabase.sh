@@ -123,7 +123,7 @@ docker compose up -d 2>&1 | tail -15
 echo "==> Waiting for auth container to become healthy..."
 sleep 10
 AUTH_OK=0
-for i in \$(seq 1 20); do
+for i in \$(seq 1 10); do
   STATUS=\$(docker compose ps auth --format '{{.Status}}' 2>/dev/null || echo "")
   echo "  Attempt \$i: auth \${STATUS}"
   if echo "\${STATUS}" | grep -qi "healthy"; then
@@ -135,7 +135,7 @@ for i in \$(seq 1 20); do
 done
 
 if [ \$AUTH_OK -eq 0 ]; then
-  echo "ERROR: auth container did not become healthy after 200s"
+  echo "ERROR: auth container did not become healthy after 100s"
   docker compose logs --tail 30 auth 2>&1 || true
   exit 1
 fi
