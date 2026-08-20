@@ -184,12 +184,20 @@ export class IslandScene extends Phaser.Scene {
       }
     }
 
+    const walletLinked = profile?.walletAddress != null;
+
     gameBridge.emit("session:initialized", {
       providerType,
       profile,
       walletLinked: profile?.walletAddress != null,
       isGuest,
     });
+
+    // If the player has a linked wallet, signal React to attempt the one-time
+    // welcome bonus claim. The server pays gas; the contract enforces once-only.
+    if (walletLinked && profile?.walletAddress) {
+      gameBridge.emit("wallet:welcomeClaim", { address: profile.walletAddress });
+    }
   }
 
   private onQuestStarted(questId: string): void {

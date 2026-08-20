@@ -10,6 +10,7 @@ import { getOrCreateWallet } from "../services/wallets.js";
 import { setCookie } from "hono/cookie";
 import { SESSION_COOKIE_NAME } from "@kleeblatt/shared";
 import { env, sessionCookie } from "../config/env.js";
+import { getFaucet, canClaimWelcome } from "../lib/chain.js";
 
 export const walletRoutes = new Hono<{ Variables: AppVariables }>();
 
@@ -113,4 +114,55 @@ walletRoutes.post("/wallet/auth", async (c) => {
   } as const;
   setCookie(c, SESSION_COOKIE_NAME, jwt, cookieOpts);
   return c.json({ ok: true, redirect: `${env.webUrl}/?auth=ok` });
+});
+
+/**
+ * POST /wallet/welcome-claim
+ *
+ * Called by the game client (via gameBridge) when a player with a linked wallet
+ * logs in for the first time. The server's dev wallet pays the gas — the player
+ * pays nothing. The on-chain `claimed` mapping ensures this can only succeed once
+ * per address regardless of how many times the endpoint is hit.
+ *
+ * Requires: authenticated session + wallet linked to the profile.
+ * Returns: { ok: true, txHash } on success, or { ok: false, reason } if already
+ *          claimed, faucet not configured, or on-chain error.
+ */
+walletRoutes.post("/wallet/welcome-claim", requireAuth, async (c) => {
+  const user = c.get("user")!;
+
+  // Resolve the wallet address from the user's linked wallet.
+  const wallet = await getWallet(user.userId);
+  if (!wallet?.address) {
+    return c.json({ ok: false, reason: "no_wallet" }, 400);
+  }
+
+  const address = wallet.address;
+
+  // Fast pre-check — avoids wasting a tx if already claimed.
+  const eligible = await canClaimWelcome(address);
+  if (!eligible) {
+    // Not an error: idempotent. Client can treat this as "already received".
+    return c.json({ ok: false, reason: "already_claimed" }, 200);
+  }
+
+  const faucet = getFaucet();
+  if (!faucet) {
+    // On-chain not configured (local dev without env vars). Silently skip.
+    return c.json({ ok: false, reason: "not_configured" }, 200);
+  }
+
+  try {
+    const tx = await faucet.claimFor(address);
+    await tx.wait();
+    return c.json({ ok: true, txHash: tx.hash });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    // "Already claimed" revert from contract — not a server error.
+    if (message.includes("Already claimed")) {
+      return c.json({ ok: false, reason: "already_claimed" }, 200);
+    }
+    console.error("[welcome-claim] on-chain error:", message);
+    return c.json({ ok: false, reason: "chain_error" }, 500);
+  }
 });

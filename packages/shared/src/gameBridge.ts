@@ -59,6 +59,10 @@ export type GameBridgeEvents = {
     isGuest: boolean;
   };
 
+  // Emitted by engine after session:initialized when wallet is freshly linked
+  // and welcome bonus has not yet been claimed. React calls POST /wallet/welcome-claim.
+  "wallet:welcomeClaim": { address: string };
+
   // React → engine: request wallet link (Scenario A)
   "react:linkWallet": Record<string, never>;
 
