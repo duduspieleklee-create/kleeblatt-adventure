@@ -10,7 +10,7 @@ import { getOrCreateWallet } from "../services/wallets.js";
 import { setCookie } from "hono/cookie";
 import { SESSION_COOKIE_NAME } from "@kleeblatt/shared";
 import { env, sessionCookie } from "../config/env.js";
-import { getFaucet, canClaimWelcome } from "../lib/chain.js";
+import { getFaucet, canClaimWelcome, getStakingInfo } from "../lib/chain.js";
 
 export const walletRoutes = new Hono<{ Variables: AppVariables }>();
 
@@ -165,4 +165,29 @@ walletRoutes.post("/wallet/welcome-claim", requireAuth, async (c) => {
     console.error("[welcome-claim] on-chain error:", message);
     return c.json({ ok: false, reason: "chain_error" }, 500);
   }
+});
+
+/**
+ * GET /wallet/staking-info
+ *
+ * Returns the staking position for the authenticated user's linked wallet:
+ * stakedBalance, pendingRewards, totalStaked, kltBalance.
+ *
+ * Requires: wallet-authenticated session + wallet linked.
+ * Guests and users without a linked wallet receive 403 / 400 respectively.
+ */
+walletRoutes.get("/wallet/staking-info", requireAuth, async (c) => {
+  const user = c.get("user")!;
+  if (user.guest) {
+    return c.json({ error: { code: "GUEST_FORBIDDEN", message: "Guests cannot access staking.", retryable: false } }, 403);
+  }
+  const wallet = await getWallet(user.userId);
+  if (!wallet?.address) {
+    return c.json({ error: { code: "NO_WALLET", message: "No wallet linked to this account.", retryable: false } }, 400);
+  }
+  const info = await getStakingInfo(wallet.address);
+  if (!info) {
+    return c.json({ error: { code: "NOT_CONFIGURED", message: "Staking contract not configured.", retryable: false } }, 503);
+  }
+  return c.json(info);
 });

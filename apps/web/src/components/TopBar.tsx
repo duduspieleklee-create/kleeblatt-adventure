@@ -4,6 +4,8 @@ import { type Hero } from "@kleeblatt/shared";
 import { linkWalletToProfile, WalletAuthError } from "../game/utils/walletAuth";
 import { gameBridge } from "@kleeblatt/shared";
 import { UpgradeOverlay } from "./UpgradeOverlay";
+import { StakingOverlay } from "./StakingOverlay";
+import { FaucetOverlay } from "./FaucetOverlay";
 import type { SessionContext } from "../hooks/useSessionContext";
 
 /** Format a token amount for display: trim trailing zeros, add thousands separators. */
@@ -31,6 +33,8 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [stakingOpen, setStakingOpen] = useState(false);
+  const [faucetOpen, setFaucetOpen] = useState(false);
 
   const handleAddWallet = async (): Promise<void> => {
     setWalletLoading(true);
@@ -101,10 +105,18 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
             </button>
           )}
           {walletAddress && !sessionContext?.isGuest && (
-            <span className="topbar-wallet" title={walletAddress}>
-              <img src="/assets/ui/wallet.png" alt="" className="topbar-wallet-icon" onError={(e) => (e.currentTarget.style.display = "none")} />
-              {walletAddress.slice(0, 4)}…{walletAddress.slice(-4)}
-            </span>
+            <>
+              <button type="button" className="topbar-faucet-btn" onClick={() => setFaucetOpen(true)}>
+                Faucet
+              </button>
+              <button type="button" className="topbar-staking-btn" onClick={() => setStakingOpen(true)}>
+                Staking
+              </button>
+              <span className="topbar-wallet" title={walletAddress}>
+                <img src="/assets/ui/wallet.png" alt="" className="topbar-wallet-icon" onError={(e) => (e.currentTarget.style.display = "none")} />
+                {walletAddress.slice(0, 4)}…{walletAddress.slice(-4)}
+              </span>
+            </>
           )}
           {ethBalance && !sessionContext?.isGuest && (
             <span className="topbar-balance" title={`${formatToken(ethBalance)} ETH`}>
@@ -148,9 +160,20 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
         <UpgradeOverlay
           onClose={() => setUpgradeOpen(false)}
           onUpgraded={() => {
-            // The session cookie is now a full account; reload to refresh the whole session context.
             window.location.reload();
           }}
+        />
+      )}
+      {stakingOpen && walletAddress && !sessionContext?.isGuest && (
+        <StakingOverlay
+          walletAddress={walletAddress}
+          onClose={() => setStakingOpen(false)}
+        />
+      )}
+      {faucetOpen && walletAddress && !sessionContext?.isGuest && (
+        <FaucetOverlay
+          walletAddress={walletAddress}
+          onClose={() => setFaucetOpen(false)}
         />
       )}
     </>
