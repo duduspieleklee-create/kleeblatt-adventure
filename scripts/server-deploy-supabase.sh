@@ -120,26 +120,44 @@ docker compose pull 2>&1 | tail -5
 echo "==> Starting Supabase stack"
 docker compose up -d 2>&1 | tail -15
 
-echo "==> Waiting for Auth to be healthy..."
+echo "==> Waiting for auth container to become healthy..."
 sleep 10
-HEALTH="000"
-for i in 1 2 3 4 5 6 7 8 9 10; do
-  HEALTH=\$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: ${SUPABASE_ANON_KEY}" http://localhost:8000/auth/v1/health 2>/dev/null || echo "000")
-  if [ "\$HEALTH" = "200" ]; then
-    echo "SUPABASE AUTH HEALTHY"
+AUTH_OK=0
+for i in \$(seq 1 20); do
+  STATUS=\$(docker compose ps auth --format '{{.Status}}' 2>/dev/null || echo "")
+  echo "  Attempt \$i: auth \${STATUS}"
+  if echo "\${STATUS}" | grep -qi "healthy"; then
+    echo "SUPABASE AUTH SERVICE HEALTHY"
+    AUTH_OK=1
     break
   fi
-  echo "  Attempt \$i: HTTP \${HEALTH}"
-  sleep 5
+  sleep 10
+done
+
+if [ \$AUTH_OK -eq 0 ]; then
+  echo "ERROR: auth container did not become healthy after 200s"
+  docker compose logs --tail 30 auth 2>&1 || true
+  exit 1
+fi
+
+echo "==> HTTP health check via gateway..."
+HEALTH="000"
+for i in 1 2 3; do
+  HEALTH=\$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: ${SUPABASE_ANON_KEY}" http://localhost:8000/auth/v1/health 2>/dev/null || echo "000")
+  if [ "\$HEALTH" = "200" ]; then
+    echo "SUPABASE HTTP HEALTHY (200)"
+    break
+  fi
+  echo "  HTTP attempt \$i: \${HEALTH}"
+  sleep 3
 done
 
 if [ "\$HEALTH" = "200" ]; then
   echo "SUPABASE DEPLOY OK"
 else
-  echo "SUPABASE HEALTH CHECK FAILED — last status=\${HEALTH}"
-  echo "=== envoy/auth container logs ==="
-  docker compose logs --tail 15 supabase-envoy 2>&1 || true
-  docker compose logs --tail 15 supabase-auth 2>&1 || true
+  echo "SUPABASE HEALTH CHECK FAILED — HTTP=\${HEALTH}"
+  docker compose logs --tail 15 api-gw 2>&1 || true
+  docker compose logs --tail 15 auth 2>&1 || true
   exit 1
 fi
 REMOTE
