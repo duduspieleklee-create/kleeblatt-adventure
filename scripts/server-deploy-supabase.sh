@@ -141,6 +141,28 @@ fi
 
 echo "==> Syncing supabase_auth_admin password..."
 docker compose exec -T db psql -U postgres -c "ALTER USER supabase_auth_admin WITH PASSWORD '${SUPABASE_POSTGRES_PASSWORD}';" 2>&1 || true
+
+echo "==> Fixing auth schema ownership..."
+cat > /tmp/fix-auth.sql <<'EOSQL'
+DO \$\$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'auth' AND proname = 'uid'
+      AND pg_get_userbyid(p.proowner) != 'supabase_auth_admin'
+  ) THEN
+    RAISE NOTICE 'auth schema has wrong ownership — recreating';
+    DROP SCHEMA auth CASCADE;
+    CREATE SCHEMA auth AUTHORIZATION supabase_auth_admin;
+  ELSE
+    RAISE NOTICE 'auth schema ownership OK';
+  END IF;
+END \$\$;
+EOSQL
+docker compose exec -T db psql -U postgres -f /tmp/fix-auth.sql 2>&1 || true
+rm -f /tmp/fix-auth.sql
+
 echo "==> Restarting auth to pick up fixed credentials..."
 docker compose restart auth 2>&1 | tail -3
 
