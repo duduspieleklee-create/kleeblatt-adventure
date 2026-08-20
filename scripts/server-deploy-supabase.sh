@@ -117,7 +117,8 @@ cd ${SUPABASE_DST}
 echo "==> Pulling updated images if needed"
 docker compose pull 2>&1 | tail -5
 
-echo "==> Starting Supabase stack"
+echo "==> Starting Supabase stack (clean restart)"
+docker compose down -v --remove-orphans 2>&1 | tail -3 || true
 docker compose up -d 2>&1 | tail -15
 
 echo "==> Waiting for auth container to become healthy..."
