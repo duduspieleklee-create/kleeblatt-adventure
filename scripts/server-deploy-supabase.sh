@@ -119,6 +119,9 @@ docker compose pull 2>&1 | tail -5
 
 echo "==> Starting Supabase stack (clean restart)"
 docker compose down -v --remove-orphans 2>&1 | tail -3 || true
+# DB uses a bind mount (./volumes/db/data), which compose -v won't remove.
+# Nuke it so Postgres reinitializes with the current POSTGRES_PASSWORD.
+rm -rf ./volumes/db/data
 docker compose up -d 2>&1 | tail -15
 
 echo "==> Waiting for auth container to become healthy..."
