@@ -5,10 +5,11 @@
  * Gas is paid by the deployer/dev wallet — players pay nothing.
  *
  * Usage:
- *   import { getFaucet, getStaking } from "../lib/chain.js";
+ *   import { getFaucet, getStakingInfo } from "../lib/chain.js";
  */
 
 import { ethers } from "ethers";
+import type { StakingInfo } from "@kleeblatt/shared";
 
 // ─── Minimal ABIs ─────────────────────────────────────────────────────────────
 
@@ -32,13 +33,32 @@ const ERC20_ABI = [
   "function allowance(address owner, address spender) external view returns (uint256)",
 ] as const;
 
+// ─── Typed contract views ────────────────────────────────────────────────────
+// ethers.Contract is untyped (string-index signature), so we define standalone
+// shapes and cast the instances once at construction.
+
+interface FaucetContract {
+  claimFor(recipient: string): Promise<ethers.ContractTransactionResponse>;
+  canClaim(recipient: string): Promise<boolean>;
+  claimed(recipient: string): Promise<boolean>;
+}
+
+interface StakingContract {
+  stakedBalance(account: string): Promise<bigint>;
+  pendingRewards(account: string): Promise<bigint>;
+  totalStaked(): Promise<bigint>;
+}
+
+interface Erc20Contract {
+  balanceOf(account: string): Promise<bigint>;
+}
+
 // ─── Singleton ───────────────────────────────────────────────────────────────
 
 let _provider: ethers.JsonRpcProvider | null = null;
-let _wallet: ethers.Wallet | null = null;
-let _faucet: ethers.Contract | null = null;
-let _staking: ethers.Contract | null = null;
-let _klt: ethers.Contract | null = null;
+let _faucet: FaucetContract | null = null;
+let _staking: StakingContract | null = null;
+let _klt: Erc20Contract | null = null;
 
 function init(): void {
   const rpc = process.env.IMX_TESTNET_RPC ?? "https://rpc.testnet.immutable.com";
@@ -54,10 +74,10 @@ function init(): void {
 
   try {
     _provider = new ethers.JsonRpcProvider(rpc);
-    _wallet = new ethers.Wallet(privateKey, _provider);
-    if (faucetAddress) _faucet = new ethers.Contract(faucetAddress, FAUCET_ABI, _wallet);
-    if (stakingAddress) _staking = new ethers.Contract(stakingAddress, STAKING_ABI, _provider);
-    if (kltAddress) _klt = new ethers.Contract(kltAddress, ERC20_ABI, _provider);
+    const wallet = new ethers.Wallet(privateKey, _provider);
+    if (faucetAddress) _faucet = new ethers.Contract(faucetAddress, FAUCET_ABI, wallet) as unknown as FaucetContract;
+    if (stakingAddress) _staking = new ethers.Contract(stakingAddress, STAKING_ABI, _provider) as unknown as StakingContract;
+    if (kltAddress) _klt = new ethers.Contract(kltAddress, ERC20_ABI, _provider) as unknown as Erc20Contract;
   } catch (err) {
     console.warn("[chain] Failed to initialise on-chain client:", err);
   }
@@ -67,24 +87,12 @@ init();
 
 // ─── Typed wrappers ──────────────────────────────────────────────────────────
 
-interface FaucetContract {
-  claimFor(recipient: string): Promise<{ hash: string; wait(): Promise<unknown> }>;
-  canClaim(recipient: string): Promise<boolean>;
-}
-
-export interface StakingInfo {
-  stakedBalance: string;   // in KLT (18 decimals, as string)
-  pendingRewards: string;  // in KLT (18 decimals, as string)
-  totalStaked: string;     // in KLT (18 decimals, as string)
-  kltBalance: string;      // wallet KLT balance (18 decimals, as string)
-}
-
 /**
  * Returns the faucet contract connected to the dev wallet, or null if
  * env vars are not configured. Callers must handle the null case gracefully.
  */
 export function getFaucet(): FaucetContract | null {
-  return _faucet as unknown as FaucetContract | null;
+  return _faucet;
 }
 
 /**
@@ -109,12 +117,10 @@ export async function getStakingInfo(address: string): Promise<StakingInfo | nul
   if (!_staking) return null;
   try {
     const [stakedBalance, pendingRewards, totalStaked, kltBalance] = await Promise.all([
-      (_staking as unknown as { stakedBalance(a: string): Promise<bigint> }).stakedBalance(address),
-      (_staking as unknown as { pendingRewards(a: string): Promise<bigint> }).pendingRewards(address),
-      (_staking as unknown as { totalStaked(): Promise<bigint> }).totalStaked(),
-      _klt
-        ? (_klt as unknown as { balanceOf(a: string): Promise<bigint> }).balanceOf(address)
-        : Promise.resolve(0n),
+      _staking.stakedBalance(address),
+      _staking.pendingRewards(address),
+      _staking.totalStaked(),
+      _klt ? _klt.balanceOf(address) : Promise.resolve(0n),
     ]);
     return {
       stakedBalance: ethers.formatUnits(stakedBalance, 18),

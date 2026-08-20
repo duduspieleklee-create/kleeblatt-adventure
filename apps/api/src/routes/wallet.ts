@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { ethers } from "ethers";
 import type { WalletBalance, WalletConnectRequest, WalletConnectResponse, WalletResponse } from "@kleeblatt/shared";
 import { requireAuth, type AppVariables } from "../middleware/session.js";
-import { connectWallet, disconnectWallet, getDepositAddress, getMockBalance, getWallet } from "../services/wallets.js";
+import { connectWallet, disconnectWallet, getDepositAddress, getMockBalance, getWallet, toWalletResponse } from "../services/wallets.js";
 import { signSession } from "../lib/jwt.js";
 import { upsertGoogleUser } from "../services/users.js";
 import { getOrCreateWallet } from "../services/wallets.js";
@@ -21,14 +21,7 @@ walletRoutes.get("/wallet", requireAuth, async (c) => {
   if (!wallet) {
     return c.json({ address: "", status: "disconnected", provider: "none" } satisfies WalletResponse);
   }
-  const body: WalletResponse = {
-    address: wallet.address,
-    status: wallet.status,
-    provider: wallet.provider,
-    depositAddress: wallet.depositAddress ?? undefined,
-    chainId: wallet.chainId ?? undefined,
-  };
-  return c.json(body);
+  return c.json(toWalletResponse(wallet));
 });
 
 walletRoutes.post("/wallet/connect", requireAuth, async (c) => {
@@ -50,13 +43,7 @@ walletRoutes.post("/wallet/disconnect", requireAuth, async (c) => {
   if (!wallet) {
     return c.json({ address: "", status: "disconnected", provider: "none" } satisfies WalletResponse);
   }
-  return c.json({
-    address: wallet.address,
-    status: wallet.status,
-    provider: wallet.provider,
-    depositAddress: wallet.depositAddress ?? undefined,
-    chainId: wallet.chainId ?? undefined,
-  } satisfies WalletResponse);
+  return c.json(toWalletResponse(wallet));
 });
 
 walletRoutes.get("/wallet/deposit-address", requireAuth, async (c) => {

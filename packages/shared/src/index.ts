@@ -36,7 +36,7 @@ export {
   isEmailWellFormed,
 } from "./lib/passwordRules.js";
 export type { PasswordRequirement } from "./lib/passwordRules.js";
-export type { WalletStatus, WalletResponse, WalletConnectRequest, WalletConnectResponse, WalletBalance } from "./types/wallet.js";
+export type { WalletStatus, WalletResponse, WalletConnectRequest, WalletConnectResponse, WalletBalance, StakingInfo } from "./types/wallet.js";
 export type { OnboardingPath, OnboardingStatus } from "./types/onboarding.js";
 
 export type { GameBridgeEvents } from "./gameBridge.js";

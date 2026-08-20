@@ -38,3 +38,19 @@ export interface WalletBalance {
   /** Mock IMX balance, or null when disconnected. */
   imxBalance: string | null;
 }
+
+/**
+ * On-chain staking position for a wallet (KLT, 18 decimals, as decimal strings).
+ * Single source of truth — consumed by the API route via `chain.ts` and by the
+ * web `StakingOverlay` via `api.ts`.
+ */
+export interface StakingInfo {
+  /** Amount currently staked by the wallet. */
+  stakedBalance: string;
+  /** Rewards accrued and claimable. */
+  pendingRewards: string;
+  /** Total KLT staked across all wallets (global). */
+  totalStaked: string;
+  /** Wallet's spendable KLT balance. */
+  kltBalance: string;
+}

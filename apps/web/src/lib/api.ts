@@ -1,4 +1,4 @@
-/** Thin fetch helpers toward Game API (credentials for session cookie) */
+// Thin fetch helpers toward Game API (credentials for session cookie)
 
 import type {
   CreateHeroInput,
@@ -10,7 +10,11 @@ import type {
   MeResponse,
   OnboardingPath,
   OnboardingStatus,
+  StakingInfo,
 } from "@kleeblatt/shared";
+
+// Re-export shared types consumed by feature components (e.g. StakingOverlay).
+export type { StakingInfo } from "@kleeblatt/shared";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 // Default: /api-Prefix (Doku-Architektur Web → /api/* → nginx/vite → API,
@@ -344,13 +348,6 @@ export async function completeOnboarding(): Promise<ApiResult<OnboardingStatus>>
   if (!res.ok)
     return { ok: false, status: res.status, message: errorMessage(body, "Intro konnte nicht abgeschlossen werden.") };
   return { ok: true, status: res.status, data: body as OnboardingStatus };
-}
-
-export interface StakingInfo {
-  stakedBalance: string;
-  pendingRewards: string;
-  totalStaked: string;
-  kltBalance: string;
 }
 
 /** GET /wallet/staking-info – fetch on-chain staking position for the linked wallet. */
