@@ -18,6 +18,8 @@ export const UI_CONFIG = {
   PARCHMENT_BORDER: 0x8b6914,
   PARCHMENT_TEXT: '#3d2914',
   PARCHMENT_MUTED: '#8b6914',
+  /** Full-screen gate overlay background (black, opaque). */
+  GATE_BG: 0x000000,
 } as const;
 
 export const TEXT_STYLES = {

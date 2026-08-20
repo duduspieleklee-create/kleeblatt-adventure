@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { gameBridge } from '@kleeblatt/shared';
+import { scaleManager } from '../managers/ScaleManager';
 import { NPC } from '../objects/NPC';
 import { SunnysidePlayer } from '../objects/SunnysidePlayer';
 import { CollectibleItem } from '../objects/CollectibleItem';
@@ -40,7 +41,7 @@ export class IslandScene extends Phaser.Scene {
   private inputManager?: InputManager;
   private debugOverlay?: DebugOverlay;
   private onInventoryHydrate?: (payload: unknown) => void;
-  private onResize?: () => void;
+  private cameraResizeUnsub?: () => void;
 
   private dialogueData: Record<string, { sequence: string[] }> = {};
   private questsData: Record<string, Quest> = {};
@@ -302,20 +303,15 @@ export class IslandScene extends Phaser.Scene {
     cam.setRoundPixels(true);
     this.fitCameraToMap();
 
-    this.onResize = () => this.fitCameraToMap();
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
+    this.cameraResizeUnsub = scaleManager.onResize(() => this.fitCameraToMap());
   }
 
   private fitCameraToMap(): void {
     const cam = this.cameras.main;
-    const { width, height } = this.scale.gameSize;
-    const mapW = this.map.widthInPixels;
-    const mapH = this.map.heightInPixels;
-
-    // Cover the viewport so the map fills the entire canvas.
-    // A square map on a 16:9 screen will have its top/bottom cropped,
-    // eliminating the black side bars and keeping UI on the visible world.
-    const zoom = Math.max(width / mapW, height / mapH);
+    const zoom = scaleManager.getCameraCoverZoom(
+      this.map.widthInPixels,
+      this.map.heightInPixels,
+    );
     cam.setZoom(zoom);
   }
 
@@ -434,10 +430,8 @@ export class IslandScene extends Phaser.Scene {
     this.spawnManager?.shutdown();
     this.debugOverlay?.shutdown();
 
-    if (this.onResize) {
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
-      this.onResize = undefined;
-    }
+    this.cameraResizeUnsub?.();
+    this.cameraResizeUnsub = undefined;
 
     if (this.scene.isActive('UIScene')) {
       this.scene.stop('UIScene');

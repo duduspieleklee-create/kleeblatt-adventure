@@ -3,8 +3,8 @@ import { gameBridge } from "@kleeblatt/shared";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
-  VIEWPORT_CONSTRAINTS,
 } from "./config/GameConfig";
+import { scaleManager } from "./managers/ScaleManager";
 import { BootScene } from "./scenes/BootScene";
 import { PreloaderScene } from "./scenes/PreloaderScene";
 import { LoginScene } from "./scenes/LoginScene";
@@ -31,13 +31,7 @@ export function createGame(container: HTMLElement): Phaser.Game {
     dom: {
       createContainer: true,
     },
-    scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
-      expandParent: true,
-      min: VIEWPORT_CONSTRAINTS.min,
-      max: VIEWPORT_CONSTRAINTS.max,
-    },
+    scale: scaleManager.getPhaserScaleConfig(),
     render: {
       antialias: false,
       roundPixels: true,
@@ -54,6 +48,9 @@ export function createGame(container: HTMLElement): Phaser.Game {
 
   const game = new Phaser.Game(config);
 
+  // Attach the dynamic scale manager before any scene runs.
+  scaleManager.attach(game);
+
   // Wire shared bridge: pause/resume control the main game scene
   const onPause = (): void => {
     game.scene.pause("IslandScene");
@@ -68,6 +65,7 @@ export function createGame(container: HTMLElement): Phaser.Game {
   game.events.once(Phaser.Core.Events.DESTROY, () => {
     gameBridge.off("pause", onPause);
     gameBridge.off("resume", onResume);
+    scaleManager.detach();
   });
 
   if (import.meta.env.DEV) {
