@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useMe } from "../hooks/useMe";
 import { useWalletBalance } from "../hooks/useWalletBalance";
 import { TopBar } from "../components/TopBar";
@@ -7,7 +6,6 @@ import { AuthOverlay } from "../components/AuthOverlay";
 import { gameBridge } from "@kleeblatt/shared";
 import type { MeResponse } from "@kleeblatt/shared";
 import { useSessionContext } from "../hooks/useSessionContext";
-import { claimWelcomeBonus } from "../lib/api";
 
 /**
  * HomePage — minimal shell. All gameplay UI (quests, dialog, menus) runs
@@ -21,17 +19,6 @@ export function HomePage() {
   const isGuest = sessionContext?.isGuest;
   // Guests never have a wallet — don't fetch or surface any wallet info.
   const { state: walletState } = useWalletBalance(meState.status === "authenticated" && !isGuest);
-
-  // One-time welcome bonus: gameBridge fires wallet:welcomeClaim when a player
-  // with a linked wallet starts a session. The server pays gas; the contract
-  // enforces the once-only rule on-chain, so this is safe to call every login.
-  useEffect(() => {
-    const handler = (_payload: { address: string }): void => {
-      void claimWelcomeBonus();
-    };
-    gameBridge.on("wallet:welcomeClaim", handler);
-    return () => { gameBridge.off("wallet:welcomeClaim", handler); };
-  }, []);
 
   const handleLogout = () => {
     void logout();

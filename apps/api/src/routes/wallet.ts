@@ -1,6 +1,7 @@
 /** Wallet-Routen: GET /wallet, POST /wallet/connect, POST /wallet/disconnect, GET /wallet/balance, POST /wallet/auth (P9). */
 
 import { Hono } from "hono";
+import { ethers } from "ethers";
 import type { WalletBalance, WalletConnectRequest, WalletConnectResponse, WalletResponse } from "@kleeblatt/shared";
 import { requireAuth, type AppVariables } from "../middleware/session.js";
 import { connectWallet, disconnectWallet, getDepositAddress, getMockBalance, getWallet } from "../services/wallets.js";
@@ -119,48 +120,62 @@ walletRoutes.post("/wallet/auth", async (c) => {
 /**
  * POST /wallet/welcome-claim
  *
- * Called by the game client (via gameBridge) when a player with a linked wallet
- * logs in for the first time. The server's dev wallet pays the gas — the player
- * pays nothing. The on-chain `claimed` mapping ensures this can only succeed once
- * per address regardless of how many times the endpoint is hit.
+ * Flow:
+ *  1. Client prompts MetaMask to sign a deterministic message (ownership proof).
+ *  2. Client sends { signature, message } to this endpoint.
+ *  3. Server recovers the signer address from the signature and checks it matches
+ *     the wallet linked to the authenticated session.
+ *  4. Server calls claimFor on-chain (pays gas). Contract enforces once-only.
  *
- * Requires: authenticated session + wallet linked to the profile.
- * Returns: { ok: true, txHash } on success, or { ok: false, reason } if already
- *          claimed, faucet not configured, or on-chain error.
+ * Requires: authenticated session + wallet linked + valid ownership signature.
  */
 walletRoutes.post("/wallet/welcome-claim", requireAuth, async (c) => {
   const user = c.get("user")!;
 
-  // Resolve the wallet address from the user's linked wallet.
+  // 1. Parse body
+  const body = await c.req.json().catch(() => null) as { signature?: string; message?: string } | null;
+  if (!body?.signature || !body?.message) {
+    return c.json({ ok: false, reason: "missing_signature" }, 400);
+  }
+
+  // 2. Resolve the wallet address linked to this session
   const wallet = await getWallet(user.userId);
   if (!wallet?.address) {
     return c.json({ ok: false, reason: "no_wallet" }, 400);
   }
+  const linkedAddress = wallet.address.toLowerCase();
 
-  const address = wallet.address;
-
-  // Fast pre-check — avoids wasting a tx if already claimed.
-  const eligible = await canClaimWelcome(address);
-  if (!eligible) {
-    // Not an error: idempotent. Client can treat this as "already received".
-    return c.json({ ok: false, reason: "already_claimed" }, 200);
+  // 3. Recover signer from signature and verify it matches the linked wallet
+  let recovered: string;
+  try {
+    recovered = ethers.verifyMessage(body.message, body.signature).toLowerCase();
+  } catch {
+    return c.json({ ok: false, reason: "invalid_signature" }, 400);
+  }
+  if (recovered !== linkedAddress) {
+    return c.json({ ok: false, reason: "address_mismatch" }, 403);
   }
 
+  // 4. Check eligibility on-chain (fast read — avoids wasting a tx)
+  const eligible = await canClaimWelcome(wallet.address);
+  if (!eligible) {
+    return c.json({ ok: false, reason: "already_claimed" }, 400);
+  }
+
+  // 5. Server calls claimFor (pays gas)
   const faucet = getFaucet();
   if (!faucet) {
-    // On-chain not configured (local dev without env vars). Silently skip.
-    return c.json({ ok: false, reason: "not_configured" }, 200);
+    return c.json({ ok: false, reason: "not_configured" }, 503);
   }
 
   try {
-    const tx = await faucet.claimFor(address);
+    const tx = await faucet.claimFor(wallet.address);
     await tx.wait();
     return c.json({ ok: true, txHash: tx.hash });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    // "Already claimed" revert from contract — not a server error.
     if (message.includes("Already claimed")) {
-      return c.json({ ok: false, reason: "already_claimed" }, 200);
+      return c.json({ ok: false, reason: "already_claimed" }, 400);
     }
     console.error("[welcome-claim] on-chain error:", message);
     return c.json({ ok: false, reason: "chain_error" }, 500);
