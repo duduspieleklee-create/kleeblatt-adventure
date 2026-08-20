@@ -8,6 +8,14 @@ import type { SessionContext } from "../hooks/useSessionContext";
 
 const EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
 
+/** Format a token amount for display: trim trailing zeros, add thousands separators. */
+function formatToken(value: string | null | undefined): string {
+  if (!value) return "";
+  const n = Number(value);
+  if (Number.isNaN(n)) return value;
+  return n.toLocaleString("en-US", { maximumFractionDigits: 4 });
+}
+
 interface TopBarProps {
   meState: MeState;
   hero: Hero | null;
@@ -149,13 +157,13 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
           </span>
         )}
         {ethBalance && (
-          <span className="topbar-balance" title={ethBalance}>
-            {ethBalance} ETH
+          <span className="topbar-balance" title={`${formatToken(ethBalance)} ETH`}>
+            {formatToken(ethBalance)} ETH
           </span>
         )}
         {imxBalance && (
-          <span className="topbar-balance" title={imxBalance}>
-            {imxBalance} IMX
+          <span className="topbar-balance" title={`${formatToken(imxBalance)} IMX`}>
+            {formatToken(imxBalance)} IMX
           </span>
         )}
 
