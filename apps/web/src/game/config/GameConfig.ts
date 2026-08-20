@@ -26,3 +26,12 @@ export const VIEWPORT_CONSTRAINTS = {
   min: { width: MIN_GAME_WIDTH, height: MIN_GAME_HEIGHT },
   max: { width: MAX_GAME_WIDTH, height: MAX_GAME_HEIGHT },
 } as const;
+
+/** Orientation policy for the game. */
+export const ORIENTATION_LOCK: OrientationLock = 'landscape';
+
+/** Whether the orientation gate should only apply to mobile devices. */
+export const LANDSCAPE_GATE_MOBILE_ONLY = true;
+
+/** Convenience type for the locked orientation. */
+export type OrientationLock = 'landscape' | 'portrait' | 'auto';
