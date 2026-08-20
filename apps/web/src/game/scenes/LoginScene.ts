@@ -40,14 +40,6 @@ export class LoginScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor("#1a1a2e");
 
-    this.add
-      .text(cx, cy - 100, "Kleeblatt Adventure", {
-        ...TEXT_STYLES.menuTitle,
-        fontSize: "32px",
-        align: "center",
-      })
-      .setOrigin(0.5);
-
     this.statusText = this.add
       .text(cx, cy - 20, "Checking login…", {
         ...TEXT_STYLES.body,
