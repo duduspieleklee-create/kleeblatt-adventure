@@ -233,6 +233,28 @@
   color: #ff6b6b;
 }
 
+/* Valid / invalid resolved feedback: green check, red cross (no spinner). */
+.status-check,
+.status-cross {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.status-check {
+  color: #4caf87;
+}
+
+.status-cross {
+  color: #ff6b6b;
+}
+
 @keyframes auth-spin {
   to {
     transform: rotate(360deg);
