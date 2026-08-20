@@ -19,6 +19,8 @@ import {
 } from '../maps/MapLoader';
 import { isFootprintWalkable } from '../maps/Walkability';
 import { DebugOverlay, isDebugMode } from '../debug/DebugOverlay';
+import { MultiplayerManager } from '../multiplayer/MultiplayerManager';
+import { getSessionPlayerName } from '../multiplayer/sessionName';
 
 const DEFAULT_SCENERY = [
   { x: 120, y: 100, width: 12, height: 10, name: 'trunk_nw' },
@@ -45,9 +47,15 @@ export class IslandScene extends Phaser.Scene {
   private onLinkWallet?: () => void;
   private onUpgradeAccount?: () => void;
   private cameraResizeUnsub?: () => void;
+  private multiplayer?: MultiplayerManager;
 
   private dialogueData: Record<string, { sequence: string[] }> = {};
   private questsData: Record<string, Quest> = {};
+
+  /** Forward React/UI chat intents to the Colyseus room (no-op if offline). */
+  private handleChatSend = ({ text }: { text: string }): void => {
+    this.multiplayer?.sendChat(text);
+  };
 
   constructor() {
     super({ key: 'IslandScene' });
@@ -82,6 +90,11 @@ export class IslandScene extends Phaser.Scene {
     this.setupItemCollection();
     this.setupQuestTriggers();
     this.setupDebugTools();
+
+    // Multiplayer glue (resilient: never throws if Colyseus is down).
+    this.multiplayer = new MultiplayerManager();
+    void this.multiplayer.connect(getSessionPlayerName());
+    gameBridge.on("chat:send", this.handleChatSend);
 
     if (!this.scene.isActive('UIScene')) {
       this.scene.launch('UIScene', {
@@ -124,6 +137,8 @@ export class IslandScene extends Phaser.Scene {
     this.onUpgradeAccount = (): void => { this.scene.pause(); };
     gameBridge.on("react:linkWallet", this.onLinkWallet);
     gameBridge.on("react:upgradeAccount", this.onUpgradeAccount);
+    // Questbook shortcut (React rail) -> same handler as the "I" key.
+    gameBridge.on("ui:toggleQuestbook", this.onOpenQuestbook);
 
     // Listen for inventory hydration from React
     this.onInventoryHydrate = (payload: unknown) => {
@@ -536,5 +551,10 @@ export class IslandScene extends Phaser.Scene {
       gameBridge.off("react:upgradeAccount", this.onUpgradeAccount);
       this.onUpgradeAccount = undefined;
     }
+    gameBridge.off("ui:toggleQuestbook", this.onOpenQuestbook);
+
+    // Clean up multiplayer glue
+    gameBridge.off("chat:send", this.handleChatSend);
+    this.multiplayer?.disconnect();
   }
 }
