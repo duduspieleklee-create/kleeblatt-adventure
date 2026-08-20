@@ -67,17 +67,17 @@ export function loadIslandMap(
   const ground = map.createLayer('ground', tileset, 0, 0, useGPU) ?? undefined;
   ground?.setDepth(MAP_DEPTH.GROUND);
 
-  // Optional visual layers (plan names or current map names)
-  const paths =
-    map.createLayer('paths', tileset, 0, 0, useGPU) ??
-    map.createLayer('Paths', tileset, 0, 0, useGPU) ??
-    undefined;
+  // Optional visual layers — only create if they exist in the tilemap
+  const pathsLayerName = map.getLayer('paths') ? 'paths' : map.getLayer('Paths') ? 'Paths' : null;
+  const paths = pathsLayerName
+    ? map.createLayer(pathsLayerName, tileset, 0, 0, useGPU) ?? undefined
+    : undefined;
   paths?.setDepth(MAP_DEPTH.PATHS);
 
-  const decor =
-    map.createLayer('ground_decoration', tileset, 0, 0, useGPU) ??
-    map.createLayer('Objects', tileset, 0, 0, useGPU) ??
-    undefined;
+  const decorLayerName = map.getLayer('ground_decoration') ? 'ground_decoration' : null;
+  const decor = decorLayerName
+    ? map.createLayer(decorLayerName, tileset, 0, 0, useGPU) ?? undefined
+    : undefined;
   decor?.setDepth(MAP_DEPTH.DECOR);
 
   const collisionLayer = map.createLayer('collision', tileset, 0, 0, false) as Phaser.Tilemaps.TilemapLayer | null;
