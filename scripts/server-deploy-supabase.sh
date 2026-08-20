@@ -120,8 +120,9 @@ docker compose pull 2>&1 | tail -5
 echo "==> Starting Supabase stack (clean restart)"
 docker compose down -v --remove-orphans 2>&1 | tail -3 || true
 # DB uses a bind mount (./volumes/db/data), which compose -v won't remove.
-# Nuke it so Postgres reinitializes with the current POSTGRES_PASSWORD.
-rm -rf ./volumes/db/data
+# Nuke the contents so Postgres reinitializes with the current POSTGRES_PASSWORD.
+# Keep the directory itself (ownership matters; Postgres needs write access).
+rm -rf ./volumes/db/data/*
 docker compose up -d 2>&1 | tail -15
 
 echo "==> Waiting for auth container to become healthy..."
@@ -141,6 +142,8 @@ done
 if [ \$AUTH_OK -eq 0 ]; then
   echo "ERROR: auth container did not become healthy after 100s"
   docker compose logs --tail 30 auth 2>&1 || true
+  echo "=== db container logs ==="
+  docker compose logs --tail 30 db 2>&1 || true
   exit 1
 fi
 
