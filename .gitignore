@@ -50,3 +50,7 @@ coverage/
 
 # Hermes agent
 .hermes/
+
+# AI agent artifacts (not project documentation)
+memory/
+skills/
