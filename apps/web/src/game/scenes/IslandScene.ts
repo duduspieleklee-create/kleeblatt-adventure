@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { gameBridge } from '@kleeblatt/shared';
 import { NPC } from '../objects/NPC';
 import { SunnysidePlayer } from '../objects/SunnysidePlayer';
 import { CollectibleItem } from '../objects/CollectibleItem';
@@ -38,6 +39,7 @@ export class IslandScene extends Phaser.Scene {
   private spawnManager?: SpawnManager;
   private inputManager?: InputManager;
   private debugOverlay?: DebugOverlay;
+  private onInventoryHydrate?: (payload: unknown) => void;
 
   private dialogueData: Record<string, { sequence: string[] }> = {};
   private questsData: Record<string, Quest> = {};
@@ -107,6 +109,17 @@ export class IslandScene extends Phaser.Scene {
     });
 
     this.events.on(Phaser.Scenes.Events.UPDATE, this.updateDepth, this);
+
+    // Notify React host that the game scene is ready
+    gameBridge.emit("scene:ready", { scene: "IslandScene" });
+
+    // Listen for inventory hydration from React
+    this.onInventoryHydrate = (payload: unknown) => {
+      const stacks = (payload as { stacks: unknown }).stacks;
+      // TODO: integrate hydrated inventory into the Phaser game's inventory system
+      console.info("[IslandScene] inventory:hydrate received", stacks);
+    };
+    gameBridge.on("inventory:hydrate", this.onInventoryHydrate);
   }
 
   private onQuestStarted(questId: string): void {
@@ -414,5 +427,11 @@ export class IslandScene extends Phaser.Scene {
     this.events.off(InputEvents.INTERACT_TARGET, this.onInputInteractTarget, this);
     this.events.off(InputEvents.OPEN_QUESTBOOK, this.onOpenQuestbook, this);
     this.events.off(InputEvents.CANCEL, this.onInputCancel, this);
+
+    // Clean up shared bridge listeners
+    if (this.onInventoryHydrate) {
+      gameBridge.off("inventory:hydrate", this.onInventoryHydrate);
+      this.onInventoryHydrate = undefined;
+    }
   }
 }
