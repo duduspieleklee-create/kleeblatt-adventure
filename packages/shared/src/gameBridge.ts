@@ -46,7 +46,7 @@ export type GameBridgeEvents = {
   "dialog:option": Loose;
   "skill:ready": Loose;
   "npc:stateChanged": Loose;
-  "scene:loaded": Loose;
+  "scene:ready": { scene: string };
   interaction: Loose;
   "enemy:spawned": Loose;
   "enemy:killed": Loose;
