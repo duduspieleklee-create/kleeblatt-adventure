@@ -13,6 +13,7 @@
 }
 
 .auth-modal {
+  position: relative;
   width: min(380px, 92vw);
   padding: 28px 26px 22px;
   border-radius: 14px;
@@ -29,6 +30,44 @@
   font-weight: 700;
   letter-spacing: 0.3px;
   color: #f5e6c8;
+}
+
+/* Upgrade overlay: intro line + close (X) button. */
+.auth-intro {
+  margin: -8px 0 18px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #b9bed0;
+}
+
+.auth-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #c9cde0;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.auth-close:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.auth-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .auth-tabs {
