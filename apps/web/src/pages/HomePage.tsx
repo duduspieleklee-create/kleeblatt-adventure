@@ -21,7 +21,7 @@ export function HomePage() {
           onLogout={() => void logout()}
         />
       )}
-      <div className="app-body game-wrapper">
+      <div className="app-body game_wrapper">
         <GamePage />
       </div>
       <DebugConsole />
