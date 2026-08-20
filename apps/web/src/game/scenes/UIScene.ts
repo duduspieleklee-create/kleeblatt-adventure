@@ -4,8 +4,6 @@ import { QuestHUD } from '../ui/QuestHUD';
 import { TEXT_STYLES, UI_CONFIG } from '../ui/UIConstants';
 import { InputEvents } from '../input/InputEvents';
 import { DeviceDetector } from '../input/DeviceDetector';
-import { TouchButton } from '../ui/TouchButton';
-import { getUIAnchors, TOUCH_TARGET_MIN } from '../ui/UIScale';
 
 export type UISceneInitData = {
   questManager: QuestManager;
@@ -19,10 +17,9 @@ export type UISceneInitData = {
  */
 export class UIScene extends Phaser.Scene {
   private questHUD?: QuestHUD;
-  private backBtn?: Phaser.GameObjects.Text;
   private versionText?: Phaser.GameObjects.Text;
-  private interactBtn?: TouchButton;
   // questbookBtn removed — questbook icon no longer displayed
+  // interactBtn removed — Talk button no longer displayed
   private worldSceneKey = 'IslandScene';
   private questManager?: QuestManager;
   private showMobileControls = false;
@@ -52,7 +49,6 @@ export class UIScene extends Phaser.Scene {
 
     this.questHUD = new QuestHUD(this, questManager, questsData);
     this.createChrome();
-    this.createMobileControls();
     this.relayout();
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.relayout, this);
@@ -72,20 +68,6 @@ export class UIScene extends Phaser.Scene {
   }
 
   private createChrome(): void {
-    this.backBtn = this.add
-      .text(0, 0, '← Menu', {
-        ...TEXT_STYLES.small,
-        color: '#ffffff',
-        backgroundColor: '#000000',
-        padding: { x: 8, y: 4 },
-      })
-      .setAlpha(0.85)
-      .setScrollFactor(0)
-      .setDepth(10002)
-      .setInteractive({ useHandCursor: true });
-
-    this.backBtn.on(Phaser.Input.Events.POINTER_DOWN, () => this.leaveToMenu());
-
     this.versionText = this.add
       .text(0, 0, String(import.meta.env.GAME_VERSION ?? ''), {
         ...TEXT_STYLES.small,
@@ -97,49 +79,14 @@ export class UIScene extends Phaser.Scene {
       .setAlpha(0.8);
   }
 
-  private createMobileControls(): void {
-    if (!this.showMobileControls) return;
-
-    this.interactBtn = new TouchButton(this, 0, 0, {
-      label: 'Talk',
-      width: 100,
-      height: TOUCH_TARGET_MIN,
-      onPress: () => this.emitInteractToWorld(),
-    });
-  }
-
-  private emitInteractToWorld(): void {
-    const world = this.scene.get(this.worldSceneKey);
-    if (world) {
-      world.events.emit(InputEvents.INTERACT);
-    }
-  }
-
   private relayout = (): void => {
-    const { width, height } = this.scale.gameSize;
-    const anchors = getUIAnchors(width, height);
-
-    if (this.backBtn) {
-      this.backBtn.setPosition(
-        Math.round(anchors.topRight.x - this.backBtn.width),
-        Math.round(anchors.topRight.y / 2),
-      );
-    }
+    const { height } = this.scale.gameSize;
 
     if (this.versionText) {
       this.versionText.setPosition(
         Math.round(UI_CONFIG.MARGIN / 2),
         Math.round(height - 18),
       );
-    }
-
-    // Action buttons bottom-right (Milestone 5.5)
-    if (this.interactBtn) {
-      this.interactBtn.setPosition(
-        Math.round(anchors.bottomRight.x - 50),
-        Math.round(anchors.bottomRight.y - TOUCH_TARGET_MIN),
-      );
-      this.interactBtn.setVisible(this.showMobileControls);
     }
 
     this.questHUD?.resize();
@@ -151,14 +98,6 @@ export class UIScene extends Phaser.Scene {
 
   private onCancel(): void {
     this.questHUD?.closeQuestbook();
-  }
-
-  private leaveToMenu(): void {
-    this.scene.stop('UIScene');
-    if (this.scene.isActive(this.worldSceneKey)) {
-      this.scene.stop(this.worldSceneKey);
-    }
-    this.scene.start('MainMenuScene');
   }
 
   shutdown(): void {
@@ -174,8 +113,6 @@ export class UIScene extends Phaser.Scene {
 
     this.questHUD?.shutdown();
     this.questHUD = undefined;
-    this.backBtn?.destroy();
     this.versionText?.destroy();
-    this.interactBtn?.destroy();
   }
 }
