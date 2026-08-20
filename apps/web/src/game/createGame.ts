@@ -1,6 +1,10 @@
 import Phaser from "phaser";
 import { gameBridge } from "@kleeblatt/shared";
-import { BASE_WIDTH, BASE_HEIGHT } from "./config/GameConfig";
+import {
+  BASE_WIDTH,
+  BASE_HEIGHT,
+  VIEWPORT_CONSTRAINTS,
+} from "./config/GameConfig";
 import { BootScene } from "./scenes/BootScene";
 import { PreloaderScene } from "./scenes/PreloaderScene";
 import { LoginScene } from "./scenes/LoginScene";
@@ -31,6 +35,8 @@ export function createGame(container: HTMLElement): Phaser.Game {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
       expandParent: true,
+      min: VIEWPORT_CONSTRAINTS.min,
+      max: VIEWPORT_CONSTRAINTS.max,
     },
     render: {
       antialias: false,
