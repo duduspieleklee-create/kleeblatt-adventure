@@ -58,13 +58,27 @@ export function createGame(container: HTMLElement): Phaser.Game {
   const onResume = (): void => {
     game.scene.resume("IslandScene");
   };
+  const onLogout = (): void => {
+    // Return to the login gate so the player sees the login UI after the
+    // React shell logs the session out. Stop any scene that might be active.
+    game.scene.stop("UIScene");
+    game.scene.stop("IslandScene");
+    game.scene.stop("MainMenuScene");
+    game.scene.stop("CharacterCreationScene");
+    game.scene.stop("PreloaderScene");
+    game.scene.stop("BootScene");
+    game.scene.stop("LoginScene");
+    game.scene.start("LoginScene");
+  };
   gameBridge.on("pause", onPause);
   gameBridge.on("resume", onResume);
+  gameBridge.on("logout", onLogout);
 
   // Clean up bridge listeners when the game is destroyed
   game.events.once(Phaser.Core.Events.DESTROY, () => {
     gameBridge.off("pause", onPause);
     gameBridge.off("resume", onResume);
+    gameBridge.off("logout", onLogout);
     scaleManager.detach();
   });
 

@@ -77,7 +77,15 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
 
           {menuOpen && (
             <div className="topbar-dropdown">
-              <button type="button" className="topbar-dropdown-item" onClick={() => { onLogout(); setMenuOpen(false); }}>
+              <button
+                type="button"
+                className="topbar-dropdown-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onLogout();
+                }}
+              >
                 Abmelden
               </button>
             </div>
