@@ -31,6 +31,12 @@ walletRoutes.get("/wallet", requireAuth, async (c) => {
 
 walletRoutes.post("/wallet/connect", requireAuth, async (c) => {
   const user = c.get("user")!;
+  if (user.guest) {
+    return c.json(
+      { error: { code: "GUEST_FORBIDDEN", message: "Guests cannot connect a wallet. Upgrade to a full account first.", retryable: false } },
+      403,
+    );
+  }
   const input = (await c.req.json()) as WalletConnectRequest;
   const result = await connectWallet(user.userId, input);
   return c.json(result satisfies WalletConnectResponse);

@@ -14,9 +14,11 @@ import { useSessionContext } from "../hooks/useSessionContext";
  */
 export function HomePage() {
   const { state: meState, logout, refresh } = useMe();
-  const { state: walletState } = useWalletBalance(meState.status === "authenticated");
   const sessionCtx = useSessionContext();
   const sessionContext = sessionCtx.status === "ready" ? sessionCtx.context : null;
+  const isGuest = sessionContext?.isGuest;
+  // Guests never have a wallet — don't fetch or surface any wallet info.
+  const { state: walletState } = useWalletBalance(meState.status === "authenticated" && !isGuest);
 
   const handleLogout = () => {
     void logout();
