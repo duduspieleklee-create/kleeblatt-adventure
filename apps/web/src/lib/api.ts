@@ -339,3 +339,19 @@ export async function completeOnboarding(): Promise<ApiResult<OnboardingStatus>>
     return { ok: false, status: res.status, message: errorMessage(body, "Intro konnte nicht abgeschlossen werden.") };
   return { ok: true, status: res.status, data: body as OnboardingStatus };
 }
+
+export interface StakingInfo {
+  stakedBalance: string;
+  pendingRewards: string;
+  totalStaked: string;
+  kltBalance: string;
+}
+
+/** GET /wallet/staking-info – fetch on-chain staking position for the linked wallet. */
+export async function fetchStakingInfo(): Promise<ApiResult<StakingInfo>> {
+  const res = await apiFetch("/wallet/staking-info");
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Staking-Info konnte nicht geladen werden.") };
+  return { ok: true, status: res.status, data: body as StakingInfo };
+}

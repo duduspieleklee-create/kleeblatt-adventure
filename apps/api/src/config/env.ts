@@ -33,6 +33,9 @@ export const env = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
   supabaseAuthUrl: process.env.SUPABASE_AUTH_URL ?? "",
   supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET ?? "",
+  faucetContractAddress: process.env.FAUCET_CONTRACT_ADDRESS ?? "",
+  stakingContractAddress: process.env.STAKING_CONTRACT_ADDRESS ?? "",
+  kltContractAddress: process.env.KLT_CONTRACT_ADDRESS ?? "",
 } as const;
 
 export const sessionCookie = {
