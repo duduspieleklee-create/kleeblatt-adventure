@@ -1,0 +1,13 @@
+{
+  "network": "immutableTestnet",
+  "chainId": 13473,
+  "deployedAt": "2026-08-20T09:43:24.000Z",
+  "deployer": "0xb117F9aA2bC3C4CE63E8A4BB78f1fA7f80731Bd3",
+  "contracts": {
+    "KleeblattToken": "0x2fafEd30191509571Ed4Ca302a599A9d7ccCEFD4",
+    "KleeblattItem": "0xFb4b03588409e7D8b62bf55379b7c7B13c256f3B",
+    "KleeblattMarketplace": "0xD090664E309b0adb3d6c494BD8213A3983FE0cbB",
+    "KleeblattStaking": "0x3a4e037F4Bf020a430A75822d01d23f0fe19b75F",
+    "KleeblattWelcomeFaucet": "0x294C16418798e9F110CB64649eB7dBaA8c44abb1"
+  }
+}
