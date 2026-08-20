@@ -22,7 +22,7 @@ export class UIScene extends Phaser.Scene {
   private backBtn?: Phaser.GameObjects.Text;
   private versionText?: Phaser.GameObjects.Text;
   private interactBtn?: TouchButton;
-  private questbookBtn?: TouchButton;
+  // questbookBtn removed — questbook icon no longer displayed
   private worldSceneKey = 'IslandScene';
   private questManager?: QuestManager;
   private showMobileControls = false;
@@ -100,13 +100,6 @@ export class UIScene extends Phaser.Scene {
   private createMobileControls(): void {
     if (!this.showMobileControls) return;
 
-    this.questbookBtn = new TouchButton(this, 0, 0, {
-      label: 'Quests',
-      width: 100,
-      height: TOUCH_TARGET_MIN,
-      onPress: () => this.onOpenQuestbook(),
-    });
-
     this.interactBtn = new TouchButton(this, 0, 0, {
       label: 'Talk',
       width: 100,
@@ -140,21 +133,13 @@ export class UIScene extends Phaser.Scene {
       );
     }
 
-    // Action buttons bottom-right with spacing (Milestone 5.5)
-    const gap = 12;
+    // Action buttons bottom-right (Milestone 5.5)
     if (this.interactBtn) {
       this.interactBtn.setPosition(
         Math.round(anchors.bottomRight.x - 50),
         Math.round(anchors.bottomRight.y - TOUCH_TARGET_MIN),
       );
       this.interactBtn.setVisible(this.showMobileControls);
-    }
-    if (this.questbookBtn) {
-      this.questbookBtn.setPosition(
-        Math.round(anchors.bottomRight.x - 50),
-        Math.round(anchors.bottomRight.y - TOUCH_TARGET_MIN * 2 - gap),
-      );
-      this.questbookBtn.setVisible(this.showMobileControls);
     }
 
     this.questHUD?.resize();
@@ -192,6 +177,5 @@ export class UIScene extends Phaser.Scene {
     this.backBtn?.destroy();
     this.versionText?.destroy();
     this.interactBtn?.destroy();
-    this.questbookBtn?.destroy();
   }
 }
