@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
-import { BASE_WIDTH, BASE_HEIGHT } from '../config/GameConfig';
+import {
+  BASE_WIDTH,
+  BASE_HEIGHT,
+  VIEWPORT_CONSTRAINTS,
+} from '../config/GameConfig';
 import { UI_CONFIG, TEXT_STYLES } from '../ui/UIConstants';
-
-const MIN_VIEWPORT = 320;
 
 /**
  * BootScene
@@ -64,20 +66,23 @@ export class BootScene extends Phaser.Scene {
       return false;
     }
 
-    const tooSmall = Math.min(w, h) < MIN_VIEWPORT;
+    const { min, max } = VIEWPORT_CONSTRAINTS;
+    const tooSmall = w < min.width || h < min.height;
+    const tooLarge = w > max.width || h > max.height;
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
     const landscape = isMobile && w > h;
 
-    if (tooSmall || landscape) {
-      this.showGateOverlay(tooSmall, landscape);
+    if (tooSmall || tooLarge || landscape) {
+      this.showGateOverlay(tooSmall, tooLarge, landscape);
       return false;
     }
 
     return true;
   }
 
-  private showGateOverlay(tooSmall: boolean, landscape: boolean): void {
+  private showGateOverlay(tooSmall: boolean, tooLarge: boolean, landscape: boolean): void {
     const { width, height } = this.scale.gameSize;
+    const { min, max } = VIEWPORT_CONSTRAINTS;
 
     const overlay = this.add.graphics();
     overlay.fillStyle(0x000000, 0.85);
@@ -87,7 +92,11 @@ export class BootScene extends Phaser.Scene {
     const lines: string[] = [];
     if (tooSmall) {
       lines.push('This game needs at least');
-      lines.push('320 × 320 to play.');
+      lines.push(`${min.width} × ${min.height} to play.`);
+    }
+    if (tooLarge) {
+      lines.push('This game does not support displays');
+      lines.push(`larger than ${max.width} × ${max.height}.`);
     }
     if (landscape) {
       lines.push('Please rotate your device');
