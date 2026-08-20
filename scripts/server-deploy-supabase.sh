@@ -36,17 +36,21 @@ eval ${RSYNC_BASE} \
 echo "==> Writing .env from secrets"
 $SSH_CMD "bash -s" <<REMOTE
 set -e
+# Ensure standard bin dirs are on PATH (non-login SSH shells can drop them)
+export PATH="/usr/local/bin:/usr/bin:/bin:\$PATH"
+# Fail loudly if Docker Engine is missing on the stage host
+command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found on stage host — install Docker Engine before deploying Supabase"; exit 1; }
 cat > ${SUPABASE_DST}/.env <<ENV
 COMPOSE_FILE=docker-compose.yml
-POSTGRES_PASSWORD=\${SUPABASE_POSTGRES_PASSWORD}
-JWT_SECRET=\${SUPABASE_JWT_SECRET}
-ANON_KEY=\${SUPABASE_ANON_KEY}
-SERVICE_ROLE_KEY=\${SUPABASE_SERVICE_ROLE_KEY}
+POSTGRES_PASSWORD=${SUPABASE_POSTGRES_PASSWORD}
+JWT_SECRET=${SUPABASE_JWT_SECRET}
+ANON_KEY=${SUPABASE_ANON_KEY}
+SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
 SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SECRET_KEY=
 JWT_JWKS=
 DASHBOARD_USERNAME=supabase
-DASHBOARD_PASSWORD=\${SUPABASE_DASHBOARD_PASSWORD:-this_password_was_generated}
+DASHBOARD_PASSWORD=${SUPABASE_DASHBOARD_PASSWORD:-this_password_was_generated}
 SECRET_KEY_BASE=UpNVnt3whd5jp9ot2F8P3FwxhqHwJqCr5alV8R5h2oq
 REALTIME_DB_ENC_KEY=supabaserealtime
 VAULT_ENC_KEY=your-32-character-encryption-key
@@ -55,8 +59,8 @@ LOGFLARE_PUBLIC_ACCESS_TOKEN=your-s...blic
 LOGFLARE_PRIVATE_ACCESS_TOKEN=your-s...vate
 S3_PROTOCOL_ACCESS_KEY_ID=625729a08b95bf1b7ff351a663f3a23c
 S3_PROTOCOL_ACCESS_KEY_SECRET=8501815907
-SUPABASE_PUBLIC_URL=\${SUPABASE_PUBLIC_URL}
-API_EXTERNAL_URL=\${SUPABASE_API_EXTERNAL_URL}
+SUPABASE_PUBLIC_URL=${SUPABASE_PUBLIC_URL}
+API_EXTERNAL_URL=${SUPABASE_API_EXTERNAL_URL}
 POSTGRES_HOST=db
 POSTGRES_DB=postgres
 POSTGRES_PORT=5432
@@ -68,7 +72,7 @@ POOLER_DB_POOL_SIZE=5
 STUDIO_DEFAULT_ORGANIZATION=Default Organization
 STUDIO_DEFAULT_PROJECT=Default Project
 OPENAI_API_KEY=
-SITE_URL=\${SUPABASE_SITE_URL}
+SITE_URL=${SUPABASE_SITE_URL}
 ADDITIONAL_REDIRECT_URLS=
 JWT_EXPIRY=3600
 DISABLE_SIGNUP=false
@@ -90,13 +94,13 @@ SMTP_SENDER_NAME=
 ENV
 
 # Load env vars into shell for the heredoc substitution
-export SUPABASE_POSTGRES_PASSWORD="\${SUPABASE_POSTGRES_PASSWORD}"
-export SUPABASE_JWT_SECRET="\${SUPABASE_JWT_SECRET}"
-export SUPABASE_ANON_KEY="\${SUPABASE_ANON_KEY}"
-export SUPABASE_SERVICE_ROLE_KEY="\${SUPABASE_SERVICE_ROLE_KEY}"
-export SUPABASE_PUBLIC_URL="\${SUPABASE_PUBLIC_URL}"
-export SUPABASE_API_EXTERNAL_URL="\${SUPABASE_API_EXTERNAL_URL}"
-export SUPABASE_SITE_URL="\${SUPABASE_SITE_URL}"
+export SUPABASE_POSTGRES_PASSWORD="${SUPABASE_POSTGRES_PASSWORD}"
+export SUPABASE_JWT_SECRET="${SUPABASE_JWT_SECRET}"
+export SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}"
+export SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY}"
+export SUPABASE_PUBLIC_URL="${SUPABASE_PUBLIC_URL}"
+export SUPABASE_API_EXTERNAL_URL="${SUPABASE_API_EXTERNAL_URL}"
+export SUPABASE_SITE_URL="${SUPABASE_SITE_URL}"
 
 cd ${SUPABASE_DST}
 echo "==> Pulling updated images if needed"
@@ -108,7 +112,7 @@ docker compose up -d 2>&1 | tail -15
 echo "==> Waiting for Auth to be healthy..."
 sleep 10
 for i in 1 2 3 4 5 6 7 8 9 10; do
-  if curl -fsS -H "apikey: \${SUPABASE_ANON_KEY}" http://localhost:8000/auth/v1/health >/dev/null 2>&1; then
+  if curl -fsS -H "apikey: ${SUPABASE_ANON_KEY}" http://localhost:8000/auth/v1/health >/dev/null 2>&1; then
     echo "SUPABASE AUTH HEALTHY"
     break
   fi
@@ -117,7 +121,7 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
 done
 
 # Final check
-if curl -fsS -H "apikey: \${SUPABASE_ANON_KEY}" http://localhost:8000/auth/v1/health >/dev/null 2>&1; then
+if curl -fsS -H "apikey: ${SUPABASE_ANON_KEY}" http://localhost:8000/auth/v1/health >/dev/null 2>&1; then
   echo "SUPABASE DEPLOY OK"
 else
   echo "SUPABASE HEALTH CHECK FAILED"

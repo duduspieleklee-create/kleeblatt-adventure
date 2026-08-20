@@ -33,6 +33,10 @@ echo "==> Running migrations against Supabase Postgres (${DB_CONTAINER})"
 # List all SQL files in order and pipe each to psql via docker exec
 $SSH_CMD "bash -s" <<REMOTE
 set -e
+# Ensure standard bin dirs are on PATH (non-login SSH shells can drop them)
+export PATH="/usr/local/bin:/usr/bin:/bin:\$PATH"
+# Fail loudly if Docker Engine is missing on the stage host
+command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found on stage host — install Docker Engine before running migrations"; exit 1; }
 cd ${API_PATH}/apps/api/drizzle
 
 # Get the Postgres password from the Supabase .env
