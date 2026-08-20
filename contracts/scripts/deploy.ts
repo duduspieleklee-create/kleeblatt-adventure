@@ -5,7 +5,8 @@ import { join } from "path";
 async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with:", deployer.address);
-  console.log("Network:", ethers.provider.network.name);
+  const network = await ethers.provider.getNetwork();
+  console.log("Network:", network.name, "chainId:", network.chainId.toString());
 
   // ─── KleeblattToken ────────────────────────────────────────────────────────
   const KleeblattToken = await ethers.getContractFactory("KleeblattToken");
@@ -78,7 +79,7 @@ async function main() {
   // ─── Save addresses ────────────────────────────────────────────────────────
   const deployments = {
     network: "immutableTestnet",
-    chainId: 13371,
+    chainId: 13473,
     deployedAt: new Date().toISOString(),
     deployer: deployer.address,
     contracts: {
