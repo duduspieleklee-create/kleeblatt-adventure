@@ -305,11 +305,17 @@ export async function fetchWalletBalance(): Promise<ApiResult<import("@kleeblatt
 
 /**
  * POST /wallet/welcome-claim
- * Asks the server to send the one-time 100 KLT welcome bonus to the player's
- * linked wallet. The server's dev wallet pays gas — no MetaMask prompt.
+ * Client signs a message to prove wallet ownership, then the server calls
+ * claimFor on-chain and pays gas.
  */
-export async function claimWelcomeBonus(): Promise<ApiResult<{ ok: boolean; txHash?: string; reason?: string }>> {
-  const res = await apiFetch("/wallet/welcome-claim", { method: "POST" });
+export async function claimWelcomeBonus(
+  signature: string,
+  message: string,
+): Promise<ApiResult<{ ok: boolean; txHash?: string; reason?: string }>> {
+  const res = await apiFetch("/wallet/welcome-claim", {
+    method: "POST",
+    body: JSON.stringify({ signature, message }),
+  });
   const body = await res.json().catch(() => null);
   if (!res.ok)
     return { ok: false, status: res.status, message: errorMessage(body, "Welcome claim failed.") };
