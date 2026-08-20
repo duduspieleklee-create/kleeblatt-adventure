@@ -59,7 +59,9 @@ export function loadIslandMap(
     }
   }
 
-  const useGPU = scene.game.renderer.type === Phaser.WEBGL;
+  // CPU tilemap layers — GPU layers (Phaser 4.2 generateLayerDataTexture)
+  // crash on certain tileset configurations; see GH issues.
+  const useGPU = false;
 
   const sea = map.createLayer('sea', tileset, 0, 0, useGPU) ?? undefined;
   sea?.setDepth(MAP_DEPTH.SEA);
