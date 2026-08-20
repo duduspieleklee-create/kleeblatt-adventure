@@ -76,6 +76,38 @@ body {
   backdrop-filter: blur(8px);
 }
 
+/* ─── Premium neon treatment (test-only, unlocked after a testnet tx) ──────── */
+.topbar.topbar--neon {
+  background: linear-gradient(90deg, rgba(124, 92, 216, 0.28), rgba(76, 175, 135, 0.28), rgba(124, 92, 216, 0.28));
+  background-size: 200% 100%;
+  border-bottom: 2px solid #c4a8ff;
+  box-shadow:
+    0 0 12px rgba(124, 92, 216, 0.75),
+    0 0 26px rgba(76, 175, 135, 0.55),
+    inset 0 0 16px rgba(124, 92, 216, 0.35);
+  animation: topbar-neon-pulse 2.6s ease-in-out infinite, topbar-neon-slide 6s linear infinite;
+}
+
+@keyframes topbar-neon-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 10px rgba(124, 92, 216, 0.6),
+      0 0 20px rgba(76, 175, 135, 0.45),
+      inset 0 0 14px rgba(124, 92, 216, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 20px rgba(124, 92, 216, 0.95),
+      0 0 38px rgba(76, 175, 135, 0.75),
+      inset 0 0 24px rgba(124, 92, 216, 0.55);
+  }
+}
+
+@keyframes topbar-neon-slide {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .topbar-left,
 .topbar-right {
   display: flex;
@@ -213,6 +245,23 @@ body {
 .topbar-upgrade-btn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.topbar-shop-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 196, 0, 0.4);
+  background: rgba(255, 196, 0, 0.1);
+  color: #ffd24a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.topbar-shop-btn:hover {
+  background: rgba(255, 196, 0, 0.18);
+  box-shadow: 0 0 10px rgba(255, 196, 0, 0.4);
 }
 
 .topbar-wallet-icon {
