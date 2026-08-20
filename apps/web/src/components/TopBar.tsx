@@ -150,18 +150,18 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
             </div>
           </form>
         )}
-        {walletAddress && (
+        {walletAddress && !sessionContext?.isGuest && (
           <span className="topbar-wallet" title={walletAddress}>
             <img src="/assets/ui/wallet.png" alt="" className="topbar-wallet-icon" onError={(e) => (e.currentTarget.style.display = "none")} />
             {walletAddress.slice(0, 4)}…{walletAddress.slice(-4)}
           </span>
         )}
-        {ethBalance && (
+        {ethBalance && !sessionContext?.isGuest && (
           <span className="topbar-balance" title={`${formatToken(ethBalance)} ETH`}>
             {formatToken(ethBalance)} ETH
           </span>
         )}
-        {imxBalance && (
+        {imxBalance && !sessionContext?.isGuest && (
           <span className="topbar-balance" title={`${formatToken(imxBalance)} IMX`}>
             {formatToken(imxBalance)} IMX
           </span>
