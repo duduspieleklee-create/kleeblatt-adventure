@@ -3,7 +3,7 @@
 import type { SessionUser } from "@kleeblatt/shared";
 import { eq } from "drizzle-orm";
 import { getDb, isDbAvailable } from "../db/client.js";
-import { users as usersTable, type UserRow } from "../db/schema.js";
+import { usersOldBackup as usersTable, type UserRow } from "../db/schema.js";
 import { memPasswordHashes, memUsers } from "./memoryStore.js";
 import { newId } from "../lib/ids.js";
 import { verifyPassword } from "../lib/password.js";

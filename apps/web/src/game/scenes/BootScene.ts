@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { scaleManager } from '../managers/ScaleManager';
 import { UI_CONFIG } from '../ui/UIConstants';
+import { supabase } from '../utils/supabaseClient';
 
 /**
  * BootScene
@@ -21,6 +22,13 @@ export class BootScene extends Phaser.Scene {
 
   private async bootSequence(): Promise<void> {
     await this.waitForFonts();
+
+    if (supabase) {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        console.info('[Boot] Existing Web3 session found');
+      }
+    }
 
     if (this.checkLayout()) {
       this.scene.start('PreloaderScene');

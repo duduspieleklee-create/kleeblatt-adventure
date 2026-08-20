@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { MeState } from "../hooks/useMe";
 import type { Hero } from "@kleeblatt/shared";
+import { linkWalletToProfile, WalletAuthError } from "../game/utils/walletAuth";
+import { supabase } from "../game/utils/supabaseClient";
+import { gameBridge } from "@kleeblatt/shared";
+import type { SessionContext } from "../hooks/useSessionContext";
 
 interface TopBarProps {
   meState: MeState;
@@ -11,10 +15,47 @@ interface TopBarProps {
   onLogout: () => void;
   onInventory?: () => void;
   onSettings?: () => void;
+  sessionContext?: SessionContext | null;
 }
 
-export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, onLogout, onInventory, onSettings }: TopBarProps) {
+export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, onLogout, onInventory, onSettings, sessionContext }: TopBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletError, setWalletError] = useState<string | null>(null);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+
+  const handleAddWallet = async (): Promise<void> => {
+    setWalletLoading(true);
+    setWalletError(null);
+    gameBridge.emit("react:linkWallet");
+    try {
+      await linkWalletToProfile();
+      window.location.reload();
+    } catch (err) {
+      setWalletError(err instanceof WalletAuthError ? err.message : "Failed to connect wallet.");
+      setWalletLoading(false);
+    }
+  };
+
+  const handleUpgradeAccount = async (): Promise<void> => {
+    if (!supabase) return;
+    setUpgradeLoading(true);
+    gameBridge.emit("react:upgradeAccount");
+    try {
+      await supabase.auth.linkIdentity({ provider: "google" });
+    } catch (err) {
+      console.error("[TopBar] Upgrade failed:", err);
+      setUpgradeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const onSessionUpdate = (): void => {
+      if (walletLoading) setWalletLoading(false);
+    };
+    gameBridge.on("session:initialized", onSessionUpdate);
+    return () => { gameBridge.off("session:initialized", onSessionUpdate); };
+  }, [walletLoading]);
 
   if (meState.status !== "authenticated") return null;
 
@@ -50,6 +91,18 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
       </div>
 
       <div className="topbar-right">
+        {!walletAddress && !sessionContext?.isGuest && (
+          <button type="button" className="topbar-wallet-btn" onClick={handleAddWallet} disabled={walletLoading}>
+            {walletLoading ? "Connecting..." : "Add Wallet"}
+          </button>
+        )}
+        {walletError && (<span className="topbar-wallet-error">{walletError}</span>)}
+        {sessionContext?.isGuest && (
+          <button type="button" className="topbar-upgrade-btn" onClick={handleUpgradeAccount} disabled={upgradeLoading}
+            title="Your progress is stored locally. Link a Google account to save it permanently.">
+            {upgradeLoading ? "Upgrading..." : "Upgrade to Full Account"}
+          </button>
+        )}
         {walletAddress && (
           <span className="topbar-wallet" title={walletAddress}>
             <img src="/assets/ui/wallet.png" alt="" className="topbar-wallet-icon" onError={(e) => (e.currentTarget.style.display = "none")} />

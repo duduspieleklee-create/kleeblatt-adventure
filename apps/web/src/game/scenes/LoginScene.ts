@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { TEXT_STYLES, UI_CONFIG } from "../ui/UIConstants";
 import { log } from "../utils/logger";
 import { gameBridge } from "@kleeblatt/shared";
+import { signInWithWallet, WalletAuthError } from "../utils/walletAuth";
 
 interface MeResponse {
   userId: string;
@@ -132,11 +133,40 @@ export class LoginScene extends Phaser.Scene {
         color: "#cfcfe6",
       })
       .setOrigin(0.5);
+
+    const walletBtn = this.add
+      .text(cx, cy + 80, "Connect Wallet", {
+        ...TEXT_STYLES.body,
+        fontSize: "18px",
+        color: "#a78bfa",
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+
+    walletBtn.on("pointerdown", () => {
+      void this.handleWalletLogin();
+    });
   }
 
   private showError(msg: string): void {
     this.statusText?.setVisible(false);
     this.errorText?.setText(msg);
     this.errorText?.setVisible(true);
+  }
+
+  private async handleWalletLogin(): Promise<void> {
+    this.statusText?.setText("Connecting wallet...");
+    this.errorText?.setVisible(false);
+    try {
+      const result = await signInWithWallet();
+      log.info("[LoginScene] Wallet auth success:", result.address);
+      gameBridge.emit("auth:authenticated");
+    } catch (err) {
+      if (err instanceof WalletAuthError) {
+        this.showError(err.message);
+      } else {
+        this.showError("Wallet authentication failed. Please try again.");
+      }
+    }
   }
 }

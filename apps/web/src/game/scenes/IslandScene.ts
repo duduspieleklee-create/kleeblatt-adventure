@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { gameBridge } from '@kleeblatt/shared';
+import { supabase } from '../utils/supabaseClient';
 import { scaleManager } from '../managers/ScaleManager';
 import { NPC } from '../objects/NPC';
 import { SunnysidePlayer } from '../objects/SunnysidePlayer';
@@ -41,6 +42,8 @@ export class IslandScene extends Phaser.Scene {
   private inputManager?: InputManager;
   private debugOverlay?: DebugOverlay;
   private onInventoryHydrate?: (payload: unknown) => void;
+  private onLinkWallet?: () => void;
+  private onUpgradeAccount?: () => void;
   private cameraResizeUnsub?: () => void;
 
   private dialogueData: Record<string, { sequence: string[] }> = {};
@@ -115,6 +118,13 @@ export class IslandScene extends Phaser.Scene {
     // Notify React host that the game scene is ready
     gameBridge.emit("scene:ready", { scene: "IslandScene" });
 
+    void this.emitSessionContext();
+
+    this.onLinkWallet = (): void => { this.scene.pause(); };
+    this.onUpgradeAccount = (): void => { this.scene.pause(); };
+    gameBridge.on("react:linkWallet", this.onLinkWallet);
+    gameBridge.on("react:upgradeAccount", this.onUpgradeAccount);
+
     // Listen for inventory hydration from React
     this.onInventoryHydrate = (payload: unknown) => {
       const stacks = (payload as { stacks: unknown }).stacks;
@@ -122,6 +132,50 @@ export class IslandScene extends Phaser.Scene {
       console.info("[IslandScene] inventory:hydrate received", stacks);
     };
     gameBridge.on("inventory:hydrate", this.onInventoryHydrate);
+  }
+
+  private async emitSessionContext(): Promise<void> {
+    let providerType: "email" | "google" | "wallet" | "guest" = "guest";
+    let profile: {
+      userId: string;
+      username: string | null;
+      walletAddress: string | null;
+      level: number;
+      gold: number;
+    } | null = null;
+
+    if (supabase) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const providers = session.user.app_metadata?.providers ?? [];
+        if (providers.includes("web3")) providerType = "wallet";
+        else if (providers.includes("google")) providerType = "google";
+        else if (providers.includes("email")) providerType = "email";
+
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, username, wallet_address, level, gold")
+          .eq("id", session.user.id)
+          .single();
+
+        if (data) {
+          profile = {
+            userId: data.id,
+            username: data.username,
+            walletAddress: data.wallet_address,
+            level: data.level,
+            gold: data.gold,
+          };
+        }
+      }
+    }
+
+    gameBridge.emit("session:initialized", {
+      providerType,
+      profile,
+      walletLinked: profile?.walletAddress != null,
+      isGuest: providerType === "guest",
+    });
   }
 
   private onQuestStarted(questId: string): void {
@@ -448,6 +502,14 @@ export class IslandScene extends Phaser.Scene {
     if (this.onInventoryHydrate) {
       gameBridge.off("inventory:hydrate", this.onInventoryHydrate);
       this.onInventoryHydrate = undefined;
+    }
+    if (this.onLinkWallet) {
+      gameBridge.off("react:linkWallet", this.onLinkWallet);
+      this.onLinkWallet = undefined;
+    }
+    if (this.onUpgradeAccount) {
+      gameBridge.off("react:upgradeAccount", this.onUpgradeAccount);
+      this.onUpgradeAccount = undefined;
     }
   }
 }
