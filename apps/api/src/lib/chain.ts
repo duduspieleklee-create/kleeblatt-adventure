@@ -67,17 +67,22 @@ function init(): void {
   const stakingAddress = process.env.STAKING_CONTRACT_ADDRESS ?? "";
   const kltAddress = process.env.KLT_CONTRACT_ADDRESS ?? "";
 
-  if (!privateKey) {
-    // On-chain features disabled — all on-chain calls are skipped gracefully.
-    return;
-  }
-
   try {
     _provider = new ethers.JsonRpcProvider(rpc);
-    const wallet = new ethers.Wallet(privateKey, _provider);
-    if (faucetAddress) _faucet = new ethers.Contract(faucetAddress, FAUCET_ABI, wallet) as unknown as FaucetContract;
+
+    // Read-only contracts need only a provider — no private key required.
+    // This keeps staking/KLT reads available even when the server has no
+    // funded dev wallet configured (which previously disabled staking entirely).
     if (stakingAddress) _staking = new ethers.Contract(stakingAddress, STAKING_ABI, _provider) as unknown as StakingContract;
     if (kltAddress) _klt = new ethers.Contract(kltAddress, ERC20_ABI, _provider) as unknown as Erc20Contract;
+
+    // Writes (faucet claimFor) require the dev wallet's signer.
+    if (faucetAddress && privateKey) {
+      const wallet = new ethers.Wallet(privateKey, _provider);
+      _faucet = new ethers.Contract(faucetAddress, FAUCET_ABI, wallet) as unknown as FaucetContract;
+    } else if (faucetAddress && !privateKey) {
+      console.warn("[chain] Faucet address set but IMX_TESTNET_PRIVATE_KEY missing — writes disabled.");
+    }
   } catch (err) {
     console.warn("[chain] Failed to initialise on-chain client:", err);
   }
