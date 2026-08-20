@@ -5,6 +5,7 @@ import { GamePage } from "./GamePage";
 import { AuthOverlay } from "../components/AuthOverlay";
 import { gameBridge } from "@kleeblatt/shared";
 import type { MeResponse } from "@kleeblatt/shared";
+import { useSessionContext } from "../hooks/useSessionContext";
 
 /**
  * HomePage — minimal shell. All gameplay UI (quests, dialog, menus) runs
@@ -14,6 +15,8 @@ import type { MeResponse } from "@kleeblatt/shared";
 export function HomePage() {
   const { state: meState, logout, refresh } = useMe();
   const { state: walletState } = useWalletBalance(meState.status === "authenticated");
+  const sessionCtx = useSessionContext();
+  const sessionContext = sessionCtx.status === "ready" ? sessionCtx.context : null;
 
   const handleLogout = () => {
     void logout();
@@ -37,6 +40,7 @@ export function HomePage() {
         <TopBar
           meState={meState}
           hero={meState.me.hero}
+          sessionContext={sessionContext}
           walletAddress={walletAddress}
           ethBalance={ethBalance}
           imxBalance={imxBalance}

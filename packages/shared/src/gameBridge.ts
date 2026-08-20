@@ -45,6 +45,26 @@ export type GameBridgeEvents = {
   /** React finished a non-Google auth (email/password) — engine should re-check /api/me and proceed. */
   "auth:authenticated": Record<string, never>;
 
+  // Session context — emitted by the main game scene after auth resolves
+  "session:initialized": {
+    providerType: "email" | "google" | "wallet" | "guest";
+    profile: {
+      userId: string;
+      username: string | null;
+      walletAddress: string | null;
+      level: number;
+      gold: number;
+    } | null;
+    walletLinked: boolean;
+    isGuest: boolean;
+  };
+
+  // React → engine: request wallet link (Scenario A)
+  "react:linkWallet": Record<string, never>;
+
+  // React → engine: request account upgrade (Scenario B)
+  "react:upgradeAccount": Record<string, never>;
+
   // React → engine (actions)
   "react:useItem": { itemId: string };
   "react:equipItem": { itemId: string };

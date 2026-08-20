@@ -1,4 +1,9 @@
-/** Drizzle-Schema: users, heroes, items, item_templates, wallets, user_onboarding, inventory_stacks */
+/** Drizzle-Schema: profiles, heroes, items, item_templates, wallets, user_onboarding, inventory_stacks
+ *
+ * NOTE: The old `users` table has been migrated into Supabase's `auth.users`.
+ * Game-specific user data now lives in `profiles` (1:1 with auth.users).
+ * All user_id columns are now uuid (previously text).
+ */
 
 import {
   boolean,
@@ -7,25 +12,26 @@ import {
   pgTable,
   text,
   timestamp,
+  uuid as pgUuid,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const walletStatusEnum = ["pending", "ready", "disconnected"] as const;
 export type WalletStatus = (typeof walletStatusEnum)[number];
 
-export const users = pgTable("users", {
-  id: text("id").primaryKey(),
-  email: text("email").notNull().unique(),
-  displayName: text("display_name"),
-  picture: text("picture"),
-  passwordHash: text("password_hash"),
+/** profiles: game-specific user data, 1:1 with auth.users (Supabase Auth). */
+export const profiles = pgTable("profiles", {
+  id: pgUuid("id").primaryKey(),
+  username: text("username"),
+  walletAddress: text("wallet_address").unique(),
+  level: integer("level").notNull().default(1),
+  gold: integer("gold").notNull().default(100),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const heroes = pgTable("heroes", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => users.id),
+  userId: pgUuid("user_id").primaryKey(),
   heroName: text("hero_name").notNull(),
   class: text("class").notNull(),
   level: integer("level").notNull().default(1),
@@ -37,9 +43,7 @@ export const heroes = pgTable("heroes", {
 
 export const items = pgTable("items", {
   id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id),
+  userId: pgUuid("user_id").notNull(),
   templateId: text("template_id").notNull(),
   name: text("name").notNull(),
   slot: text("slot"),
@@ -65,9 +69,7 @@ export const itemTemplates = pgTable("item_templates", {
 
 /** Mock-Wallet: 1:1 pro User (docs/architecture/23-db-schema.md, P3) */
 export const wallets = pgTable("wallets", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => users.id),
+  userId: pgUuid("user_id").primaryKey(),
   address: text("address").notNull(),
   /** interne ID beim MPC-Provider (nur Mock: leer) */
   providerRef: text("provider_ref"),
@@ -79,9 +81,7 @@ export const wallets = pgTable("wallets", {
 export const chestOpens = pgTable(
   "chest_opens",
   {
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id),
+    userId: pgUuid("user_id").notNull(),
     chestId: text("chest_id").notNull(),
     openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -90,9 +90,7 @@ export const chestOpens = pgTable(
 
 /** Onboarding: Pfad-Wahl + Intro-Fortschritt (docs/architecture/11-onboarding-journey.md) */
 export const userOnboardings = pgTable("user_onboarding", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => users.id),
+  userId: pgUuid("user_id").primaryKey(),
   /** "casual" (Neuling) oder "expert" (Experte) */
   path: text("path").notNull().default("casual"),
   /** Intro abgeschlossen? */
@@ -103,15 +101,30 @@ export const userOnboardings = pgTable("user_onboarding", {
 
 /** Rucksack-Stacks: templateId → quantity (Materialien, Tränke). */
 export const inventoryStacks = pgTable("inventory_stacks", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => users.id),
+  userId: pgUuid("user_id").primaryKey(),
   /** jsonb: { [templateId]: number } */
   stacks: jsonb("stacks").notNull().default({}),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export type UserRow = typeof users.$inferSelect;
+export type ProfileRow = typeof profiles.$inferSelect;
+
+/**
+ * Compatibility: the old `users` table has been renamed to `users_old_backup`
+ * by migration 0005. We keep a Drizzle definition so existing API services
+ * (users.ts, auth.ts) continue to work during the Supabase Auth transition.
+ * New code should use `profiles` + Supabase Auth instead.
+ */
+export const usersOldBackup = pgTable("users_old_backup", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  displayName: text("display_name"),
+  picture: text("picture"),
+  passwordHash: text("password_hash"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type UserRow = typeof usersOldBackup.$inferSelect;
 export type HeroRow = typeof heroes.$inferSelect;
 export type ItemRow = typeof items.$inferSelect;
 export type ItemTemplateRow = typeof itemTemplates.$inferSelect;

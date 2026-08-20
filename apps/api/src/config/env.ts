@@ -27,6 +27,11 @@ export const env = {
     process.env.GOOGLE_CALLBACK_URL ?? "http://localhost:4000/auth/google/callback",
   /** When true in development, enables GET /auth/dev-login (no Google). */
   authDevBypass: process.env.AUTH_DEV_BYPASS === "true",
+  /** Supabase Auth (self-hosted) — used for Web3/SIWE authentication. */
+  supabaseUrl: process.env.SUPABASE_URL ?? "",
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "",
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+  supabaseAuthUrl: process.env.SUPABASE_AUTH_URL ?? "",
 } as const;
 
 export const sessionCookie = {
