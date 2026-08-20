@@ -1,19 +1,37 @@
 export type SpinnerState = "idle" | "checking" | "valid" | "invalid";
 
 /**
- * Small rotating circle used for live field validation.
- * - idle:    hidden
- * - checking:amber, spinning
- * - valid:   green
- * - invalid: red
+ * Live field-validation indicator.
+ * - idle:     hidden
+ * - checking: amber, spinning circle (async availability check)
+ * - valid:    green checkmark
+ * - invalid:  red cross
  */
 export function StatusSpinner({ state }: { state: SpinnerState }) {
   if (state === "idle") return null;
-  const cls =
-    state === "valid"
-      ? "status-spinner status-spinner-valid"
-      : state === "invalid"
-        ? "status-spinner status-spinner-invalid"
-        : "status-spinner status-spinner-checking";
-  return <span className={cls} role="status" aria-label={state} />;
+
+  if (state === "checking") {
+    return (
+      <span
+        className="status-spinner status-spinner-checking"
+        role="status"
+        aria-label="checking"
+      />
+    );
+  }
+
+  if (state === "valid") {
+    return (
+      <span className="status-check" role="status" aria-label="valid">
+        ✓
+      </span>
+    );
+  }
+
+  // invalid
+  return (
+    <span className="status-cross" role="status" aria-label="invalid">
+      ✗
+    </span>
+  );
 }
