@@ -35,8 +35,19 @@ $SSH_CMD "bash -s" <<REMOTE
 set -e
 # Ensure standard bin dirs are on PATH (non-login SSH shells can drop them)
 export PATH="/usr/local/bin:/usr/bin:/bin:\$PATH"
-# Fail loudly if Docker Engine is missing on the stage host
-command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not found on stage host — install Docker Engine before running migrations"; exit 1; }
+# Ensure Docker Engine is installed on the stage host (self-heal fresh VPSes)
+if ! command -v docker >/dev/null 2>&1; then
+  echo "==> Docker Engine not found on stage host — installing"
+  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  sh /tmp/get-docker.sh
+  rm -f /tmp/get-docker.sh
+  command -v systemctl >/dev/null 2>&1 && systemctl enable --now docker >/dev/null 2>&1 || \
+    command -v service >/dev/null 2>&1 && service docker start >/dev/null 2>&1 || true
+  # wait for the docker daemon to be ready
+  for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do docker info >/dev/null 2>&1 && break; sleep 2; done
+  export PATH="/usr/local/bin:/usr/bin:/bin:\$PATH"
+fi
+command -v docker >/dev/null 2>&1 || { echo "ERROR: Docker Engine still not available after install attempt"; exit 1; }
 cd ${API_PATH}/apps/api/drizzle
 
 # Get the Postgres password from the Supabase .env
