@@ -117,13 +117,32 @@ cd ${SUPABASE_DST}
 echo "==> Pulling updated images if needed"
 docker compose pull 2>&1 | tail -5
 
-echo "==> Starting Supabase stack (clean restart)"
-docker compose down -v --remove-orphans 2>&1 | tail -3 || true
-# DB uses a bind mount (./volumes/db/data), which compose -v won't remove.
-# Nuke the contents so Postgres reinitializes with the current POSTGRES_PASSWORD.
-# Keep the directory itself (ownership matters; Postgres needs write access).
-rm -rf ./volumes/db/data/*
+echo "==> Starting Supabase stack"
 docker compose up -d 2>&1 | tail -15
+
+echo "==> Waiting for db to be healthy..."
+sleep 5
+DB_OK=0
+for i in \$(seq 1 10); do
+  STATUS=\$(docker compose ps db --format '{{.Status}}' 2>/dev/null || echo "")
+  echo "  Attempt \$i: db \${STATUS}"
+  if echo "\${STATUS}" | grep -qi "healthy"; then
+    DB_OK=1
+    break
+  fi
+  sleep 5
+done
+
+if [ \$DB_OK -eq 0 ]; then
+  echo "ERROR: db container did not become healthy"
+  docker compose logs --tail 30 db 2>&1 || true
+  exit 1
+fi
+
+echo "==> Syncing supabase_auth_admin password..."
+docker compose exec -T db psql -U postgres -c "ALTER USER supabase_auth_admin WITH PASSWORD '${SUPABASE_POSTGRES_PASSWORD}';" 2>&1 || true
+echo "==> Restarting auth to pick up fixed credentials..."
+docker compose restart auth 2>&1 | tail -3
 
 echo "==> Waiting for auth container to become healthy..."
 sleep 10
