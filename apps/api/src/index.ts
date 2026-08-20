@@ -4,17 +4,19 @@ import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { runMigrationsIfAvailable } from "./db/migrate.js";
 import { isDbAvailable } from "./db/client.js";
-import { Server, Room, type Client } from "colyseus";
+import { Server, Room, type Client } from "@colyseus/core";
 import { WebSocketTransport } from "@colyseus/ws-transport";
-import { Schema } from "@colyseus/schema";
-import { IslandRoomState, ChatMessage } from "@kleeblatt/shared";
+import type { ChatMessage } from "@kleeblatt/shared";
 
 class IslandRoom extends Room {
   private names = new Map<string, string>();
   private lastMsg = new Map<string, number>();
+  private backlog: ChatMessage[] = [];
 
   onCreate() {
-    this.setState(new IslandRoomState());
+    // No schema state: chat is relayed via messages (robust against
+    // @colyseus/schema version skew). Player/sync state can be added later
+    // with a pinned schema.
     this.onMessage("chat", (client: Client, message: unknown) => {
       // a. Guard: must be an object with a string `text`.
       if (
@@ -26,24 +28,30 @@ class IslandRoom extends Room {
       }
       // b. Validate + trim + cap length, then strip control chars.
       const text = ((message as { text: string }).text).trim().slice(0, 200);
-      const clean = text.replace(/[\u0000-\u001F\u007F]/g, "");
+      const clean = text.replace(/[\u0000-\u001f\u007f]/g, "");
       if (!clean) return;
       // c. Rate-limit: at most one message per 300ms per session.
       const now = Date.now();
       const last = this.lastMsg.get(client.sessionId) ?? 0;
       if (now - last < 300) return;
       this.lastMsg.set(client.sessionId, now);
-      // d. Broadcast.
-      const msg = new ChatMessage();
-      msg.sessionId = client.sessionId;
-      msg.name = this.names.get(client.sessionId) ?? "Guest";
-      msg.text = clean;
-      msg.ts = now;
-      this.state.messages.push(msg);
-      // e. Cap history at 50 messages.
-      while (this.state.messages.length > 50) {
-        this.state.messages.shift();
-      }
+      // d. Build + store + broadcast.
+      const msg: ChatMessage = {
+        sessionId: client.sessionId,
+        name: this.names.get(client.sessionId) ?? "Guest",
+        text: clean,
+        ts: now,
+      };
+      this.backlog.push(msg);
+      while (this.backlog.length > 50) this.backlog.shift();
+      this.broadcast("chat", msg);
+    });
+
+    // Backlog is requested explicitly (after the client has registered its
+    // "history" handler) to avoid a race where onJoin's push arrives before
+    // the client is listening. See MultiplayerManager.connect().
+    this.onMessage("requestHistory", (client: Client) => {
+      client.send("history", this.backlog);
     });
   }
 
@@ -81,29 +89,22 @@ const honoListener = getRequestListener(app.fetch);
 
 // Single HTTP server shared by Hono (REST) and Colyseus (matchmaking + WS).
 // No second port: Colyseus attaches to this exact server instance.
+// Register Hono as the default request handler FIRST, so Colyseus.attach()
+// can wrap it and forward every non-/matchmake request back to Hono.
 const httpServer: HttpServer = createServer();
+httpServer.on("request", honoListener);
 
 // Colyseus transport attaches to the SAME http.Server (WebSocket upgrade).
 const transport = new WebSocketTransport({ server: httpServer });
 
-const gameServer = new Server({
-  transport,
-  // Provide an express app so Colyseus mounts its matchmaking router on it and
-  // falls back to that app for non-Colyseus routes. We then delegate that
-  // fallback to Hono, keeping the existing REST API on the same port.
-  express: () => {},
-});
+const gameServer = new Server({ transport });
 gameServer.define("island", IslandRoom);
 
-// serverless() binds the matchmaking routes + WS upgrade listener to the
-// existing http.Server WITHOUT calling listen() again.
-await gameServer.serverless();
-
-// Delegate every non-Colyseus request back through Hono's request listener.
-const colyseusExpressApp = transport.getExpressApp();
-colyseusExpressApp.use((_req: import("node:http").IncomingMessage, res: import("node:http").ServerResponse) => {
-  void honoListener(_req, res);
-});
+// NOTE: Server's constructor calls attach() internally using `transport.server`
+// (our httpServer). attach() wraps the Hono request listener registered above
+// and forwards every non-/matchmake request back to Hono. Do NOT call
+// gameServer.attach() again here — that would run without a `transport` and throw.
+// Non-/matchmake traffic is delegated back to the Hono listener registered above.
 
 httpServer.listen(env.port, () => {
   console.info(

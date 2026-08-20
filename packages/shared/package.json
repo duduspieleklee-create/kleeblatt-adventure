@@ -20,7 +20,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@colyseus/schema": "^4.0.31"
+    "@colyseus/schema": "^3.0.0"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

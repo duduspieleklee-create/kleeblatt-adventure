@@ -13,6 +13,7 @@
 
 import { Client, type Room } from "colyseus.js";
 import { gameBridge } from "@kleeblatt/shared";
+import type { ChatMessage } from "@kleeblatt/shared";
 
 export const COLYSEUS_DEFAULT_URL = "http://localhost:4000";
 export const ISLAND_ROOM_NAME = "island";
@@ -37,10 +38,19 @@ export class MultiplayerManager {
       this.room = await this.client.joinOrCreate(ISLAND_ROOM_NAME, { name });
       this.connected = true;
 
-      // onAdd fires for the live backlog too, so late joiners receive history.
-      this.room.state.messages.onAdd((msg: { name: string; text: string; ts: number }, _i: number) => {
+      // Live chat + backlog arrive as messages (no schema state).
+      this.room.onMessage("chat", (msg: ChatMessage) => {
         gameBridge.emit("chat:message", { name: msg.name, text: msg.text, ts: msg.ts });
       });
+      this.room.onMessage("history", (list: ChatMessage[]) => {
+        for (const m of list) {
+          gameBridge.emit("chat:message", { name: m.name, text: m.text, ts: m.ts });
+        }
+      });
+
+      // Request backlog only after the "history" handler is registered, so
+      // late-joiners reliably receive prior messages.
+      this.room.send("requestHistory");
 
       this.room.onLeave((code) => {
         console.warn(`[MultiplayerManager] left island room (code ${code})`);

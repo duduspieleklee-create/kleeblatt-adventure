@@ -1,27 +1,15 @@
-import { Schema, ArraySchema, type } from "@colyseus/schema";
-
 /**
- * A single chat message broadcast within an island room.
+ * Shared chat types for the island room.
+ *
+ * Chat is relayed via Colyseus message-passing (onMessage/broadcast), so it
+ * does NOT depend on @colyseus/schema. This keeps the proof robust against the
+ * schema-version skew between @colyseus/core@0.16.x and modern @colyseus/schema.
+ * Player/sync state can be added later with a pinned schema version.
  */
-export class ChatMessage extends Schema {
-  @type("string")
-  sessionId = "";
 
-  @type("string")
-  name = "";
-
-  @type("string")
-  text = "";
-
-  @type("number")
-  ts = 0;
-}
-
-/**
- * Authoritative Colyseus room state for an island room.
- * Single source of truth for both the API (server) and the web (client).
- */
-export class IslandRoomState extends Schema {
-  @type([ChatMessage])
-  messages = new ArraySchema<ChatMessage>();
+export interface ChatMessage {
+  sessionId: string;
+  name: string;
+  text: string;
+  ts: number;
 }
