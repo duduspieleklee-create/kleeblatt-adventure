@@ -122,20 +122,24 @@ docker compose up -d 2>&1 | tail -15
 
 echo "==> Waiting for Auth to be healthy..."
 sleep 10
+HEALTH="000"
 for i in 1 2 3 4 5 6 7 8 9 10; do
-  if curl -fsS -H "apikey: ${SUPABASE_ANON_KEY}" http://localhost:8000/auth/v1/health >/dev/null 2>&1; then
+  HEALTH=\$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: ${SUPABASE_ANON_KEY}" http://localhost:8000/auth/v1/health 2>/dev/null || echo "000")
+  if [ "\$HEALTH" = "200" ]; then
     echo "SUPABASE AUTH HEALTHY"
     break
   fi
-  echo "  Attempt \$i: not ready yet..."
+  echo "  Attempt \$i: HTTP \${HEALTH}"
   sleep 5
 done
 
-# Final check
-if curl -fsS -H "apikey: ${SUPABASE_ANON_KEY}" http://localhost:8000/auth/v1/health >/dev/null 2>&1; then
+if [ "\$HEALTH" = "200" ]; then
   echo "SUPABASE DEPLOY OK"
 else
-  echo "SUPABASE HEALTH CHECK FAILED"
+  echo "SUPABASE HEALTH CHECK FAILED — last status=\${HEALTH}"
+  echo "=== envoy/auth container logs ==="
+  docker compose logs --tail 15 supabase-envoy 2>&1 || true
+  docker compose logs --tail 15 supabase-auth 2>&1 || true
   exit 1
 fi
 REMOTE
