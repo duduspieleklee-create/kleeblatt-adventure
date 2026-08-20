@@ -14,6 +14,7 @@
  * widget; for now the direct transfer is the simplest testable on-chain action.
  */
 import { useState } from "react";
+import { getKltTokenAddress } from "../game/config/contracts";
 import "../styles/staking.css";
 
 interface Props {
@@ -54,11 +55,7 @@ export function ShopOverlay({ onClose, walletAddress, onPurchased }: Props) {
       return;
     }
 
-    const kltAddress = import.meta.env.VITE_KLT_CONTRACT_ADDRESS;
-    if (!kltAddress) {
-      setState({ status: "error", message: "KLT contract address not configured." });
-      return;
-    }
+    const kltAddress = getKltTokenAddress();
 
     try {
       // 1. Make sure we are on the Immutable testnet (13473).

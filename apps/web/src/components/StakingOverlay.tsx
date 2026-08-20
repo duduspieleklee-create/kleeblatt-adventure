@@ -6,6 +6,7 @@
  */
 import { useState, useEffect, useCallback } from "react";
 import { fetchStakingInfo, type StakingInfo } from "../lib/api";
+import { getStakingContractAddress, getKltTokenAddress } from "../game/config/contracts";
 import "../styles/staking.css";
 
 interface Props {
@@ -35,9 +36,8 @@ async function callStakingContract(
   const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum;
   if (!ethereum) throw new Error("No wallet found. Install MetaMask or another Web3 wallet.");
 
-  const stakingAddress = import.meta.env.VITE_STAKING_CONTRACT_ADDRESS;
-  const kltAddress = import.meta.env.VITE_KLT_CONTRACT_ADDRESS;
-  if (!stakingAddress) throw new Error("Staking contract address not configured.");
+  const stakingAddress = getStakingContractAddress();
+  const kltAddress = getKltTokenAddress();
 
   const accounts = (await ethereum.request({ method: "eth_requestAccounts" })) as string[];
   const from = accounts[0];
