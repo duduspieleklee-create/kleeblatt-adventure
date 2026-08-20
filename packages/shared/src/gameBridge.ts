@@ -37,10 +37,11 @@ export type GameBridgeEvents = {
   "dialog:start": Loose;
   "dialog:option": Loose;
 
-  // React → engine (lifecycle + inventory)
+  // React → engine (lifecycle + inventory + auth)
   pause: Record<string, never>;
   resume: Record<string, never>;
   "inventory:hydrate": { stacks: InventoryStacks };
+  logout: Record<string, never>;
 
   // React → engine (actions)
   "react:useItem": { itemId: string };

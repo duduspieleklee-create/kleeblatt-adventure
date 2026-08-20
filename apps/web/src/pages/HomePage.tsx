@@ -1,6 +1,8 @@
 import { useMe } from "../hooks/useMe";
+import { useWalletBalance } from "../hooks/useWalletBalance";
 import { TopBar } from "../components/TopBar";
 import { GamePage } from "./GamePage";
+import { gameBridge } from "@kleeblatt/shared";
 
 /**
  * HomePage — minimal shell. All gameplay UI (quests, dialog, menus) runs
@@ -9,15 +11,28 @@ import { GamePage } from "./GamePage";
  */
 export function HomePage() {
   const { state: meState, logout } = useMe();
+  const { state: walletState } = useWalletBalance(meState.status === "authenticated");
+
+  const handleLogout = () => {
+    void logout();
+    // Tell Phaser to return to the login scene after the session ends.
+    gameBridge.emit("logout");
+  };
+
+  const walletAddress = walletState.status === "ready" ? walletState.data.address : undefined;
+  const ethBalance = walletState.status === "ready" ? walletState.data.ethBalance : undefined;
+  const imxBalance = walletState.status === "ready" ? walletState.data.imxBalance : undefined;
 
   return (
     <div className="app-shell">
       {meState.status === "authenticated" && (
         <TopBar
           meState={meState}
-          hero={null}
-          walletAddress={undefined}
-          onLogout={() => void logout()}
+          hero={meState.me.hero}
+          walletAddress={walletAddress}
+          ethBalance={ethBalance}
+          imxBalance={imxBalance}
+          onLogout={handleLogout}
         />
       )}
       <div className="app-body game-wrapper">
