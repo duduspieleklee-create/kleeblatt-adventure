@@ -14,6 +14,7 @@ function toSessionUser(row: UserRow): SessionUser {
     email: row.email,
     displayName: row.displayName,
     picture: row.picture,
+    guest: row.guest ?? false,
   };
 }
 
@@ -33,16 +34,84 @@ export async function createEmailUser(input: {
       displayName,
       picture: null,
       passwordHash: input.passwordHash,
+      guest: false,
       createdAt: new Date(),
     };
     await db.insert(usersTable).values(row);
     return toSessionUser(row);
   }
 
-  const user: SessionUser = { userId, email: input.email, displayName, picture: null };
+  const user: SessionUser = { userId, email: input.email, displayName, picture: null, guest: false };
   memUsers.set(userId, user);
   memPasswordHashes.set(userId, input.passwordHash);
   return user;
+}
+
+/**
+ * Create a temporary "play as guest" account — a real user row (no password),
+ * flagged guest=true so the UI can offer an upgrade later.
+ */
+export async function createGuestUser(): Promise<SessionUser> {
+  const userId = newId("guest");
+  const displayName = "Guest";
+  const email = `guest+${userId}@localhost`;
+
+  if (await isDbAvailable()) {
+    const db = getDb()!;
+    const row: UserRow = {
+      id: userId,
+      email,
+      displayName,
+      picture: null,
+      passwordHash: null,
+      guest: true,
+      createdAt: new Date(),
+    };
+    await db.insert(usersTable).values(row);
+    return toSessionUser(row);
+  }
+
+  const user: SessionUser = { userId, email, displayName, picture: null, guest: true };
+  memUsers.set(userId, user);
+  return user;
+}
+
+/**
+ * Upgrade a guest account to a full email/password account in place
+ * (same userId, so progress is preserved). Returns the updated SessionUser,
+ * or null if the account isn't a guest / doesn't exist.
+ */
+export async function upgradeGuestUser(
+  userId: string,
+  email: string,
+  passwordHash: string,
+): Promise<SessionUser | null> {
+  if (await isDbAvailable()) {
+    const db = getDb()!;
+    const existing = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    if (existing.length === 0 || existing[0]?.guest !== true) return null;
+    await db
+      .update(usersTable)
+      .set({ email, passwordHash, guest: false })
+      .where(eq(usersTable.id, userId));
+    const rows = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    return rows[0] ? toSessionUser(rows[0]) : null;
+  }
+
+  const u = memUsers.get(userId);
+  if (!u || !u.guest) return null;
+  const updated: SessionUser = { ...u, email, guest: false };
+  memUsers.set(userId, updated);
+  memPasswordHashes.set(userId, passwordHash);
+  return memUsers.get(userId) ?? null;
 }
 
 /** Lookup a user by email (case-insensitive). Used for login + availability checks. */
@@ -113,6 +182,7 @@ export async function upsertGoogleUser(input: {
       displayName: input.displayName ?? existing[0]?.displayName ?? null,
       picture: input.picture ?? existing[0]?.picture ?? null,
       passwordHash: existing[0]?.passwordHash ?? null,
+      guest: existing[0]?.guest ?? false,
       createdAt: existing[0]?.createdAt ?? new Date(),
     };
     if (existing.length > 0) {
@@ -132,6 +202,7 @@ export async function upsertGoogleUser(input: {
     email: input.email,
     displayName: input.displayName ?? existing?.displayName ?? null,
     picture: input.picture ?? existing?.picture ?? null,
+    guest: existing?.guest ?? false,
   };
   memUsers.set(userId, user);
   return user;

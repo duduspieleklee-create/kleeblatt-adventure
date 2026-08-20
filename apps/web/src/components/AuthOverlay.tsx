@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { MeResponse } from "@kleeblatt/shared";
 import { PASSWORD_REQUIREMENTS, validatePassword } from "@kleeblatt/shared";
-import { checkEmailAvailable, login, register } from "../lib/api";
+import { checkEmailAvailable, login, register, guest } from "../lib/api";
 import { signInWithWalletAndExchange, WalletAuthError } from "../game/utils/walletAuth";
 import { StatusSpinner, type SpinnerState } from "./StatusSpinner";
 import "../styles/auth.css";
@@ -95,6 +95,23 @@ export function AuthOverlay({ onAuthenticated }: AuthOverlayProps) {
       onAuthenticated(me);
     } catch (err) {
       setError(err instanceof WalletAuthError ? err.message : "Wallet login failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleGuestLogin(): Promise<void> {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const result = await guest();
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      onAuthenticated(result.data);
+    } catch {
+      setError("Network error. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -204,6 +221,14 @@ export function AuthOverlay({ onAuthenticated }: AuthOverlayProps) {
         </form>
 
         <div className="auth-alt">
+          <button
+            type="button"
+            className="auth-guest"
+            onClick={() => void handleGuestLogin()}
+            disabled={submitting}
+          >
+            Play as guest
+          </button>
           <button
             type="button"
             className="auth-wallet"

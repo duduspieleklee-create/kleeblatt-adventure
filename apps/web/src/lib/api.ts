@@ -93,6 +93,30 @@ export async function login(
   return { ok: true, status: res.status, data: body.me as import("@kleeblatt/shared").MeResponse };
 }
 
+/** Start a temporary guest session (no email/password required). */
+export async function guest(): Promise<ApiResult<import("@kleeblatt/shared").MeResponse>> {
+  const res = await apiFetch("/auth/guest", { method: "POST" });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Guest login failed.") };
+  return { ok: true, status: res.status, data: body.me as import("@kleeblatt/shared").MeResponse };
+}
+
+/** Upgrade the current guest session into a full email/password account in place. */
+export async function upgradeAccount(
+  email: string,
+  password: string,
+): Promise<ApiResult<import("@kleeblatt/shared").MeResponse>> {
+  const res = await apiFetch("/auth/upgrade", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Upgrade failed.") };
+  return { ok: true, status: res.status, data: body.me as import("@kleeblatt/shared").MeResponse };
+}
+
 export interface EmailAvailability {
   available: boolean;
   valid: boolean;

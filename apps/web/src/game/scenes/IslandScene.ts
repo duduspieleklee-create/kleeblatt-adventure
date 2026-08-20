@@ -136,6 +136,7 @@ export class IslandScene extends Phaser.Scene {
 
   private async emitSessionContext(): Promise<void> {
     let providerType: "email" | "google" | "wallet" | "guest" = "guest";
+    let isGuest = false;
     let profile: {
       userId: string;
       username: string | null;
@@ -143,6 +144,19 @@ export class IslandScene extends Phaser.Scene {
       level: number;
       gold: number;
     } | null = null;
+
+    // Authoritative guest flag comes from the backend session (/api/me),
+    // not from the Supabase JS client (which is absent for cookie-based auth).
+    try {
+      const res = await fetch("/api/me", { credentials: "include" });
+      if (res.ok) {
+        const me = (await res.json()) as { guest?: boolean; email?: string | null };
+        isGuest = Boolean(me.guest);
+        providerType = isGuest ? "guest" : me.email ? "email" : "guest";
+      }
+    } catch {
+      // If /api/me is unreachable, fall back to the Supabase-derived guess below.
+    }
 
     if (supabase) {
       const { data: { session } } = await supabase.auth.getSession();
@@ -174,7 +188,7 @@ export class IslandScene extends Phaser.Scene {
       providerType,
       profile,
       walletLinked: profile?.walletAddress != null,
-      isGuest: providerType === "guest",
+      isGuest,
     });
   }
 

@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import type { MeState } from "../hooks/useMe";
-import type { Hero } from "@kleeblatt/shared";
+import { type Hero, validatePassword } from "@kleeblatt/shared";
 import { linkWalletToProfile, WalletAuthError } from "../game/utils/walletAuth";
-import { supabase } from "../game/utils/supabaseClient";
 import { gameBridge } from "@kleeblatt/shared";
+import { upgradeAccount } from "../lib/api";
 import type { SessionContext } from "../hooks/useSessionContext";
+
+const EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
 
 interface TopBarProps {
   meState: MeState;
@@ -22,7 +24,12 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
-  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upEmail, setUpEmail] = useState("");
+  const [upPassword, setUpPassword] = useState("");
+  const [upConfirm, setUpConfirm] = useState("");
+  const [upError, setUpError] = useState<string | null>(null);
+  const [upSubmitting, setUpSubmitting] = useState(false);
 
   const handleAddWallet = async (): Promise<void> => {
     setWalletLoading(true);
@@ -37,15 +44,22 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
     }
   };
 
-  const handleUpgradeAccount = async (): Promise<void> => {
-    if (!supabase) return;
-    setUpgradeLoading(true);
-    gameBridge.emit("react:upgradeAccount");
+  const handleUpgradeAccount = async (e: FormEvent): Promise<void> => {
+    e.preventDefault();
+    setUpError(null);
+    setUpSubmitting(true);
     try {
-      await supabase.auth.linkIdentity({ provider: "google" });
-    } catch (err) {
-      console.error("[TopBar] Upgrade failed:", err);
-      setUpgradeLoading(false);
+      const result = await upgradeAccount(upEmail.trim().toLowerCase(), upPassword);
+      if (!result.ok) {
+        setUpError(result.message);
+        return;
+      }
+      // The session cookie is now a full account; reload to refresh the whole session context.
+      window.location.reload();
+    } catch {
+      setUpError("Network error. Please try again.");
+    } finally {
+      setUpSubmitting(false);
     }
   };
 
@@ -61,6 +75,11 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
 
   const name = meState.me.displayName ?? meState.me.email;
   const pic = meState.me.picture;
+
+  const upPwValid = validatePassword(upPassword).valid;
+  const upConfirmValid = upConfirm.length > 0 && upConfirm === upPassword && upPwValid;
+  const upCanSubmit =
+    EMAIL_RE.test(upEmail.trim()) && upPwValid && upConfirmValid && !upSubmitting;
 
   return (
     <nav className="topbar">
@@ -97,11 +116,31 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
           </button>
         )}
         {walletError && (<span className="topbar-wallet-error">{walletError}</span>)}
-        {sessionContext?.isGuest && (
-          <button type="button" className="topbar-upgrade-btn" onClick={handleUpgradeAccount} disabled={upgradeLoading}
-            title="Your progress is stored locally. Link a Google account to save it permanently.">
-            {upgradeLoading ? "Upgrading..." : "Upgrade to Full Account"}
+        {sessionContext?.isGuest && !upgradeOpen && (
+          <button type="button" className="topbar-upgrade-btn" onClick={() => setUpgradeOpen(true)}
+            title="Your progress is stored temporarily. Create an account to save it permanently.">
+            Upgrade to Full Account
           </button>
+        )}
+        {sessionContext?.isGuest && upgradeOpen && (
+          <form className="topbar-upgrade-form" onSubmit={handleUpgradeAccount}>
+            <input className="topbar-upgrade-input" type="email" autoComplete="email"
+              placeholder="you@example.com" value={upEmail} onChange={(e) => setUpEmail(e.target.value)} />
+            <input className="topbar-upgrade-input" type="password" autoComplete="new-password"
+              placeholder="Password" value={upPassword} onChange={(e) => setUpPassword(e.target.value)} />
+            <input className="topbar-upgrade-input" type="password" autoComplete="new-password"
+              placeholder="Confirm password" value={upConfirm} onChange={(e) => setUpConfirm(e.target.value)} />
+            {upError && <span className="topbar-upgrade-error">{upError}</span>}
+            <div className="topbar-upgrade-actions">
+              <button type="submit" className="topbar-upgrade-btn" disabled={!upCanSubmit}>
+                {upSubmitting ? "Upgrading..." : "Create account"}
+              </button>
+              <button type="button" className="topbar-upgrade-cancel"
+                onClick={() => { setUpgradeOpen(false); setUpError(null); }}>
+                Cancel
+              </button>
+            </div>
+          </form>
         )}
         {walletAddress && (
           <span className="topbar-wallet" title={walletAddress}>
