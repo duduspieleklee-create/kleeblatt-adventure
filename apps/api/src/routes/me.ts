@@ -14,6 +14,7 @@ meRoutes.get("/me", requireAuth, async (c) => {
     displayName: user.displayName,
     picture: user.picture,
     hero,
+    guest: user.guest,
   };
   return c.json(body);
 });

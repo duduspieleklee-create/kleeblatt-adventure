@@ -8,6 +8,7 @@ describe("jwt session", () => {
       email: "t@example.com",
       displayName: "Tester",
       picture: null,
+      guest: false,
     };
     const token = await signSession(user);
     const back = await verifySession(token);

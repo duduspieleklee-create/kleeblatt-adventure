@@ -121,6 +121,8 @@ export const usersOldBackup = pgTable("users_old_backup", {
   displayName: text("display_name"),
   picture: text("picture"),
   passwordHash: text("password_hash"),
+  /** true for temporary "play as guest" accounts (upgradable to full). */
+  guest: boolean("guest").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
