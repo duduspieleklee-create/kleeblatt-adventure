@@ -6,6 +6,7 @@ import { gameBridge } from "@kleeblatt/shared";
 import { UpgradeOverlay } from "./UpgradeOverlay";
 import { StakingOverlay } from "./StakingOverlay";
 import { FaucetOverlay } from "./FaucetOverlay";
+import { ShopOverlay } from "./ShopOverlay";
 import type { SessionContext } from "../hooks/useSessionContext";
 
 /** Format a token amount for display: trim trailing zeros, add thousands separators. */
@@ -35,6 +36,22 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [stakingOpen, setStakingOpen] = useState(false);
   const [faucetOpen, setFaucetOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
+
+  // Premium (test-only) — persisted in localStorage so the neon survives reloads.
+  const [premiumActive, setPremiumActive] = useState<boolean>(() => {
+    const raw = localStorage.getItem("kleeblatt_premium_expires");
+    if (!raw) return false;
+    const exp = Number(raw);
+    if (!Number.isNaN(exp) && exp > Date.now()) return true;
+    localStorage.removeItem("kleeblatt_premium_expires");
+    return false;
+  });
+
+  const handlePurchased = (): void => {
+    localStorage.setItem("kleeblatt_premium_expires", String(Date.now() + 30 * 24 * 3600 * 1000));
+    setPremiumActive(true);
+  };
 
   const handleAddWallet = async (): Promise<void> => {
     setWalletLoading(true);
@@ -64,7 +81,7 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
 
   return (
     <>
-      <nav className="topbar">
+      <nav className={`topbar${premiumActive ? " topbar--neon" : ""}`}>
         <div className="topbar-left">
           <div className="topbar-logo">
             <img src="/assets/ui/leaf.png" alt="" className="topbar-logo-icon" onError={(e) => (e.currentTarget.style.display = "none")} />
@@ -108,6 +125,9 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
             <>
               <button type="button" className="topbar-faucet-btn" onClick={() => setFaucetOpen(true)}>
                 Faucet
+              </button>
+              <button type="button" className="topbar-shop-btn" onClick={() => setShopOpen(true)}>
+                Shop
               </button>
               <button type="button" className="topbar-staking-btn" onClick={() => setStakingOpen(true)}>
                 Staking
@@ -174,6 +194,13 @@ export function TopBar({ meState, hero, walletAddress, ethBalance, imxBalance, o
         <FaucetOverlay
           walletAddress={walletAddress}
           onClose={() => setFaucetOpen(false)}
+        />
+      )}
+      {shopOpen && walletAddress && !sessionContext?.isGuest && (
+        <ShopOverlay
+          walletAddress={walletAddress}
+          onClose={() => setShopOpen(false)}
+          onPurchased={handlePurchased}
         />
       )}
     </>
