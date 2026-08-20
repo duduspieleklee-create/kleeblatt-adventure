@@ -1,12 +1,11 @@
 import { useMe } from "../hooks/useMe";
 import { TopBar } from "../components/TopBar";
-import { DebugConsole } from "../components/DebugConsole";
 import { GamePage } from "./GamePage";
 
 /**
- * HomePage — minimal shell. All auth, character creation, and onboarding
- * now happen inside Phaser scenes (LoginScene, CharacterCreationScene).
- * React only provides the page container + optional TopBar (logout).
+ * HomePage — minimal shell. All gameplay UI (quests, dialog, menus) runs
+ * inside Phaser scenes. React only renders the TopBar (user info + logout)
+ * and the Phaser game container.
  */
 export function HomePage() {
   const { state: meState, logout } = useMe();
@@ -21,10 +20,9 @@ export function HomePage() {
           onLogout={() => void logout()}
         />
       )}
-      <div className="app-body game_wrapper">
+      <div className="app-body game-wrapper">
         <GamePage />
       </div>
-      <DebugConsole />
     </div>
   );
 }
