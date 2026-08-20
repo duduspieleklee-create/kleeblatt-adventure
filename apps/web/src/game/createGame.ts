@@ -3,6 +3,8 @@ import { gameBridge } from "@kleeblatt/shared";
 import { BASE_WIDTH, BASE_HEIGHT } from "./config/GameConfig";
 import { BootScene } from "./scenes/BootScene";
 import { PreloaderScene } from "./scenes/PreloaderScene";
+import { LoginScene } from "./scenes/LoginScene";
+import { CharacterCreationScene } from "./scenes/CharacterCreationScene";
 import { MainMenuScene } from "./scenes/MainMenuScene";
 import { IslandScene } from "./scenes/IslandScene";
 import { UIScene } from "./scenes/UIScene";
@@ -22,6 +24,9 @@ export function createGame(container: HTMLElement): Phaser.Game {
     height: BASE_HEIGHT,
     parent: container,
     backgroundColor: "#000000",
+    dom: {
+      createContainer: true,
+    },
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -38,7 +43,7 @@ export function createGame(container: HTMLElement): Phaser.Game {
         debug: false,
       },
     },
-    scene: [BootScene, PreloaderScene, MainMenuScene, IslandScene, UIScene],
+    scene: [BootScene, PreloaderScene, LoginScene, CharacterCreationScene, MainMenuScene, IslandScene, UIScene],
   };
 
   const game = new Phaser.Game(config);
