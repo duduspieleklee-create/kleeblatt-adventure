@@ -32,7 +32,6 @@ async function main() {
   await mkt.setContracts(kliAddress, kltAddress);
   console.log("Marketplace contracts configured");
 
-  await kli.grantRole(await kli.DEFAULT_ADMIN_ROLE(), deployer.address);
   await klt.addMinter(mktAddress);
 
   // ─── KleeblattStaking ──────────────────────────────────────────────────────
