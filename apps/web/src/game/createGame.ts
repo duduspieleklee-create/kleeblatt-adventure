@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { gameBridge } from "@kleeblatt/shared";
 import { BASE_WIDTH, BASE_HEIGHT } from "./config/GameConfig";
 import { BootScene } from "./scenes/BootScene";
 import { PreloaderScene } from "./scenes/PreloaderScene";
@@ -41,6 +42,22 @@ export function createGame(container: HTMLElement): Phaser.Game {
   };
 
   const game = new Phaser.Game(config);
+
+  // Wire shared bridge: pause/resume control the main game scene
+  const onPause = (): void => {
+    game.scene.pause("IslandScene");
+  };
+  const onResume = (): void => {
+    game.scene.resume("IslandScene");
+  };
+  gameBridge.on("pause", onPause);
+  gameBridge.on("resume", onResume);
+
+  // Clean up bridge listeners when the game is destroyed
+  game.events.once(Phaser.Core.Events.DESTROY, () => {
+    gameBridge.off("pause", onPause);
+    gameBridge.off("resume", onResume);
+  });
 
   if (import.meta.env.DEV) {
     (window as unknown as { __PHASER_GAME__?: Phaser.Game }).__PHASER_GAME__ = game;

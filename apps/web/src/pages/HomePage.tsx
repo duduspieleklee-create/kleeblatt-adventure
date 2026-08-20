@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { HeroResponse, OnboardingPath } from "@kleeblatt/shared";
 import { useMe } from "../hooks/useMe";
 import { useHero } from "../hooks/useHero";
@@ -10,24 +10,7 @@ import { DebugConsole } from "../components/DebugConsole";
 import { OnboardingChoice } from "../components/OnboardingChoice";
 import { NeulingIntro } from "../components/NeulingIntro";
 import { ExperteIntro } from "../components/ExperteIntro";
-import { MatchPage } from "./MatchPage";
-
-/** Summiere Stats aller ausgerüsteten Items. */
-function sumEquippedStats(
-  hero: { equipped: Record<string, string> },
-  inventory: Array<{ itemId: string; stats: Record<string, number> }>,
-): Record<string, number> {
-  const result: Record<string, number> = {};
-  for (const itemId of Object.values(hero.equipped ?? {})) {
-    const item = inventory.find((i) => i.itemId === itemId);
-    if (item?.stats) {
-      for (const [key, val] of Object.entries(item.stats)) {
-        result[key] = (result[key] ?? 0) + val;
-      }
-    }
-  }
-  return result;
-}
+import { GamePage } from "./GamePage";
 
 export function HomePage() {
   const { state: meState, logout, refresh: refreshMe } = useMe();
@@ -72,17 +55,6 @@ export function HomePage() {
   useEffect(() => {
     if (isAuthenticated) setShowAuth(false);
   }, [isAuthenticated]);
-
-  // Equipped stats für MatchPage berechnen
-  const equippedStats = useMemo(() => {
-    if (hero.state.status !== "ready") return {};
-    return sumEquippedStats(hero.state.hero, hero.state.inventory);
-  }, [hero.state]);
-
-  // Nach Match-Ende (XP + Level-Up verrechnet) Held neu laden
-  const handleMatchResult = useCallback(() => {
-    hero.refresh();
-  }, [hero]);
 
   if (!isAuthenticated) {
     return (
@@ -183,12 +155,7 @@ export function HomePage() {
         onLogout={() => void logout()}
       />
       <div className="app-body game-wrapper">
-        <MatchPage
-          heroClass={hero.state.hero.class}
-          heroLevel={hero.state.hero.level}
-          equippedStats={equippedStats}
-          onMatchResult={handleMatchResult}
-        />
+        <GamePage />
       </div>
       <DebugConsole />
     </div>

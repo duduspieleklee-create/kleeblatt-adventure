@@ -61,8 +61,8 @@ Full tree: [STRUCTURE.md](./STRUCTURE.md)
 
 ## Live
 
-Production web client: **https://game.kleeblatt.space/**  
-Deploy: push to `main` → workflow `Deploy game.kleeblatt.space` (see [DEPLOYMENT.md](./DEPLOYMENT.md)).
+Stage: **https://stage.kleeblatt.space/**  
+Deploy: push to `main` → workflow `Deploy Stage (kleeblatt-adventure)` (see [DEPLOYMENT.md](./DEPLOYMENT.md)).
 
 ## License
 

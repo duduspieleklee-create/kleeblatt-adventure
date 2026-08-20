@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Stage deploy for kleeblatt-adventure.
-# Triggered by .github/workflows/deploy-stage.yml on every push to main.
+# Triggered by .github/workflows/deploy.yml on every push to main.
 # CI produces the builds (turbo build of web+api); this script ships them to
 # the stage server (185.47.174.207 / stage.kleeblatt.space) and (re)starts
 # the API with PM2. The web build is served statically by Caddy; API paths

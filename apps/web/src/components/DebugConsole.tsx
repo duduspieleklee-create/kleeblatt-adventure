@@ -73,15 +73,17 @@ export function DebugConsole() {
 
     const eventNames = [
       "player:hp", "player:resource", "player:level", "player:death", "player:respawn",
-      "enemy:died", "enemy:damaged", "loot:received", "match:started", "match:ended",
+      "enemy:died", "enemy:damaged", "loot:received",
       "skill:cooldown", "skill:used", "chest:opened",
-      "match:start", "match:exit", "loadout:update", "pause", "resume",
+      "scene:ready", "pause", "resume", "inventory:updated", "inventory:hydrate",
+      "quest:started", "quest:progress", "quest:completed",
+      "dialog:start", "dialog:option",
     ] as const;
 
     const handlers: Record<string, (p: unknown) => void> = {};
     eventNames.forEach((name) => {
       handlers[name] = (payload) => {
-        const tag = name.includes(":") && ["match:start", "match:exit", "loadout:update", "pause", "resume"].includes(name) ? "action" : "event";
+        const tag = name.includes(":") && ["pause", "resume"].includes(name) ? "action" : "event";
         addLog(tag as LogLevel, `${name}: ${JSON.stringify(payload).slice(0, 200)}`);
       };
       gameBridge.on(name, handlers[name]);
