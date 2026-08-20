@@ -64,6 +64,46 @@ export async function logout(): Promise<void> {
   await apiFetch("/auth/logout", { method: "POST" });
 }
 
+export async function register(
+  email: string,
+  password: string,
+): Promise<ApiResult<import("@kleeblatt/shared").MeResponse>> {
+  const res = await apiFetch("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Registration failed.") };
+  return { ok: true, status: res.status, data: body.me as import("@kleeblatt/shared").MeResponse };
+}
+
+export async function login(
+  email: string,
+  password: string,
+): Promise<ApiResult<import("@kleeblatt/shared").MeResponse>> {
+  const res = await apiFetch("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Login failed.") };
+  return { ok: true, status: res.status, data: body.me as import("@kleeblatt/shared").MeResponse };
+}
+
+export interface EmailAvailability {
+  available: boolean;
+  valid: boolean;
+}
+
+/** Lightweight email availability check for the registration form. */
+export async function checkEmailAvailable(email: string): Promise<EmailAvailability> {
+  const res = await apiFetch(`/auth/check-email?email=${encodeURIComponent(email)}`);
+  if (!res.ok) return { available: false, valid: false };
+  return (await res.json()) as EmailAvailability;
+}
+
 export async function fetchHero(): Promise<ApiResult<Hero | null>> {
   const res = await apiFetch("/hero");
   const body = await res.json().catch(() => null);

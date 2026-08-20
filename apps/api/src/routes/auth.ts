@@ -3,11 +3,14 @@
 import { randomBytes } from "node:crypto";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { SESSION_COOKIE_NAME } from "@kleeblatt/shared";
+import { SESSION_COOKIE_NAME, type MeResponse, type SessionUser } from "@kleeblatt/shared";
 import { env, sessionCookie } from "../config/env.js";
 import { signSession } from "../lib/jwt.js";
-import { upsertGoogleUser } from "../services/users.js";
+import { upsertGoogleUser, createEmailUser, getUserByEmail, verifyEmailPassword } from "../services/users.js";
 import { getOrCreateWallet } from "../services/wallets.js";
+import { getHero } from "../services/heroes.js";
+import { hashPassword } from "../lib/password.js";
+import { registerSchema, loginSchema, emailSchema } from "../lib/validation.js";
 import type { AppVariables } from "../middleware/session.js";
 
 export const authRoutes = new Hono<{ Variables: AppVariables }>();
@@ -176,6 +179,94 @@ authRoutes.get("/auth/google/callback", async (c) => {
 authRoutes.post("/auth/logout", (c) => {
   deleteCookie(c, SESSION_COOKIE_NAME, { path: sessionCookie.path });
   return c.json({ ok: true });
+});
+
+/** Build a MeResponse (mirrors /me) including the optional hero. */
+async function buildMe(user: SessionUser): Promise<MeResponse> {
+  const hero = await getHero(user.userId);
+  return {
+    userId: user.userId,
+    email: user.email,
+    displayName: user.displayName,
+    picture: user.picture,
+    hero,
+  };
+}
+
+/** POST /auth/register — create an email/password account and start a session. */
+authRoutes.post("/auth/register", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = registerSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: {
+          code: "VALIDATION",
+          message: parsed.error.issues[0]?.message ?? "Invalid input.",
+          retryable: false,
+        },
+      },
+      400,
+    );
+  }
+  const { email, password } = parsed.data;
+
+  const existing = await getUserByEmail(email);
+  if (existing) {
+    return c.json(
+      {
+        error: {
+          code: "EMAIL_TAKEN",
+          message: "This email is already registered.",
+          retryable: false,
+        },
+      },
+      409,
+    );
+  }
+
+  const passwordHash = await hashPassword(password);
+  const user = await createEmailUser({ email, passwordHash });
+  await getOrCreateWallet(user.userId);
+  const jwt = await signSession(user);
+  setCookie(c, SESSION_COOKIE_NAME, jwt, cookieOpts());
+  return c.json({ ok: true, me: await buildMe(user) }, 201);
+});
+
+/** POST /auth/login — verify email + password and start a session. */
+authRoutes.post("/auth/login", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = loginSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json(
+      { error: { code: "VALIDATION", message: "Invalid email or password.", retryable: false } },
+      400,
+    );
+  }
+  const { email, password } = parsed.data;
+
+  const user = await verifyEmailPassword(email, password);
+  if (!user) {
+    return c.json(
+      { error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password.", retryable: false } },
+      401,
+    );
+  }
+
+  const jwt = await signSession(user);
+  setCookie(c, SESSION_COOKIE_NAME, jwt, cookieOpts());
+  return c.json({ ok: true, me: await buildMe(user) }, 200);
+});
+
+/** GET /auth/check-email?email= — availability check for the registration form. */
+authRoutes.get("/auth/check-email", async (c) => {
+  const raw = c.req.query("email") ?? "";
+  const parsed = emailSchema.safeParse(raw);
+  if (!parsed.success) {
+    return c.json({ available: false, valid: false });
+  }
+  const existing = await getUserByEmail(parsed.data);
+  return c.json({ available: !existing, valid: true });
 });
 
 /**

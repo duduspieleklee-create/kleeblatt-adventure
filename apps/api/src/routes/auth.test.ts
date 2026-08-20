@@ -131,3 +131,72 @@ describe("auth/google/callback", () => {
     expect(stateCookie?.toLowerCase()).toContain("max-age=0");
   });
 });
+
+describe("auth/email-password", () => {
+  const EMAIL = "alpha@example.com";
+  const PASSWORD = "Password123";
+
+  it("registriert einen neuen Nutzer und setzt ein Session-Cookie", async () => {
+    const res = await app.request("/api/auth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { ok: boolean; me: { email: string; hero: unknown } };
+    expect(body.ok).toBe(true);
+    expect(body.me.email).toBe(EMAIL);
+    expect(body.me.hero).toBeNull();
+    expect(setCookieValue(res, "kleeblatt_session")).toBeTruthy();
+  });
+
+  it("check-email meldet belegte und freie Adressen korrekt", async () => {
+    const taken = await app.request(`/api/auth/check-email?email=${encodeURIComponent(EMAIL)}`);
+    expect((await taken.json())).toEqual({ available: false, valid: true });
+
+    const free = await app.request(
+      `/api/auth/check-email?email=${encodeURIComponent("beta@example.com")}`,
+    );
+    expect((await free.json())).toEqual({ available: true, valid: true });
+
+    const invalid = await app.request("/api/auth/check-email?email=not-an-email");
+    expect((await invalid.json())).toEqual({ available: false, valid: false });
+  });
+
+  it("lehnt doppelte Registrierung mit 409 ab", async () => {
+    const res = await app.request("/api/auth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it("lehnt zu schwaches Passwort mit 400 ab", async () => {
+    const res = await app.request("/api/auth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "gamma@example.com", password: "weak" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("login mit falschem Passwort → 401", async () => {
+    const res = await app.request("/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: EMAIL, password: "WrongPassword1" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("login mit korrektem Passwort → 200 + Session-Cookie", async () => {
+    const res = await app.request("/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
+    });
+    expect(res.status).toBe(200);
+    expect(setCookieValue(res, "kleeblatt_session")).toBeTruthy();
+  });
+});

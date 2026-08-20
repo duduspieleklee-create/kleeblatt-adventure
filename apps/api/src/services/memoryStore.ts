@@ -3,6 +3,8 @@
 import type { Hero, InventoryItem, InventoryStacks, OnboardingStatus, SessionUser } from "@kleeblatt/shared";
 
 export const memUsers = new Map<string, SessionUser>();
+/** Password hashes for email users (in-memory fallback, keyed by userId). */
+export const memPasswordHashes = new Map<string, string>();
 export const memHeroes = new Map<string, Hero>();
 export const memItems = new Map<string, { ownerId: string; item: InventoryItem }>();
 
