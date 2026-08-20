@@ -40,5 +40,7 @@ export { applyXp, DEFAULT_XP_CURVE } from "./rules/xp.js";
 
 export { API_DEFAULT_PORT, WEB_DEFAULT_PORT, PROTOTYPE_MAP_ID } from "./constants/index.js";
 
+export { ChatMessage, IslandRoomState } from "./schemas/chat.js";
+
 /** HttpOnly session cookie name (game-config.json → auth.session.cookieName) */
 export const SESSION_COOKIE_NAME = "kleeblatt_session";

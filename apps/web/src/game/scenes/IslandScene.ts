@@ -10,6 +10,8 @@ import {
 import { KeyboardInputManager } from "../input/KeyboardInputManager";
 import { InputEvents } from "../input/InputEvents";
 import { gameBridge } from "@kleeblatt/shared";
+import { MultiplayerManager } from "../multiplayer/MultiplayerManager";
+import { getSessionPlayerName } from "../multiplayer/sessionName";
 
 /**
  * Core island world (ported from kleeblock).
@@ -21,6 +23,12 @@ export class IslandScene extends Phaser.Scene {
   private map!: Phaser.Tilemaps.Tilemap;
   private collisionLayer!: Phaser.Tilemaps.TilemapLayer;
   private inputManager?: KeyboardInputManager;
+  private multiplayer?: MultiplayerManager;
+
+  /** Forward React/UI chat intents to the Colyseus room (no-op if offline). */
+  private handleChatSend = ({ text }: { text: string }): void => {
+    this.multiplayer?.sendChat(text);
+  };
 
   constructor() {
     super({ key: "IslandScene" });
@@ -51,6 +59,11 @@ export class IslandScene extends Phaser.Scene {
 
     this.events.on(Phaser.Scenes.Events.UPDATE, this.updateDepth, this);
     this.events.on(InputEvents.INTERACT, this.onInteract, this);
+
+    // Multiplayer glue (resilient: never throws if Colyseus is down).
+    this.multiplayer = new MultiplayerManager();
+    void this.multiplayer.connect(getSessionPlayerName());
+    gameBridge.on("chat:send", this.handleChatSend);
 
     gameBridge.emit("scene:loaded", { scene: "IslandScene" });
 
@@ -173,5 +186,7 @@ export class IslandScene extends Phaser.Scene {
     this.inputManager?.shutdown();
     this.events.off(Phaser.Scenes.Events.UPDATE, this.updateDepth, this);
     this.events.off(InputEvents.INTERACT, this.onInteract, this);
+    gameBridge.off("chat:send", this.handleChatSend);
+    this.multiplayer?.disconnect();
   }
 }

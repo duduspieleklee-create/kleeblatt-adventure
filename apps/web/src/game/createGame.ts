@@ -6,7 +6,7 @@ import { IslandScene } from "./scenes/IslandScene";
 // Legacy scenes kept in tree for gradual migration
 import { BootScene } from "./scenes/boot-scene";
 import { MatchScene } from "./scenes/match-scene";
-import { TownScene } from "./scenes/TownScene";
+import { TowerScene } from "./scenes/TownScene";
 
 /** Logical viewport 1280×720; Scale.FIT adapts to the React container / window. */
 export const GAME_VIEWPORT = { width: BASE_WIDTH, height: BASE_HEIGHT } as const;
@@ -47,7 +47,7 @@ export function createGame(container: HTMLElement): Phaser.Game {
       // legacy (not auto-started)
       BootScene,
       MatchScene,
-      TownScene,
+      TowerScene,
     ],
   });
 }

@@ -43,6 +43,18 @@ export class DesktopKeyboardController {
   update(): void {
     if (!this.cursors) return;
 
+    // Don't steer the player while a DOM input (chat box, etc.) is focused.
+    const active = document.activeElement;
+    if (
+      active &&
+      (active.tagName === "INPUT" ||
+        active.tagName === "TEXTAREA" ||
+        (active as HTMLElement).isContentEditable)
+    ) {
+      this.inputController.setMoveVector(0, 0);
+      return;
+    }
+
     const left = this.cursors.left.isDown || this.wasd.left.isDown;
     const right = this.cursors.right.isDown || this.wasd.right.isDown;
     const up = this.cursors.up.isDown || this.wasd.up.isDown;

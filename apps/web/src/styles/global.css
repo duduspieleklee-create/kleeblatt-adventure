@@ -393,6 +393,180 @@ button.primary:disabled {
   height: 100%;
 }
 
+/* ─── T4/T5: Shortcut Rail + Chat Widget ─────────────────── */
+
+/* Rail container is click-through so the Phaser canvas keeps receiving input
+   when no panel is open. Buttons/panels re-enable pointer events. */
+.shortcut-rail {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.shortcut-rail-buttons {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.shortcut-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid #2a3a2e;
+  background: #1a221c;
+  color: #e8f0e8;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px #0008;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  pointer-events: auto;
+}
+
+.shortcut-btn:hover {
+  background: #243024;
+}
+
+.shortcut-btn[aria-pressed="true"] {
+  border-color: #4cc95a;
+  background: #1d2b20;
+  box-shadow: 0 0 0 1px #4cc95a inset, 0 2px 8px #0008;
+}
+
+.shortcut-panel {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 51;
+}
+
+/* Quest panel floats to the right of the rail buttons. */
+.shortcut-panel-quests {
+  left: 72px;
+  top: 12px;
+  width: min(92vw, 340px);
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.shortcut-panel-quests .quest-panel {
+  margin: 0;
+}
+
+/* Chat widget — scale-aware sizing driven by --chat-w / --chat-h
+   (set from the Phaser ScaleManager displaySize, NOT the viewport). */
+.chat-widget {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  background: #141b16ee;
+  border: 1px solid #2a3a2e;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px #000a;
+  overflow: hidden;
+  z-index: 52;
+  color: #e8f0e8;
+  width: clamp(260px, calc(0.30 * var(--chat-w, 800px)), 380px);
+  height: clamp(220px, calc(0.45 * var(--chat-h, 450px)), 360px);
+}
+
+.chat-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #2a3a2e;
+  background: #1a221c;
+  flex-shrink: 0;
+}
+
+.chat-widget-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #b8cbb8;
+}
+
+.chat-widget-close {
+  background: none;
+  border: none;
+  color: #8fa88f;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.chat-widget-close:hover {
+  color: #e8f0e8;
+}
+
+.chat-widget-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.chat-widget-empty {
+  color: #8fa88f;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.chat-widget-msg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: baseline;
+  word-break: break-word;
+}
+
+.chat-widget-name {
+  font-weight: 600;
+  color: #7fe08a;
+}
+
+.chat-widget-time {
+  font-size: 0.7rem;
+  color: #8fa88f;
+  font-variant-numeric: tabular-nums;
+}
+
+.chat-widget-text {
+  flex-basis: 100%;
+  color: #e8f0e8;
+}
+
+.chat-widget-input {
+  flex-shrink: 0;
+  border: none;
+  border-top: 1px solid #2a3a2e;
+  background: #0f1410;
+  color: #e8f0e8;
+  padding: 0.5rem 0.6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.chat-widget-input::placeholder {
+  color: #8fa88f;
+}
+
 /* ─── Top Bar ───────────────────────────────────────────── */
 
 .topbar {

@@ -15,8 +15,11 @@
     "db:migrate": "tsx src/db/migrate-cli.ts"
   },
   "dependencies": {
+    "@colyseus/schema": "^4.0.31",
+    "@colyseus/ws-transport": "^0.17.13",
     "@hono/node-server": "^1.13.7",
     "@kleeblatt/shared": "*",
+    "colyseus": "^0.17.10",
     "drizzle-orm": "^0.44.0",
     "hono": "^4.6.12",
     "jose": "^5.9.6",

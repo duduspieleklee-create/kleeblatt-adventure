@@ -19,6 +19,9 @@
     "lint": "eslint src --max-warnings 0",
     "clean": "rm -rf dist"
   },
+  "dependencies": {
+    "@colyseus/schema": "^4.0.31"
+  },
   "devDependencies": {
     "typescript": "^5.7.2",
     "vitest": "^2.1.9"
