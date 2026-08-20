@@ -71,8 +71,8 @@ export class PreloaderScene extends Phaser.Scene {
       delay: 12_000,
       callback: () => {
         if (this.scene.isActive('PreloaderScene')) {
-          log.warn('[Preloader] Timed out — forcing menu');
-          this.scene.start('MainMenuScene');
+      log.warn('[Preloader] Timed out — forcing login');
+      this.scene.start('LoginScene');
         }
       },
     });
@@ -95,11 +95,11 @@ export class PreloaderScene extends Phaser.Scene {
       );
       this.time.addEvent({
         delay: 2000,
-        callback: () => this.scene.start('MainMenuScene'),
+        callback: () => this.scene.start('LoginScene'),
       });
     } else {
       log.debug('[Preloader] All assets loaded successfully');
-      this.scene.start('MainMenuScene');
+      this.scene.start('LoginScene');
     }
   }
 }

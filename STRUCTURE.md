@@ -32,8 +32,8 @@ kleeblatt-adventure/
 │   └── tsconfig/                 # Shared TypeScript base config
 ├── scripts/                      # Seed, deploy helpers
 ├── docs/
-│   ├── architecture/             # Design docs 00–25
-│   └── planning/
+│   ├── architecture/             # Design docs 00–33 + design specs
+│   └── planning/                 # Roadmap, DoR/DoD, risk register
 ├── game-config.json              # Gameplay values (SSOT)
 ├── docker-compose.yml            # Postgres + Redis
 ├── turbo.json                    # Turborepo task graph + cache
