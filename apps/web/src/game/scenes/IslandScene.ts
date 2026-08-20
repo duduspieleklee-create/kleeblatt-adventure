@@ -361,7 +361,10 @@ export class IslandScene extends Phaser.Scene {
   }
 
   private fitCameraToMap(): void {
-    const cam = this.cameras.main;
+    // Guard against teardown: on logout the scene is stopped (camera destroyed)
+    // but the ScaleManager may still emit RESIZE before shutdown unsubscribes.
+    const cam = this.cameras?.main;
+    if (!cam || !this.map) return;
     const zoom = scaleManager.getCameraCoverZoom(
       this.map.widthInPixels,
       this.map.heightInPixels,
