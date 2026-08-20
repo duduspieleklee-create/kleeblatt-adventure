@@ -28,6 +28,11 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # On-chain contract addresses (Immutable zkEVM Testnet, chainId 13473).
+          # These GitHub secrets were never passed to the Vite build before,
+          # which made Staking / Shop throw "… not configured" in the bundle.
+          VITE_STAKING_CONTRACT_ADDRESS: ${{ secrets.VITE_STAKING_CONTRACT_ADDRESS }}
+          VITE_KLT_CONTRACT_ADDRESS: ${{ secrets.VITE_KLT_CONTRACT_ADDRESS }}
         run: npx turbo run build --filter=@kleeblatt/shared --filter=@kleeblatt/api --filter=@kleeblatt/web
 
       - name: Verify build artifacts
