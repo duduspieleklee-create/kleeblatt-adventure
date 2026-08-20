@@ -1,4 +1,4 @@
-# Colyseus Chat-Proof – Start-Insel
+# Colyseus Chat-Proof – Start-Insel.
 
 **Stand:** 20. August 2026 (v2, überarbeitet nach Code-Audit) **Bezug:** Monorepo `apps/web` (React + Phaser 4.2, Scale.FIT 1280×720), `apps/api` (Hono), `packages/shared` (enthält `gameBridge`)
 
