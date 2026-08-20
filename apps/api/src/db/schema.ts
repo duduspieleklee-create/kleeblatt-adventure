@@ -15,9 +15,10 @@ export type WalletStatus = (typeof walletStatusEnum)[number];
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
-  email: text("email").notNull(),
+  email: text("email").notNull().unique(),
   displayName: text("display_name"),
   picture: text("picture"),
+  passwordHash: text("password_hash"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -42,6 +42,8 @@ export type GameBridgeEvents = {
   resume: Record<string, never>;
   "inventory:hydrate": { stacks: InventoryStacks };
   logout: Record<string, never>;
+  /** React finished a non-Google auth (email/password) — engine should re-check /api/me and proceed. */
+  "auth:authenticated": Record<string, never>;
 
   // React → engine (actions)
   "react:useItem": { itemId: string };

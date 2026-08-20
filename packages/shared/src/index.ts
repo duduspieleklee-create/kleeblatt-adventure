@@ -29,6 +29,13 @@ export type {
 export type { HealthResponse, ApiErrorBody } from "./types/api.js";
 
 export type { SessionUser, MeResponse } from "./types/user.js";
+export {
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_REQUIREMENTS,
+  validatePassword,
+  isEmailWellFormed,
+} from "./lib/passwordRules.js";
+export type { PasswordRequirement } from "./lib/passwordRules.js";
 export type { WalletStatus, WalletResponse, WalletConnectRequest, WalletConnectResponse, WalletBalance } from "./types/wallet.js";
 export type { OnboardingPath, OnboardingStatus } from "./types/onboarding.js";
 

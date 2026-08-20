@@ -2,7 +2,9 @@ import { useMe } from "../hooks/useMe";
 import { useWalletBalance } from "../hooks/useWalletBalance";
 import { TopBar } from "../components/TopBar";
 import { GamePage } from "./GamePage";
+import { AuthOverlay } from "../components/AuthOverlay";
 import { gameBridge } from "@kleeblatt/shared";
+import type { MeResponse } from "@kleeblatt/shared";
 
 /**
  * HomePage — minimal shell. All gameplay UI (quests, dialog, menus) runs
@@ -10,13 +12,19 @@ import { gameBridge } from "@kleeblatt/shared";
  * and the Phaser game container.
  */
 export function HomePage() {
-  const { state: meState, logout } = useMe();
+  const { state: meState, logout, refresh } = useMe();
   const { state: walletState } = useWalletBalance(meState.status === "authenticated");
 
   const handleLogout = () => {
     void logout();
     // Tell Phaser to return to the login scene after the session ends.
     gameBridge.emit("logout");
+  };
+
+  const handleAuthenticated = (_me: MeResponse): void => {
+    // Refresh React auth state (shows TopBar) and tell Phaser to proceed.
+    void refresh();
+    gameBridge.emit("auth:authenticated");
   };
 
   const walletAddress = walletState.status === "ready" ? walletState.data.address : undefined;
@@ -38,6 +46,9 @@ export function HomePage() {
       <div className="app-body game-wrapper">
         <GamePage />
       </div>
+      {meState.status === "anonymous" && (
+        <AuthOverlay onAuthenticated={handleAuthenticated} />
+      )}
     </div>
   );
 }
