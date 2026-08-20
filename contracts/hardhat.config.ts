@@ -21,7 +21,7 @@ const config: HardhatUserConfig = {
   networks: {
     immutableTestnet: {
       url: IMX_TESTNET_RPC,
-      chainId: 13371,
+      chainId: 13473,
       accounts: IMX_TESTNET_PRIVATE_KEY ? [IMX_TESTNET_PRIVATE_KEY] : [],
     },
     hardhat: {
