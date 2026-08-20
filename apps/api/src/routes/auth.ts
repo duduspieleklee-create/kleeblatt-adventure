@@ -3,6 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { jwtVerify } from "jose";
 import { SESSION_COOKIE_NAME, type MeResponse, type SessionUser } from "@kleeblatt/shared";
 import { env, sessionCookie } from "../config/env.js";
 import { signSession } from "../lib/jwt.js";
@@ -267,6 +268,61 @@ authRoutes.get("/auth/check-email", async (c) => {
   }
   const existing = await getUserByEmail(parsed.data);
   return c.json({ available: !existing, valid: true });
+});
+
+/** POST /auth/supabase — bridge a Supabase JWT (Web3/SIWE login) into an app session. */
+authRoutes.post("/auth/supabase", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body.access_token !== "string") {
+    return c.json(
+      { error: { code: "VALIDATION", message: "access_token required", retryable: false } },
+      400,
+    );
+  }
+  if (!env.supabaseJwtSecret) {
+    return c.json(
+      { error: { code: "NOT_CONFIGURED", message: "Supabase JWT secret not configured", retryable: false } },
+      503,
+    );
+  }
+
+  try {
+    const { payload } = await jwtVerify(
+      body.access_token,
+      new TextEncoder().encode(env.supabaseJwtSecret),
+    );
+    const userId = typeof payload.sub === "string" ? payload.sub : null;
+    const email = typeof payload.email === "string" ? payload.email : null;
+    if (!userId || !email) {
+      return c.json(
+        { error: { code: "INVALID_TOKEN", message: "Missing user id or email", retryable: false } },
+        401,
+      );
+    }
+
+    const meta = (payload.user_metadata ?? {}) as Record<string, unknown>;
+    const displayName =
+      typeof meta.preferred_username === "string"
+        ? meta.preferred_username
+        : typeof meta.username === "string"
+          ? meta.username
+          : typeof meta.display_name === "string"
+            ? meta.display_name
+            : email.split("@")[0] ?? null;
+    const picture = typeof meta.picture === "string" ? meta.picture : null;
+
+    const user: SessionUser = { userId, email, displayName, picture };
+    await getOrCreateWallet(user.userId);
+    const jwt = await signSession(user);
+    setCookie(c, SESSION_COOKIE_NAME, jwt, cookieOpts());
+    return c.json({ ok: true, me: await buildMe(user) }, 200);
+  } catch (err) {
+    console.error("[auth] Supabase bridge error:", err);
+    return c.json(
+      { error: { code: "INVALID_TOKEN", message: "Supabase token verification failed", retryable: false } },
+      401,
+    );
+  }
 });
 
 /**

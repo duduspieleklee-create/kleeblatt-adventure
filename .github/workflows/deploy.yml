@@ -62,6 +62,7 @@ jobs:
           STAGE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           STAGE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           STAGE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STAGE_SUPABASE_JWT_SECRET: ${{ secrets.SUPABASE_JWT_SECRET }}
           STAGE_SUPABASE_AUTH_URL: ${{ secrets.SUPABASE_URL }}/auth/v1
         run: bash scripts/server-deploy-stage.sh
 

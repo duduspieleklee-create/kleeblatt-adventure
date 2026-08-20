@@ -1,0 +1,65 @@
+# ============================================================
+# Kleeblatt Adventure - Caddy reverse proxy + static file server
+# Serves the stage web client and proxies API + Supabase gateway.
+# Deploy: copy to /etc/caddy/Caddyfile on the stage VPS, then `caddy reload`.
+# ============================================================
+
+# Hermes Agent Web UI (Open WebUI) + Supabase Auth API reverse proxy
+79-108-162-165.eu-fr-cloud-xip.com {
+    encode zstd gzip
+
+    # Supabase Auth API (GoTrue via Kong gateway)
+    handle /auth/v1/* {
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    # Default: Open WebUI
+    handle {
+        reverse_proxy 127.0.0.1:8080
+    }
+}
+
+stage.kleeblatt.space {
+    root * /var/www/stage
+    encode gzip
+
+    # Supabase self-hosted API gateway (Kong on 8000)
+    handle /auth/v1/* {
+        reverse_proxy localhost:8000
+    }
+    handle /rest/v1/* {
+        reverse_proxy localhost:8000
+    }
+    handle /realtime/v1/* {
+        reverse_proxy localhost:8000
+    }
+    handle /storage/v1/* {
+        reverse_proxy localhost:8000
+    }
+    handle /functions/v1/* {
+        reverse_proxy localhost:8000
+    }
+    handle /graphql/v1/* {
+        reverse_proxy localhost:8000
+    }
+
+    # Kleeblatt custom API (Node on 4000) - legacy root paths
+    handle /api/* {
+        reverse_proxy 127.0.0.1:4000
+    }
+    handle /auth/* {
+        reverse_proxy 127.0.0.1:4000
+    }
+    handle /health {
+        reverse_proxy 127.0.0.1:4000
+    }
+    handle /me {
+        reverse_proxy 127.0.0.1:4000
+    }
+
+    # SPA fallback
+    handle {
+        try_files {path} /index.html
+        file_server
+    }
+}

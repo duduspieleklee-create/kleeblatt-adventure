@@ -1,5 +1,7 @@
 import { supabase } from "./supabaseClient";
 import type { Session, User } from "@supabase/supabase-js";
+import { exchangeSupabaseSession } from "../../lib/api";
+import type { MeResponse } from "@kleeblatt/shared";
 
 export interface WalletAuthResult {
   address: string;
@@ -121,6 +123,26 @@ export async function signInWithWallet(): Promise<WalletAuthResult> {
     user: data.user,
     isNewUser: data.user.created_at === data.user.updated_at,
   };
+}
+
+/**
+ * Sign in with a wallet and exchange the Supabase session for an app session.
+ * This is the end-to-end flow used by the React AuthOverlay and Phaser LoginScene.
+ * Returns the app's MeResponse so the UI can proceed immediately.
+ */
+export async function signInWithWalletAndExchange(): Promise<MeResponse> {
+  const { session } = await signInWithWallet();
+  const accessToken = session.access_token;
+  if (!accessToken) {
+    throw new WalletAuthError("No Supabase access token returned", "AUTH_FAILED");
+  }
+
+  const result = await exchangeSupabaseSession(accessToken);
+  if (result.ok) {
+    return result.data;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  throw new WalletAuthError((result as any).message ?? "Session exchange failed", "AUTH_FAILED");
 }
 
 /**

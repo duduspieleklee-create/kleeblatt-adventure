@@ -139,6 +139,9 @@ if [ \$DB_OK -eq 0 ]; then
   exit 1
 fi
 
+echo "==> Ensuring _realtime schema exists (required by realtime Ecto migrations)..."
+docker compose exec -T db psql -U postgres -c "CREATE SCHEMA IF NOT EXISTS _realtime AUTHORIZATION supabase_admin;" 2>&1 || true
+
 echo "==> Syncing supabase_auth_admin password..."
 docker compose exec -T db psql -U postgres -c "ALTER USER supabase_auth_admin WITH PASSWORD '${SUPABASE_POSTGRES_PASSWORD}';" 2>&1 || true
 

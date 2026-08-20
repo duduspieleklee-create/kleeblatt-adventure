@@ -178,7 +178,7 @@ BEGIN
     RETURN;
   END IF;
 
-  EXECUTE $$
+  EXECUTE $SQL$
     INSERT INTO "public"."profiles" ("id", "username", "level", "gold", "created_at")
     SELECT
       m.new_id,
@@ -190,7 +190,7 @@ BEGIN
     JOIN "public"."users" u ON u.id = m.old_id
     LEFT JOIN "public"."heroes" h ON h.user_id = m.old_id
     ON CONFLICT ("id") DO NOTHING
-  $$;
+  $SQL$;
 END $$;
 
 --> statement-breakpoint
@@ -352,6 +352,8 @@ END $$;
 -- replay attacks in the Sign-In with Ethereum flow.
 -- ============================================================
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE IF NOT EXISTS "public"."siwe_nonces" (
   "nonce" text PRIMARY KEY,
   "created_at" timestamptz NOT NULL DEFAULT now(),
@@ -367,7 +369,7 @@ CREATE OR REPLACE FUNCTION "public"."generate_siwe_nonce"()
 RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   new_nonce text;
@@ -392,7 +394,7 @@ CREATE OR REPLACE FUNCTION "public"."verify_siwe_nonce"(
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   rec RECORD;

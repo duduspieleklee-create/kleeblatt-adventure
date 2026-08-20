@@ -181,7 +181,36 @@
   background: #f1f1f1;
 }
 
-/* Live-validation rotating circle (spins in all visible states, tinted by state). */
+.auth-wallet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 9px;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  background: rgba(167, 139, 250, 0.12);
+  color: #d8ccff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  margin-bottom: 10px;
+}
+
+.auth-wallet:hover:not(:disabled) {
+  background: rgba(167, 139, 250, 0.2);
+  border-color: rgba(167, 139, 250, 0.55);
+}
+
+.auth-wallet:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Live-validation rotating circle (spins only while checking). */
 .status-spinner {
   width: 16px;
   height: 16px;
@@ -189,11 +218,11 @@
   border-radius: 50%;
   border: 2px solid currentColor;
   border-top-color: transparent;
-  animation: auth-spin 0.7s linear infinite;
 }
 
 .status-spinner-checking {
   color: #e0a44a;
+  animation: auth-spin 0.7s linear infinite;
 }
 
 .status-spinner-valid {

@@ -32,6 +32,7 @@ export const env = {
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "",
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
   supabaseAuthUrl: process.env.SUPABASE_AUTH_URL ?? "",
+  supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET ?? "",
 } as const;
 
 export const sessionCookie = {

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { MeResponse } from "@kleeblatt/shared";
 import { PASSWORD_REQUIREMENTS, validatePassword } from "@kleeblatt/shared";
 import { checkEmailAvailable, login, register } from "../lib/api";
+import { signInWithWalletAndExchange, WalletAuthError } from "../game/utils/walletAuth";
 import { StatusSpinner, type SpinnerState } from "./StatusSpinner";
 import "../styles/auth.css";
 
@@ -85,6 +86,19 @@ export function AuthOverlay({ onAuthenticated }: AuthOverlayProps) {
   const pwSpinner: SpinnerState = password.length === 0 ? "idle" : pwValid ? "valid" : "invalid";
   const confirmSpinner: SpinnerState =
     confirm.length === 0 ? "idle" : confirmValid ? "valid" : "invalid";
+
+  async function handleWalletLogin(): Promise<void> {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const me = await signInWithWalletAndExchange();
+      onAuthenticated(me);
+    } catch (err) {
+      setError(err instanceof WalletAuthError ? err.message : "Wallet login failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="auth-overlay">
@@ -190,6 +204,14 @@ export function AuthOverlay({ onAuthenticated }: AuthOverlayProps) {
         </form>
 
         <div className="auth-alt">
+          <button
+            type="button"
+            className="auth-wallet"
+            onClick={() => void handleWalletLogin()}
+            disabled={submitting}
+          >
+            Connect Wallet
+          </button>
           <a className="auth-google" href="/api/auth/google">
             Continue with Google
           </a>

@@ -7,6 +7,7 @@ import type {
   InventoryItem,
   InventoryStacks,
   InventoryStacksResponse,
+  MeResponse,
   OnboardingPath,
   OnboardingStatus,
 } from "@kleeblatt/shared";
@@ -102,6 +103,18 @@ export async function checkEmailAvailable(email: string): Promise<EmailAvailabil
   const res = await apiFetch(`/auth/check-email?email=${encodeURIComponent(email)}`);
   if (!res.ok) return { available: false, valid: false };
   return (await res.json()) as EmailAvailability;
+}
+
+/** Exchange a Supabase access token (e.g. from Web3/SIWE login) for an app session cookie. */
+export async function exchangeSupabaseSession(accessToken: string): Promise<ApiResult<MeResponse>> {
+  const res = await apiFetch("/auth/supabase", {
+    method: "POST",
+    body: JSON.stringify({ access_token: accessToken }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok)
+    return { ok: false, status: res.status, message: errorMessage(body, "Session exchange failed.") };
+  return { ok: true, status: res.status, data: body.me as MeResponse };
 }
 
 export async function fetchHero(): Promise<ApiResult<Hero | null>> {
