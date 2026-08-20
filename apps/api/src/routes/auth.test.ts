@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app.js";
 
 const app = createApp();
-const CALLBACK_URL = "https://game.kleeblatt.space/auth/google/callback";
+const CALLBACK_URL = "https://stage.kleeblatt.space/auth/google/callback";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -60,7 +60,7 @@ describe("auth/google/callback", () => {
     const res = await app.request("/api/auth/google/callback");
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe(
-      "https://game.kleeblatt.space/?auth=error&reason=missing_code",
+      "https://stage.kleeblatt.space/?auth=error&reason=missing_code",
     );
   });
 
@@ -121,7 +121,7 @@ describe("auth/google/callback", () => {
       { headers: { Cookie: `kleeblatt_oauth_state=${state}` } },
     );
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("https://game.kleeblatt.space/?auth=ok");
+    expect(res.headers.get("location")).toBe("https://stage.kleeblatt.space/?auth=ok");
     expect(setCookieValue(res, "kleeblatt_session")).toBeTruthy();
     // State-Cookie muss gelöscht sein (Einmalgebrauch)
     const stateCookie = res.headers
