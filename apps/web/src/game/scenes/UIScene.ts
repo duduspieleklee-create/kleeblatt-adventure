@@ -4,7 +4,6 @@ import { QuestHUD } from '../ui/QuestHUD';
 import { TEXT_STYLES, UI_CONFIG } from '../ui/UIConstants';
 import { InputEvents } from '../input/InputEvents';
 import { DeviceDetector } from '../input/DeviceDetector';
-import { getUIAnchors, TOUCH_TARGET_MIN } from '../ui/UIScale';
 
 export type UISceneInitData = {
   questManager: QuestManager;
@@ -81,8 +80,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private relayout = (): void => {
-    const { width, height } = this.scale.gameSize;
-    const anchors = getUIAnchors(width, height);
+    const { height } = this.scale.gameSize;
 
     if (this.versionText) {
       this.versionText.setPosition(
